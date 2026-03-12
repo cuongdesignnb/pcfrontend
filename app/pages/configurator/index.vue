@@ -282,7 +282,7 @@ const printQuotation = () => {
     <span>Báo giá tự động từ hệ thống Build PC</span>
   </div>
 
-  <scr` + `ipt>window.onload = function() { window.print(); }</scr` + `ipt>
+
 </body>
 </html>`
 
@@ -290,6 +290,7 @@ const printQuotation = () => {
   if (printWindow) {
     printWindow.document.write(html)
     printWindow.document.close()
+    printWindow.onload = () => printWindow.print()
   }
 }
 

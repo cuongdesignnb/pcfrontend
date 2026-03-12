@@ -17,6 +17,7 @@ interface SuggestionsResponse {
 
 const config = useRuntimeConfig()
 const route = useRoute()
+const { user, isAuthenticated, token } = useAuth()
 
 const slug = route.params.slug as string
 
@@ -123,6 +124,76 @@ const averageRating = computed(() => {
   const sum = reviews.reduce((acc: number, r: any) => acc + r.rating, 0)
   return (sum / reviews.length).toFixed(1)
 })
+
+const reviewForm = reactive({
+  rating: 5,
+  title: '',
+  body: '',
+  guest_name: '',
+  guest_email: '',
+})
+const submittingReview = ref(false)
+
+const canSubmitReview = computed(() => {
+  if (!reviewForm.body.trim()) return false
+  if (!isAuthenticated.value && (!reviewForm.guest_name.trim() || !reviewForm.guest_email.trim())) {
+    return false
+  }
+  return true
+})
+
+const scrollToReviews = () => {
+  if (!process.client) return
+  document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const submitReview = async () => {
+  if (!product.value || !canSubmitReview.value || submittingReview.value) return
+
+  submittingReview.value = true
+
+  try {
+    const headers: Record<string, string> = {}
+    if (token.value) {
+      headers.Authorization = `Bearer ${token.value}`
+    }
+
+    await $fetch(`${config.public.apiBase}/products/${slug}/reviews`, {
+      method: 'POST',
+      headers: Object.keys(headers).length ? headers : undefined,
+      body: {
+        rating: reviewForm.rating,
+        title: reviewForm.title || null,
+        body: reviewForm.body,
+        guest_name: reviewForm.guest_name || null,
+        guest_email: reviewForm.guest_email || null,
+      },
+    })
+
+    toast.add({
+      title: 'Đã gửi đánh giá',
+      description: 'Cảm ơn bạn! Đánh giá sẽ hiển thị sau khi được duyệt.',
+      icon: 'i-heroicons-check-circle',
+      color: 'success',
+    })
+
+    reviewForm.title = ''
+    reviewForm.body = ''
+    if (!isAuthenticated.value) {
+      reviewForm.guest_name = ''
+      reviewForm.guest_email = ''
+    }
+  } catch (error: any) {
+    toast.add({
+      title: 'Không thể gửi đánh giá',
+      description: error?.data?.message || 'Vui lòng kiểm tra thông tin và thử lại.',
+      icon: 'i-heroicons-exclamation-triangle',
+      color: 'error',
+    })
+  } finally {
+    submittingReview.value = false
+  }
+}
 
 // SEO
 useSeoMeta({
@@ -237,6 +308,7 @@ useSeoMeta({
                 <span v-if="Number(averageRating) > 0" class="text-sm font-semibold text-gray-700">{{ averageRating }}</span>
                 <span class="text-sm text-gray-400">|</span>
                 <button 
+                  @click="scrollToReviews"
                   class="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
                 >
                   {{ product.reviews?.length || 0 }} đánh giá
@@ -447,7 +519,7 @@ useSeoMeta({
         </div>
 
         <!-- ===== ĐÁNH GIÁ SẢN PHẨM ===== -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+        <div id="product-reviews" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
           <!-- Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50/60 to-transparent">
             <div class="flex items-center gap-2.5">
@@ -464,6 +536,102 @@ useSeoMeta({
           </div>
 
           <div class="p-6">
+            <!-- Review form -->
+            <div class="mb-6 rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50/50 to-white p-5">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 class="text-base font-bold text-gray-900">Viết đánh giá của bạn</h3>
+                  <p class="text-sm text-gray-500">Đánh giá sẽ được kiểm duyệt trước khi hiển thị công khai.</p>
+                </div>
+                <div v-if="isAuthenticated" class="text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full font-medium">
+                  Đăng nhập: {{ user?.name }}
+                </div>
+                <div v-else class="text-sm text-gray-600 bg-white border border-gray-200 px-3 py-1 rounded-full">
+                  Bạn có thể đánh giá không cần đăng nhập
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Số sao</label>
+                  <div class="flex items-center gap-1.5">
+                    <button
+                      v-for="star in 5"
+                      :key="`form-star-${star}`"
+                      type="button"
+                      class="transition-transform hover:scale-110"
+                      @click="reviewForm.rating = star"
+                    >
+                      <svg
+                        class="w-6 h-6"
+                        :class="star <= reviewForm.rating ? 'text-amber-400' : 'text-gray-200'"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid sm:grid-cols-2 gap-4" v-if="!isAuthenticated">
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Họ tên</label>
+                    <input
+                      v-model="reviewForm.guest_name"
+                      type="text"
+                      placeholder="Nhập họ tên"
+                      class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                    <input
+                      v-model="reviewForm.guest_email"
+                      type="email"
+                      placeholder="you@example.com"
+                      class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                    >
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Tiêu đề (tuỳ chọn)</label>
+                  <input
+                    v-model="reviewForm.title"
+                    type="text"
+                    placeholder="Ví dụ: Hiệu năng tốt trong tầm giá"
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                  >
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Nội dung đánh giá</label>
+                  <textarea
+                    v-model="reviewForm.body"
+                    rows="4"
+                    placeholder="Chia sẻ trải nghiệm thực tế của bạn về sản phẩm..."
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                  ></textarea>
+                </div>
+
+                <div class="flex justify-end">
+                  <button
+                    type="button"
+                    :disabled="!canSubmitReview || submittingReview"
+                    class="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-60 disabled:cursor-not-allowed bg-primary-600 hover:bg-primary-700"
+                    @click="submitReview"
+                  >
+                    <svg v-if="submittingReview" class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    {{ submittingReview ? 'Đang gửi...' : 'Gửi đánh giá' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- Review summary -->
             <div v-if="product.reviews?.length" class="mb-6">
               <div class="flex flex-col sm:flex-row gap-6 p-5 bg-gradient-to-r from-amber-50 to-orange-50/30 rounded-xl border border-amber-100/80">
@@ -500,7 +668,7 @@ useSeoMeta({
                     {{ review.user?.name?.[0]?.toUpperCase() || '?' }}
                   </div>
                   <div class="flex-1">
-                    <p class="font-semibold text-gray-800">{{ review.user?.name || 'Khách hàng' }}</p>
+                    <p class="font-semibold text-gray-800">{{ review.user?.name || review.guest_name || 'Khách hàng' }}</p>
                     <div class="flex items-center gap-2">
                       <div class="flex gap-0.5">
                         <template v-for="i in 5" :key="i">
@@ -522,7 +690,13 @@ useSeoMeta({
                     ✓ Đã mua hàng
                   </span>
                 </div>
-                <p class="text-gray-600 leading-relaxed pl-[52px]">{{ review.comment }}</p>
+                <div class="pl-[52px]">
+                  <p v-if="review.title" class="font-semibold text-gray-800 mb-1">{{ review.title }}</p>
+                  <p class="text-gray-600 leading-relaxed">{{ review.body }}</p>
+                  <p v-if="review.admin_reply" class="mt-3 text-sm text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                    Phản hồi từ PC Shop: {{ review.admin_reply }}
+                  </p>
+                </div>
               </div>
             </div>
             <div v-else class="text-center py-12">

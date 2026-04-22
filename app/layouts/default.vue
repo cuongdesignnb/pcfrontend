@@ -133,9 +133,9 @@ onMounted(() => {
           <div>
             <h3 class="text-lg font-semibold mb-4">Danh mục</h3>
             <ul class="space-y-2 text-sm text-gray-400">
-              <li><NuxtLink to="/categories/pc-gaming" :prefetch="false" class="hover:text-white">PC Gaming</NuxtLink></li>
-              <li><NuxtLink to="/categories/laptop-gaming" :prefetch="false" class="hover:text-white">Laptop Gaming</NuxtLink></li>
-              <li><NuxtLink to="/categories/linh-kien-pc" :prefetch="false" class="hover:text-white">Linh kiện PC</NuxtLink></li>
+              <li><NuxtLink to="/pc-gaming" :prefetch="false" class="hover:text-white">PC Gaming</NuxtLink></li>
+              <li><NuxtLink to="/laptop-gaming" :prefetch="false" class="hover:text-white">Laptop Gaming</NuxtLink></li>
+              <li><NuxtLink to="/linh-kien-pc" :prefetch="false" class="hover:text-white">Linh kiện PC</NuxtLink></li>
               <li><NuxtLink to="/configurator" class="hover:text-white">Xây dựng cấu hình</NuxtLink></li>
             </ul>
           </div>

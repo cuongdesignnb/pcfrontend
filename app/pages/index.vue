@@ -366,7 +366,7 @@ onMounted(() => {
               <NuxtLink
                 v-for="(sec, i) in sideSections"
                 :key="sec.category.id"
-                :to="`/categories/${sec.category.slug}`"
+                :to="`/${sec.category.slug}`"
                 :prefetch="false"
                 class="flex-1 relative rounded-2xl overflow-hidden p-6 flex flex-col justify-end min-h-[120px] group hover:shadow-xl transition-all bg-gradient-to-br"
                 :class="[getColor(i).gradient, `hero-side-${i + 1}`]"
@@ -386,7 +386,7 @@ onMounted(() => {
                   <NuxtLink
                     v-for="(sec, i) in visibleSideSections"
                     :key="sec.category.id"
-                    :to="`/categories/${sec.category.slug}`"
+                    :to="`/${sec.category.slug}`"
                     :prefetch="false"
                     class="flex-1 relative rounded-2xl lg:rounded-none overflow-hidden p-6 flex flex-col justify-end min-h-[120px] group hover:shadow-xl transition-all bg-gradient-to-br lg:first:rounded-t-2xl lg:last:rounded-b-2xl"
                     :class="getColor((sideSlideIndex + i) % sectionColors.length).gradient"
@@ -430,7 +430,7 @@ onMounted(() => {
           <NuxtLink
             v-for="(cat, ci) in allSubcats.slice(0, 20)"
             :key="cat.id"
-            :to="`/categories/${cat.slug}`"
+            :to="`/${cat.slug}`"
             :prefetch="false"
             data-reveal="scale"
             class="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
@@ -491,7 +491,7 @@ onMounted(() => {
                 {{ child.name }}
               </button>
               <NuxtLink
-                :to="`/categories/${section.category.slug}`"
+                :to="`/${section.category.slug}`"
                 :prefetch="false"
                 class="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 ml-auto"
               >
@@ -506,7 +506,7 @@ onMounted(() => {
             <NuxtLink
               v-for="product in filteredProducts(section, sIdx)"
               :key="product.id"
-              :to="`/products/${product.slug}`"
+              :to="`/${section.category.slug}/${product.slug}`"
               :prefetch="false"
               data-product-card
               :class="['card-hover bg-white rounded-xl overflow-hidden border border-gray-100 hover:border-primary-200 transition-all group', revealedSections.has(sIdx) ? '' : 'reveal-up']"
@@ -544,7 +544,7 @@ onMounted(() => {
 
           <div v-if="filteredProducts(section, sIdx).length === 0" class="text-center py-8 text-gray-400">
             <p>Chưa có sản phẩm trong danh mục con này.</p>
-            <NuxtLink :to="`/categories/${section.category.slug}`" class="text-primary-600 hover:underline text-sm mt-2 inline-block">
+            <NuxtLink :to="`/${section.category.slug}`" class="text-primary-600 hover:underline text-sm mt-2 inline-block">
               Xem tất cả {{ section.category.name }}
             </NuxtLink>
           </div>

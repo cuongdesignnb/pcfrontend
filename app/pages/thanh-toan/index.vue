@@ -97,7 +97,7 @@ const placeOrder = async () => {
       paymentData.value = response.payment;
     } else {
       // COD - redirect to success page
-      router.push(`/orders/${response.order.id}/success`);
+      router.push(`/don-hang/${response.order.id}/thanh-cong`);
     }
   } catch (error: any) {
     toast.add({
@@ -127,7 +127,7 @@ const checkPaymentStatus = async () => {
     if (response.paid) {
       paymentVerified.value = true;
       setTimeout(() => {
-        router.push(`/orders/${orderResult.value.id}/success`);
+        router.push(`/don-hang/${orderResult.value.id}/thanh-cong`);
       }, 2000);
     }
   } catch (error) {
@@ -195,7 +195,7 @@ useSeoMeta({
     <div v-if="cartItems.length === 0" class="text-center py-12">
       <p class="text-6xl mb-4">🛒</p>
       <p class="text-xl text-gray-500 mb-6">Giỏ hàng trống</p>
-      <UButton to="/products" size="lg">Mua sắm ngay</UButton>
+      <UButton to="/" size="lg">Mua sắm ngay</UButton>
     </div>
 
     <!-- QR Payment Modal -->

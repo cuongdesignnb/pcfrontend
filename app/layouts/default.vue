@@ -66,7 +66,7 @@ onMounted(() => {
             </button>
 
             <!-- Cart -->
-            <NuxtLink to="/cart" class="p-2 text-gray-600 hover:text-primary-600 relative rounded-lg hover:bg-gray-50">
+            <NuxtLink to="/gio-hang" class="p-2 text-gray-600 hover:text-primary-600 relative rounded-lg hover:bg-gray-50">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
               </svg>
@@ -80,7 +80,7 @@ onMounted(() => {
 
             <!-- Account -->
             <NuxtLink
-              :to="auth.isAuthenticated.value ? '/account' : '/auth/login'"
+              :to="auth.isAuthenticated.value ? '/tai-khoan' : '/dang-nhap'"
               class="p-2 text-gray-600 hover:text-primary-600 flex items-center gap-1.5 rounded-lg hover:bg-gray-50"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,10 +122,10 @@ onMounted(() => {
           <div>
             <h3 class="text-lg font-semibold mb-4">Liên kết nhanh</h3>
             <ul class="space-y-2 text-sm text-gray-400">
-              <li><NuxtLink to="/about" class="hover:text-white">Giới thiệu</NuxtLink></li>
-              <li><NuxtLink to="/contact" class="hover:text-white">Liên hệ</NuxtLink></li>
-              <li><NuxtLink to="/warranty" class="hover:text-white">Chính sách bảo hành</NuxtLink></li>
-              <li><NuxtLink to="/shipping" class="hover:text-white">Vận chuyển</NuxtLink></li>
+              <li><NuxtLink to="/gioi-thieu" class="hover:text-white">Giới thiệu</NuxtLink></li>
+              <li><NuxtLink to="/lien-he" class="hover:text-white">Liên hệ</NuxtLink></li>
+              <li><NuxtLink to="/bao-hanh" class="hover:text-white">Chính sách bảo hành</NuxtLink></li>
+              <li><NuxtLink to="/van-chuyen" class="hover:text-white">Vận chuyển</NuxtLink></li>
             </ul>
           </div>
 
@@ -136,7 +136,7 @@ onMounted(() => {
               <li><NuxtLink to="/pc-gaming" :prefetch="false" class="hover:text-white">PC Gaming</NuxtLink></li>
               <li><NuxtLink to="/laptop-gaming" :prefetch="false" class="hover:text-white">Laptop Gaming</NuxtLink></li>
               <li><NuxtLink to="/linh-kien-pc" :prefetch="false" class="hover:text-white">Linh kiện PC</NuxtLink></li>
-              <li><NuxtLink to="/configurator" class="hover:text-white">Xây dựng cấu hình</NuxtLink></li>
+              <li><NuxtLink to="/cau-hinh" class="hover:text-white">Xây dựng cấu hình</NuxtLink></li>
             </ul>
           </div>
 

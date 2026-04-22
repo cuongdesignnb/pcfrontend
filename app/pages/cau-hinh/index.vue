@@ -155,7 +155,7 @@ const addAllToCart = async () => {
         icon: "i-heroicons-check-circle",
         color: "success",
       });
-      navigateTo("/cart");
+      navigateTo("/gio-hang");
     } else {
       toast.add({
         title: "Không thể thêm vào giỏ",
@@ -360,7 +360,7 @@ const saveBuild = async () => {
         icon: "i-heroicons-exclamation-triangle",
         color: "warning",
       });
-      navigateTo("/auth/login?redirect=/configurator");
+      navigateTo("/dang-nhap?redirect=/cau-hinh");
     } else {
       console.error("Error saving build:", error);
       toast.add({

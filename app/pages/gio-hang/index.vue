@@ -232,7 +232,7 @@ useSeoMeta({
             </div>
           </div>
 
-          <UButton to="/checkout" size="lg" block>
+          <UButton to="/thanh-toan" size="lg" block>
             Tiến hành thanh toán
           </UButton>
 

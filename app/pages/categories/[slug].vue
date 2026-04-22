@@ -1,6 +1,21 @@
 <script setup lang="ts">
 import type { Category, Product, Brand } from '~/types'
 
+interface FilterGroupValue {
+  label: string
+  slug: string
+  count: number
+}
+
+interface FilterGroup {
+  id: number
+  name: string
+  slug: string
+  type: 'checkbox' | 'price_range'
+  match_field: string
+  values: FilterGroupValue[]
+}
+
 interface SpecFilter {
   key_id: number
   label: string
@@ -12,6 +27,7 @@ interface SpecFilter {
 interface FiltersData {
   brands: Brand[]
   price_range: { min: number; max: number }
+  groups: FilterGroup[]
   specs: SpecFilter[]
 }
 
@@ -43,12 +59,17 @@ const minPrice = ref<number | undefined>(route.query.min_price ? Number(route.qu
 const maxPrice = ref<number | undefined>(route.query.max_price ? Number(route.query.max_price) : undefined)
 const inStock = ref(route.query.in_stock === '1')
 const specFilters = ref<Record<string, string[]>>({})
+const dynamicFilters = ref<Record<string, string[]>>({}) // f_<slug> based filters
 const viewMode = ref<'grid' | 'list'>('grid')
+const collapsedGroups = ref<Record<string, boolean>>({})
 
 // Initialize spec filters from query
 for (const [key, value] of Object.entries(route.query)) {
   if (key.startsWith('spec_') && value) {
     specFilters.value[key] = (value as string).split(',')
+  }
+  if (key.startsWith('f_') && value) {
+    dynamicFilters.value[key] = (value as string).split(',')
   }
 }
 
@@ -65,6 +86,9 @@ const queryParams = computed(() => {
   if (maxPrice.value) params.max_price = maxPrice.value
   if (inStock.value) params.in_stock = '1'
   for (const [key, vals] of Object.entries(specFilters.value)) {
+    if (vals.length) params[key] = vals.join(',')
+  }
+  for (const [key, vals] of Object.entries(dynamicFilters.value)) {
     if (vals.length) params[key] = vals.join(',')
   }
   return params
@@ -96,7 +120,7 @@ watch(queryParams, (params) => {
   if (params.max_price) query.max_price = String(params.max_price)
   if (params.in_stock) query.in_stock = '1'
   for (const [key, val] of Object.entries(params)) {
-    if (key.startsWith('spec_')) query[key] = val
+    if (key.startsWith('spec_') || key.startsWith('f_')) query[key] = val
   }
   router.replace({ query })
 }, { deep: true })
@@ -114,13 +138,28 @@ function toggleBrand(brandSlug: string) {
   resetPage()
 }
 
-// Toggle spec value
+// Toggle spec value (legacy)
 function toggleSpec(key: string, value: string) {
   if (!specFilters.value[key]) specFilters.value[key] = []
   const idx = specFilters.value[key].indexOf(value)
   if (idx > -1) specFilters.value[key].splice(idx, 1)
   else specFilters.value[key].push(value)
   resetPage()
+}
+
+// Toggle dynamic filter value (new system)
+function toggleDynamicFilter(filterSlug: string, valueSlug: string) {
+  const key = `f_${filterSlug}`
+  if (!dynamicFilters.value[key]) dynamicFilters.value[key] = []
+  const idx = dynamicFilters.value[key].indexOf(valueSlug)
+  if (idx > -1) dynamicFilters.value[key].splice(idx, 1)
+  else dynamicFilters.value[key].push(valueSlug)
+  resetPage()
+}
+
+// Toggle collapse
+function toggleCollapse(slug: string) {
+  collapsedGroups.value[slug] = !collapsedGroups.value[slug]
 }
 
 // Clear all filters
@@ -131,6 +170,7 @@ function clearAllFilters() {
   maxPrice.value = undefined
   inStock.value = false
   specFilters.value = {}
+  dynamicFilters.value = {}
   sort.value = 'newest'
   resetPage()
 }
@@ -165,6 +205,7 @@ const activeFilterCount = computed(() => {
   if (minPrice.value || maxPrice.value) count++
   if (inStock.value) count++
   count += Object.values(specFilters.value).filter(v => v.length > 0).length
+  count += Object.values(dynamicFilters.value).filter(v => v.length > 0).length
   return count
 })
 
@@ -324,7 +365,29 @@ useSeoMeta({
             </label>
           </div>
 
-          <!-- Dynamic Spec Filters -->
+          <!-- Dynamic Filter Groups (from admin) -->
+          <div v-for="group in (filters?.groups ?? [])" :key="group.id" class="bg-white rounded-xl p-4 shadow-sm">
+            <button @click="toggleCollapse(group.slug)" class="w-full flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-gray-900 text-sm">{{ group.name }}</h3>
+              <svg :class="collapsedGroups[group.slug] ? '' : 'rotate-180'" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div v-show="!collapsedGroups[group.slug]" class="space-y-2 max-h-48 overflow-y-auto">
+              <label v-for="val in group.values" :key="val.slug" class="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  :checked="(dynamicFilters[`f_${group.slug}`] ?? []).includes(val.slug)"
+                  @change="toggleDynamicFilter(group.slug, val.slug)"
+                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                >
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 flex-1">{{ val.label }}</span>
+                <span class="text-xs text-gray-400">({{ val.count }})</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Legacy Dynamic Spec Filters (fallback when no filter groups assigned) -->
           <div v-for="specF in (filters?.specs ?? [])" :key="specF.key_id" class="bg-white rounded-xl p-4 shadow-sm">
             <h3 class="font-semibold text-gray-900 mb-3 text-sm">
               {{ specF.label }}
@@ -549,7 +612,20 @@ useSeoMeta({
                   <input type="checkbox" v-model="inStock" @change="resetPage()" class="rounded border-gray-300 text-primary-600">
                   <span class="text-sm text-gray-700 font-medium">Chỉ hiện hàng còn</span>
                 </label>
-                <!-- Spec filters -->
+                <!-- Dynamic filter groups (new) -->
+                <div v-for="group in (filters?.groups ?? [])" :key="group.id">
+                  <h4 class="font-medium text-gray-900 mb-2 text-sm">{{ group.name }}</h4>
+                  <div class="space-y-2">
+                    <label v-for="val in group.values" :key="val.slug" class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" :checked="(dynamicFilters[`f_${group.slug}`] ?? []).includes(val.slug)"
+                        @change="toggleDynamicFilter(group.slug, val.slug)"
+                        class="rounded border-gray-300 text-primary-600">
+                      <span class="text-sm text-gray-700 flex-1">{{ val.label }}</span>
+                      <span class="text-xs text-gray-400">({{ val.count }})</span>
+                    </label>
+                  </div>
+                </div>
+                <!-- Legacy spec filters -->
                 <div v-for="specF in (filters?.specs ?? [])" :key="specF.key_id">
                   <h4 class="font-medium text-gray-900 mb-2 text-sm">{{ specF.label }}</h4>
                   <div class="space-y-2">

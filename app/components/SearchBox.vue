@@ -62,7 +62,7 @@ watch(() => route.fullPath, () => {
       <input
         v-model="query"
         type="text"
-        placeholder="Tim san pham, bai viet..."
+        placeholder="Tìm sản phẩm, bài viết..."
         class="w-full pl-10 pr-10 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
         @focus="query.length >= 2 && hasResults && (isOpen = true)"
         @blur="close"
@@ -99,7 +99,7 @@ watch(() => route.fullPath, () => {
         <!-- Products -->
         <div v-if="results.products.length">
           <div class="px-4 py-2 bg-gray-50 border-b border-gray-100">
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">San pham</span>
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sản phẩm</span>
           </div>
           <div class="divide-y divide-gray-50">
             <button
@@ -129,7 +129,7 @@ watch(() => route.fullPath, () => {
         <!-- Posts -->
         <div v-if="results.posts.length">
           <div class="px-4 py-2 bg-gray-50 border-b border-gray-100" :class="results.products.length ? 'border-t' : ''">
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Bai viet</span>
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Bài viết</span>
           </div>
           <div class="divide-y divide-gray-50">
             <button
@@ -153,7 +153,7 @@ watch(() => route.fullPath, () => {
         <!-- No results -->
         <div v-if="!hasResults && query.length >= 2 && !loading" class="px-4 py-8 text-center">
           <svg class="w-10 h-10 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          <p class="text-sm text-gray-500">Khong tim thay ket qua cho "{{ query }}"</p>
+          <p class="text-sm text-gray-500">Không tìm thấy kết quả cho "{{ query }}"</p>
         </div>
       </div>
     </Transition>

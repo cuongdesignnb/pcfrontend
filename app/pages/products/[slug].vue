@@ -1,12 +1,12 @@
-<script setup lang="ts">
+<script setup>
 // Redirect old /products/:slug to new URL format
 // We need to fetch the product to know its category
 const config = useRuntimeConfig()
 const route = useRoute()
-const slug = route.params.slug as string
+const slug = route.params.slug
 
 try {
-  const data = await $fetch<{ product: { slug: string; category?: { slug: string } } }>(`${config.public.apiBase}/products/${slug}`)
+  const data = await $fetch(`${config.public.apiBase}/products/${slug}`)
   const catSlug = data.product?.category?.slug || 'san-pham'
   navigateTo(`/${catSlug}/${slug}`, { redirectCode: 301 })
 } catch {

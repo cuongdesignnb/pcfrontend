@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Redirect old /products/:slug to new URL format
 // We need to fetch the product to know its category
 const config = useRuntimeConfig()

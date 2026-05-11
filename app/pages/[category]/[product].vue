@@ -64,8 +64,26 @@ const formatPrice = (price: number) => {
 // Selected image
 const selectedImage = ref(0)
 
-// Image zoom
+// Image Modal & Zoom
 const isZoomed = ref(false)
+const isImageModalOpen = ref(false)
+const modalZoomScale = ref(1)
+
+const nextImage = () => {
+  if (!product.value?.images) return
+  selectedImage.value = (selectedImage.value + 1) % product.value.images.length
+  modalZoomScale.value = 1
+}
+
+const prevImage = () => {
+  if (!product.value?.images) return
+  selectedImage.value = (selectedImage.value - 1 + product.value.images.length) % product.value.images.length
+  modalZoomScale.value = 1
+}
+
+const toggleZoom = () => {
+  modalZoomScale.value = modalZoomScale.value === 1 ? 2 : 1
+}
 
 // Quantity
 const quantity = ref(1)
@@ -200,6 +218,22 @@ useSeoMeta({
   title: () => product.value?.name ? `${product.value.name} - PC Shop` : 'Sản phẩm - PC Shop',
   description: () => product.value?.short_description || product.value?.meta_description,
 })
+
+// Handle keyboard navigation for modal
+const handleKeydown = (e: KeyboardEvent) => {
+  if (!isImageModalOpen.value) return
+  if (e.key === 'ArrowRight') nextImage()
+  if (e.key === 'ArrowLeft') prevImage()
+  if (e.key === 'Escape') isImageModalOpen.value = false
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <template>
@@ -232,7 +266,7 @@ useSeoMeta({
               <!-- Main image -->
               <div 
                 class="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden group cursor-zoom-in border border-gray-100"
-                @click="isZoomed = !isZoomed"
+                @click="isImageModalOpen = true"
               >
                 <!-- Sale badge -->
                 <div v-if="product.sale_price" class="absolute top-4 left-4 z-10">
@@ -246,7 +280,7 @@ useSeoMeta({
                   :alt="product.name"
                   :class="[
                     'w-full h-full object-contain transition-transform duration-500',
-                    isZoomed ? 'scale-150' : 'group-hover:scale-105'
+                    'group-hover:scale-105'
                   ]"
                 >
                 <div v-else class="w-full h-full flex items-center justify-center">
@@ -256,8 +290,9 @@ useSeoMeta({
                   </div>
                 </div>
                 <!-- Zoom hint -->
-                <div class="absolute bottom-3 right-3 bg-black/40 text-white text-xs px-2.5 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                  {{ isZoomed ? 'Thu nhỏ' : 'Phóng to' }}
+                <div class="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all flex items-center gap-1.5 backdrop-blur-sm">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                  Xem chi tiết
                 </div>
               </div>
               
@@ -846,19 +881,78 @@ useSeoMeta({
           </div>
         </div>
       </template>
+    </div>
 
-      <!-- Loading state -->
-      <template v-else>
-        <div class="flex items-center justify-center py-24">
-          <div class="text-center">
-            <svg class="animate-spin h-10 w-10 mx-auto text-primary-500 mb-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            <p class="text-gray-500 font-medium">Đang tải sản phẩm...</p>
+    <!-- Image Gallery Modal -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-opacity duration-300 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-200 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="isImageModalOpen" class="fixed inset-0 z-[9999] flex flex-col bg-black/95 backdrop-blur-md" tabindex="0" autofocus>
+          <!-- Header Actions -->
+          <div class="absolute top-0 left-0 right-0 p-4 lg:p-6 flex justify-between items-center z-50 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+            <div class="text-white/90 font-medium text-sm bg-black/40 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10 pointer-events-auto">
+              {{ selectedImage + 1 }} / {{ product?.images?.length || 1 }}
+            </div>
+            <div class="flex items-center gap-3 pointer-events-auto">
+              <button @click="toggleZoom" class="flex items-center justify-center w-10 h-10 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-all border border-white/10 backdrop-blur-md" title="Phóng to/Thu nhỏ">
+                <svg v-if="modalZoomScale === 1" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"/></svg>
+              </button>
+              <button @click="isImageModalOpen = false" class="flex items-center justify-center w-10 h-10 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-all border border-white/10 backdrop-blur-md" title="Đóng (Esc)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Content -->
+          <div class="flex-1 w-full h-full flex items-center justify-center overflow-hidden relative" @click="isImageModalOpen = false">
+            <div class="w-full h-full flex items-center justify-center overflow-auto" @click.stop="toggleZoom">
+              <img 
+                v-if="product?.images?.[selectedImage]"
+                :src="product.images[selectedImage]?.url" 
+                :alt="product.name"
+                :class="[
+                  'max-w-full max-h-[85vh] object-contain transition-transform duration-300 ease-out origin-center select-none',
+                  modalZoomScale > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'
+                ]"
+                :style="{ transform: `scale(${modalZoomScale})` }"
+                draggable="false"
+              >
+            </div>
+          </div>
+
+          <!-- Navigation Buttons -->
+          <button v-if="(product?.images?.length || 0) > 1" @click.stop="prevImage" class="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/40 hover:bg-black/80 border border-white/10 rounded-full transition-all backdrop-blur-md z-50">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button v-if="(product?.images?.length || 0) > 1" @click.stop="nextImage" class="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-black/40 hover:bg-black/80 border border-white/10 rounded-full transition-all backdrop-blur-md z-50">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <!-- Thumbnails -->
+          <div v-if="(product?.images?.length || 0) > 1" class="absolute bottom-6 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none">
+            <div class="flex gap-3 px-4 py-3 bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-x-auto max-w-full [&::-webkit-scrollbar]:hidden pointer-events-auto">
+              <button 
+                v-for="(img, idx) in product.images" 
+                :key="img.id"
+                @click.stop="selectedImage = idx; modalZoomScale = 1"
+                :class="[
+                  'w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all duration-300',
+                  selectedImage === idx ? 'border-primary-500 scale-105 shadow-[0_0_15px_rgba(var(--color-primary-500),0.5)]' : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'
+                ]"
+              >
+                <img :src="img.url" class="w-full h-full object-cover">
+              </button>
+            </div>
           </div>
         </div>
-      </template>
-    </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>

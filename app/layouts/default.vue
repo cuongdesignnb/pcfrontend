@@ -2,6 +2,7 @@
 // Default layout for the storefront
 const cart = useCart()
 const auth = useAuth()
+const { siteLogo, siteName } = useSettings()
 
 // Fetch cart on mount
 onMounted(() => {
@@ -38,8 +39,11 @@ onMounted(() => {
         <div class="flex items-center justify-between h-14 gap-4">
           <!-- Logo -->
           <NuxtLink to="/" class="flex items-center gap-2 shrink-0">
-            <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">PC</div>
-            <span class="text-xl font-extrabold text-gray-900 hidden sm:inline">PC Shop</span>
+            <img v-if="siteLogo" :src="siteLogo" :alt="siteName" class="h-8 w-auto object-contain" />
+            <template v-else>
+              <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">PC</div>
+              <span class="text-xl font-extrabold text-gray-900 hidden sm:inline">{{ siteName }}</span>
+            </template>
           </NuxtLink>
 
           <!-- Search bar -->
@@ -103,7 +107,7 @@ onMounted(() => {
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
           <!-- About -->
           <div>
-            <h3 class="text-lg font-semibold mb-4">PC Shop</h3>
+            <h3 class="text-lg font-semibold mb-4">{{ siteName }}</h3>
             <p class="text-gray-400 text-sm">
               Chuyên cung cấp PC, Laptop và linh kiện máy tính chính hãng với giá tốt nhất.
             </p>
@@ -152,7 +156,7 @@ onMounted(() => {
         </div>
 
         <div class="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-          © 2026 PC Shop. All rights reserved.
+          © 2026 {{ siteName }}. All rights reserved.
         </div>
       </div>
     </footer>

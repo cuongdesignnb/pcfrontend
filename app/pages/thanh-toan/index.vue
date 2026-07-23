@@ -2,6 +2,34 @@
 const config = useRuntimeConfig();
 const router = useRouter();
 const { getHeaders: getCartHeaders } = useCartSession();
+const checkoutIdempotencyKey = ref("");
+const orderAccessToken = ref("");
+const checkoutIdempotencyStorageKey = "pc-checkout-idempotency-key";
+const checkoutAccessTokenStorageKey = "pc-checkout-order-access-token";
+
+const createCheckoutIntent = () => {
+  checkoutIdempotencyKey.value = crypto.randomUUID();
+  orderAccessToken.value = crypto.randomUUID();
+  sessionStorage.setItem(
+    checkoutIdempotencyStorageKey,
+    checkoutIdempotencyKey.value,
+  );
+  sessionStorage.setItem(
+    checkoutAccessTokenStorageKey,
+    orderAccessToken.value,
+  );
+};
+
+const ensureCheckoutIntent = () => {
+  checkoutIdempotencyKey.value =
+    sessionStorage.getItem(checkoutIdempotencyStorageKey) || "";
+  orderAccessToken.value =
+    sessionStorage.getItem(checkoutAccessTokenStorageKey) || "";
+
+  if (!checkoutIdempotencyKey.value || !orderAccessToken.value) {
+    createCheckoutIntent();
+  }
+};
 
 // Form data
 const form = reactive({
@@ -32,6 +60,8 @@ const wards = ref<any[]>([]);
 
 // Fetch provinces on mount (SSR disabled for checkout)
 onMounted(async () => {
+  ensureCheckoutIntent();
+
   try {
     const data = await $fetch<any[]>(
       `${config.public.apiBase}/locations/provinces`,
@@ -77,6 +107,8 @@ const placeOrder = async () => {
       headers: getCartHeaders(),
       body: {
         ...form,
+        checkout_idempotency_key: checkoutIdempotencyKey.value,
+        order_access_token: orderAccessToken.value,
         items: cartItems.value.map((item: any) => ({
           product_id: item.product_id,
           quantity: item.quantity,
@@ -85,6 +117,12 @@ const placeOrder = async () => {
     });
 
     orderResult.value = response.order;
+    sessionStorage.setItem(
+      `pc-order-access-token:${response.order.id}`,
+      orderAccessToken.value,
+    );
+    sessionStorage.removeItem(checkoutIdempotencyStorageKey);
+    sessionStorage.removeItem(checkoutAccessTokenStorageKey);
     toast.add({
       title: "Đặt hàng thành công!",
       description: `Mã đơn hàng: #${response.order.id}`,
@@ -93,13 +131,20 @@ const placeOrder = async () => {
     });
 
     // If SePay payment, show QR code for bank transfer
-    if (form.payment_method === "sepay" && response.payment) {
+    if (
+      form.payment_method === "sepay" &&
+      response.payment &&
+      response.order.can_pay
+    ) {
       paymentData.value = response.payment;
     } else {
-      // COD - redirect to success page
+      // COD or an order still waiting for KIOT confirmation.
       router.push(`/don-hang/${response.order.id}/thanh-cong`);
     }
   } catch (error: any) {
+    if (error.data?.integration_status === "rejected") {
+      createCheckoutIntent();
+    }
     toast.add({
       title: "Lỗi đặt hàng",
       description: error.data?.message || "Có lỗi xảy ra. Vui lòng thử lại.",
@@ -122,10 +167,19 @@ const checkPaymentStatus = async () => {
   try {
     const response = await $fetch<any>(
       `${config.public.apiBase}/orders/${orderResult.value.id}/check-payment`,
+      {
+        headers: {
+          "X-Order-Access-Token": orderAccessToken.value,
+        },
+      },
     );
 
     if (response.paid) {
       paymentVerified.value = true;
+      if (paymentCheckInterval) {
+        clearInterval(paymentCheckInterval);
+        paymentCheckInterval = null;
+      }
       setTimeout(() => {
         router.push(`/don-hang/${orderResult.value.id}/thanh-cong`);
       }, 2000);
@@ -141,10 +195,13 @@ const checkPaymentStatus = async () => {
 let paymentCheckInterval: ReturnType<typeof setInterval> | null = null;
 
 watch(paymentData, (newData) => {
+  if (paymentCheckInterval) {
+    clearInterval(paymentCheckInterval);
+    paymentCheckInterval = null;
+  }
+
   if (newData) {
     paymentCheckInterval = setInterval(checkPaymentStatus, 5000);
-  } else if (paymentCheckInterval) {
-    clearInterval(paymentCheckInterval);
   }
 });
 
@@ -178,7 +235,9 @@ const isFormValid = computed(() => {
     form.customer_email.trim() &&
     form.customer_phone.trim() &&
     form.shipping_address.trim() &&
-    form.shipping_city.trim()
+    form.shipping_city.trim() &&
+    checkoutIdempotencyKey.value &&
+    orderAccessToken.value
   );
 });
 

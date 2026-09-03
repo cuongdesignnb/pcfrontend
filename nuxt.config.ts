@@ -9,6 +9,15 @@ export default defineNuxtConfig({
     '@nuxt/image',
   ],
 
+  // Product-detail components live in a nested directory but are referenced
+  // by their short names (for example <ProductGallery>). Disable directory
+  // name prefixes so Nuxt registers those components during SSR as well as
+  // on the client. Without this, Vue treats them as unknown custom elements
+  // and the server renders an empty PDP shell.
+  components: [
+    { path: '~/app/components', pathPrefix: false },
+  ],
+
   // CSS
   css: ['~/assets/css/main.css'],
 

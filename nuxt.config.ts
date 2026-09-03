@@ -15,7 +15,7 @@ export default defineNuxtConfig({
   // on the client. Without this, Vue treats them as unknown custom elements
   // and the server renders an empty PDP shell.
   components: [
-    { path: '~/app/components', pathPrefix: false },
+    { path: '~/components', pathPrefix: false },
   ],
 
   // CSS

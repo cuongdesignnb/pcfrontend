@@ -46,8 +46,11 @@ export default defineNuxtConfig({
   // Route rules for rendering strategy
   routeRules: {
     '/': { isr: 300 },
-    '/products/**': { isr: 60 },
-    '/*/*': { isr: 60 },
+    // Product detail routes use direct SSR.  An ISR rule on the generic
+    // two-segment matcher (for example /phu-kien/:slug) makes Nuxt require a
+    // runtime _payload.json file, which is not reliably persisted by the
+    // Docker Node server between requests.
+    '/products/**': { ssr: true },
     '/categories/**': { isr: 300 },
     '/blog/**': { swr: 3600 },
     '/configurator/**': { ssr: false },
@@ -58,6 +61,10 @@ export default defineNuxtConfig({
 
   // Disable automatic prefetch on NuxtLinks (too many links → payload storm)
   experimental: {
+    // Keep SSR data in the initial document. This removes the second
+    // _payload.json request and prevents hydration from failing when a
+    // dynamic product page is served through the Docker reverse proxy.
+    payloadExtraction: false,
     defaults: {
       nuxtLink: {
         prefetch: false,

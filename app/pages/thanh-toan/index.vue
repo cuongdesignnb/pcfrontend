@@ -1,35 +1,44 @@
 <script setup lang="ts">
+import type { BuyNowItem, ProductDetail, ProductDetailResponse } from '~/types/product-detail'
+
 const config = useRuntimeConfig();
 const router = useRouter();
+const route = useRoute();
 const { getHeaders: getCartHeaders } = useCartSession();
+const { read: readBuyNow, clear: clearBuyNow } = useBuyNow();
+const {
+  siteName,
+  paymentCodEnabled,
+  shippingFreeThreshold,
+  shippingDefaultFee,
+  formatMoney,
+} = useSettings();
 const checkoutIdempotencyKey = ref("");
 const orderAccessToken = ref("");
-const checkoutIdempotencyStorageKey = "pc-checkout-idempotency-key";
-const checkoutAccessTokenStorageKey = "pc-checkout-order-access-token";
+const checkoutMode = ref<'cart' | 'buy_now'>('cart');
+const buyNowItem = ref<BuyNowItem | null>(null);
+const buyNowProduct = ref<ProductDetail | null>(null);
+const buyNowLoading = ref(false);
 
-const createCheckoutIntent = () => {
-  checkoutIdempotencyKey.value = crypto.randomUUID();
-  orderAccessToken.value = crypto.randomUUID();
-  sessionStorage.setItem(
-    checkoutIdempotencyStorageKey,
-    checkoutIdempotencyKey.value,
-  );
-  sessionStorage.setItem(
-    checkoutAccessTokenStorageKey,
-    orderAccessToken.value,
-  );
-};
+interface CartResponseItem {
+  id: number;
+  product_id: number;
+  variant_id: number | null;
+  quantity: number;
+  price: number | string;
+  variant?: { id: number; name: string } | null;
+  product: { name: string; images?: { url: string | null }[] };
+}
 
-const ensureCheckoutIntent = () => {
-  checkoutIdempotencyKey.value =
-    sessionStorage.getItem(checkoutIdempotencyStorageKey) || "";
-  orderAccessToken.value =
-    sessionStorage.getItem(checkoutAccessTokenStorageKey) || "";
-
-  if (!checkoutIdempotencyKey.value || !orderAccessToken.value) {
-    createCheckoutIntent();
-  }
-};
+interface CheckoutLine {
+  product_id: number;
+  variant_id: number | null;
+  quantity: number;
+  name: string;
+  image: string | null;
+  variant_name: string | null;
+  unit_price: number;
+}
 
 // Form data
 const form = reactive({
@@ -45,13 +54,38 @@ const form = reactive({
 });
 
 // Fetch cart
-const { data: cartData } = await useFetch<{ items: any[]; total: number }>(
+const { data: cartData } = await useFetch<{ items: CartResponseItem[]; total: number }>(
   `${config.public.apiBase}/cart`,
   { default: () => ({ items: [], total: 0 }), headers: getCartHeaders() },
 );
 
 const cartItems = computed(() => cartData.value?.items || []);
-const cartTotal = computed(() => cartData.value?.total || 0);
+const checkoutItems = computed<CheckoutLine[]>(() => {
+  if (checkoutMode.value === 'buy_now' && buyNowItem.value && buyNowProduct.value) {
+    const variant = buyNowItem.value.variant_id
+      ? buyNowProduct.value.variants.find(item => item.id === buyNowItem.value?.variant_id) || null
+      : null;
+    return [{
+      product_id: buyNowProduct.value.id,
+      variant_id: variant?.id || null,
+      quantity: buyNowItem.value.quantity,
+      name: buyNowProduct.value.name,
+      image: buyNowProduct.value.images[0]?.url || null,
+      variant_name: variant?.name || null,
+      unit_price: variant?.pricing.display_price || buyNowProduct.value.pricing.display_price,
+    }];
+  }
+  return cartItems.value.map(item => ({
+    product_id: item.product_id,
+    variant_id: item.variant_id || null,
+    quantity: item.quantity,
+    name: item.product.name,
+    image: item.product.images?.[0]?.url || null,
+    variant_name: item.variant?.name || null,
+    unit_price: Number(item.price),
+  }));
+});
+const cartTotal = computed(() => checkoutItems.value.reduce((total, item) => total + item.unit_price * item.quantity, 0));
 
 // Location data
 const selectedProvinceCode = ref("");
@@ -60,8 +94,34 @@ const wards = ref<any[]>([]);
 
 // Fetch provinces on mount (SSR disabled for checkout)
 onMounted(async () => {
-  ensureCheckoutIntent();
-
+  const storageKey = "pc-checkout-idempotency-key";
+  checkoutIdempotencyKey.value = sessionStorage.getItem(storageKey) || crypto.randomUUID();
+  sessionStorage.setItem(storageKey, checkoutIdempotencyKey.value);
+  const accessTokenStorageKey = "pc-checkout-order-access-token";
+  orderAccessToken.value = sessionStorage.getItem(accessTokenStorageKey) || crypto.randomUUID();
+  sessionStorage.setItem(accessTokenStorageKey, orderAccessToken.value);
+  if (route.query.mode === 'buy-now') {
+    const item = readBuyNow();
+    if (item) {
+      checkoutMode.value = 'buy_now';
+      buyNowItem.value = item;
+      buyNowLoading.value = true;
+      try {
+        const response = await $fetch<ProductDetailResponse>(`${config.public.apiBase}/products/${encodeURIComponent(item.product_slug)}`);
+        if (item.variant_id && !response.product.variants.some(variant => variant.id === item.variant_id)) {
+          throw new Error('Biến thể không còn khả dụng');
+        }
+        buyNowProduct.value = response.product;
+      } catch {
+        clearBuyNow();
+        buyNowItem.value = null;
+        checkoutMode.value = 'cart';
+        toast.add({ title: 'Không thể tải sản phẩm mua ngay', description: 'Vui lòng quay lại trang sản phẩm và thử lại.', color: 'error' });
+      } finally {
+        buyNowLoading.value = false;
+      }
+    }
+  }
   try {
     const data = await $fetch<any[]>(
       `${config.public.apiBase}/locations/provinces`,
@@ -88,7 +148,9 @@ watch(selectedProvinceCode, async (code) => {
 
 // Shipping fee
 const shippingFee = computed(() => {
-  return cartTotal.value >= 500000 ? 0 : 30000;
+  return shippingFreeThreshold.value > 0 && cartTotal.value >= shippingFreeThreshold.value
+    ? 0
+    : shippingDefaultFee.value;
 });
 
 const orderTotal = computed(() => cartTotal.value + shippingFee.value);
@@ -107,22 +169,22 @@ const placeOrder = async () => {
       headers: getCartHeaders(),
       body: {
         ...form,
+        checkout_mode: checkoutMode.value,
         checkout_idempotency_key: checkoutIdempotencyKey.value,
         order_access_token: orderAccessToken.value,
-        items: cartItems.value.map((item: any) => ({
+        items: checkoutItems.value.map((item) => ({
           product_id: item.product_id,
+          variant_id: item.variant_id,
           quantity: item.quantity,
         })),
       },
     });
 
     orderResult.value = response.order;
-    sessionStorage.setItem(
-      `pc-order-access-token:${response.order.id}`,
-      orderAccessToken.value,
-    );
-    sessionStorage.removeItem(checkoutIdempotencyStorageKey);
-    sessionStorage.removeItem(checkoutAccessTokenStorageKey);
+    sessionStorage.setItem(`pc-order-access-token:${response.order.id}`, orderAccessToken.value);
+    sessionStorage.removeItem("pc-checkout-idempotency-key");
+    sessionStorage.removeItem("pc-checkout-order-access-token");
+    if (checkoutMode.value === 'buy_now') clearBuyNow();
     toast.add({
       title: "Đặt hàng thành công!",
       description: `Mã đơn hàng: #${response.order.id}`,
@@ -131,11 +193,7 @@ const placeOrder = async () => {
     });
 
     // If SePay payment, show QR code for bank transfer
-    if (
-      form.payment_method === "sepay" &&
-      response.payment &&
-      response.order.can_pay
-    ) {
+    if (form.payment_method === "sepay" && response.payment && response.order.can_pay) {
       paymentData.value = response.payment;
     } else {
       // COD or an order still waiting for KIOT confirmation.
@@ -143,7 +201,10 @@ const placeOrder = async () => {
     }
   } catch (error: any) {
     if (error.data?.integration_status === "rejected") {
-      createCheckoutIntent();
+      checkoutIdempotencyKey.value = crypto.randomUUID();
+      orderAccessToken.value = crypto.randomUUID();
+      sessionStorage.setItem("pc-checkout-idempotency-key", checkoutIdempotencyKey.value);
+      sessionStorage.setItem("pc-checkout-order-access-token", orderAccessToken.value);
     }
     toast.add({
       title: "Lỗi đặt hàng",
@@ -167,19 +228,11 @@ const checkPaymentStatus = async () => {
   try {
     const response = await $fetch<any>(
       `${config.public.apiBase}/orders/${orderResult.value.id}/check-payment`,
-      {
-        headers: {
-          "X-Order-Access-Token": orderAccessToken.value,
-        },
-      },
+      { headers: { "X-Order-Access-Token": orderAccessToken.value } },
     );
 
     if (response.paid) {
       paymentVerified.value = true;
-      if (paymentCheckInterval) {
-        clearInterval(paymentCheckInterval);
-        paymentCheckInterval = null;
-      }
       setTimeout(() => {
         router.push(`/don-hang/${orderResult.value.id}/thanh-cong`);
       }, 2000);
@@ -195,13 +248,10 @@ const checkPaymentStatus = async () => {
 let paymentCheckInterval: ReturnType<typeof setInterval> | null = null;
 
 watch(paymentData, (newData) => {
-  if (paymentCheckInterval) {
-    clearInterval(paymentCheckInterval);
-    paymentCheckInterval = null;
-  }
-
   if (newData) {
     paymentCheckInterval = setInterval(checkPaymentStatus, 5000);
+  } else if (paymentCheckInterval) {
+    clearInterval(paymentCheckInterval);
   }
 });
 
@@ -236,13 +286,12 @@ const isFormValid = computed(() => {
     form.customer_phone.trim() &&
     form.shipping_address.trim() &&
     form.shipping_city.trim() &&
-    checkoutIdempotencyKey.value &&
-    orderAccessToken.value
+    checkoutIdempotencyKey.value
   );
 });
 
 useSeoMeta({
-  title: "Thanh toán - PC Shop",
+  title: () => `Thanh toán - ${siteName.value}`,
 });
 </script>
 
@@ -251,8 +300,8 @@ useSeoMeta({
     <h1 class="text-3xl font-bold mb-8">Thanh toán</h1>
 
     <!-- Empty cart -->
-    <div v-if="cartItems.length === 0" class="text-center py-12">
-      <p class="text-6xl mb-4">🛒</p>
+    <div v-if="buyNowLoading" class="text-center py-12"><p class="text-xl text-gray-500">Đang chuẩn bị đơn hàng…</p></div>
+    <div v-else-if="checkoutItems.length === 0" class="text-center py-12">
       <p class="text-xl text-gray-500 mb-6">Giỏ hàng trống</p>
       <UButton to="/" size="lg">Mua sắm ngay</UButton>
     </div>
@@ -275,7 +324,7 @@ useSeoMeta({
           </div>
 
           <p class="text-2xl font-bold text-primary-600 mb-4">
-            {{ new Intl.NumberFormat("vi-VN").format(paymentData.amount) }}₫
+            {{ formatMoney(paymentData.amount) }}
           </p>
 
           <!-- Bank info -->
@@ -323,12 +372,12 @@ useSeoMeta({
           </div>
 
           <p class="text-sm text-red-500 mb-4">
-            ⚠️ Vui lòng ghi đúng nội dung chuyển khoản để thanh toán được xác
+            Vui lòng ghi đúng nội dung chuyển khoản để thanh toán được xác
             nhận tự động
           </p>
 
           <div class="flex items-center justify-center gap-2 text-gray-500">
-            <span class="animate-spin">⏳</span>
+            <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary-600"></span>
             <span>Đang chờ thanh toán...</span>
           </div>
 
@@ -342,7 +391,6 @@ useSeoMeta({
         </template>
 
         <template v-else>
-          <div class="text-6xl mb-4">✅</div>
           <h2 class="text-2xl font-bold text-green-600 mb-2">
             Thanh toán thành công!
           </h2>
@@ -480,10 +528,11 @@ useSeoMeta({
                   Quét mã QR để thanh toán nhanh chóng
                 </p>
               </div>
-              <span class="text-3xl">📱</span>
+              <span class="rounded bg-primary-100 px-2 py-1 text-sm font-semibold text-primary-700">QR</span>
             </label>
 
             <label
+              v-if="paymentCodEnabled"
               class="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
               :class="{
                 'border-primary-500 bg-primary-50':
@@ -502,7 +551,7 @@ useSeoMeta({
                   Thanh toán bằng tiền mặt khi giao hàng
                 </p>
               </div>
-              <span class="text-3xl">💵</span>
+              <span class="rounded bg-gray-100 px-2 py-1 text-sm font-semibold text-gray-700">COD</span>
             </label>
           </div>
         </div>
@@ -515,28 +564,23 @@ useSeoMeta({
 
           <!-- Order Items -->
           <div class="space-y-3 mb-4 max-h-64 overflow-y-auto">
-            <div v-for="item in cartItems" :key="item.id" class="flex gap-3">
+            <div v-for="item in checkoutItems" :key="`${item.product_id}-${item.variant_id || 'base'}`" class="flex gap-3">
               <div class="w-16 h-16 bg-gray-100 rounded flex-shrink-0">
                 <img
-                  v-if="item.product.images?.[0]"
-                  :src="item.product.images[0].url"
-                  :alt="item.product.name"
+                  v-if="item.image"
+                  :src="item.image"
+                  :alt="item.name"
                   class="w-full h-full object-cover rounded"
                 />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium line-clamp-2">
-                  {{ item.product.name }}
+                  {{ item.name }}
                 </p>
-                <p class="text-sm text-gray-500">SL: {{ item.quantity }}</p>
+                <p class="text-sm text-gray-500">{{ item.variant_name ? `${item.variant_name} · ` : '' }}SL: {{ item.quantity }}</p>
               </div>
               <p class="text-sm font-semibold whitespace-nowrap">
-                {{
-                  new Intl.NumberFormat("vi-VN").format(
-                    (item.product.sale_price || item.product.price) *
-                      item.quantity,
-                  )
-                }}₫
+                {{ formatMoney(item.unit_price * item.quantity) }}
               </p>
             </div>
           </div>
@@ -544,9 +588,7 @@ useSeoMeta({
           <div class="border-t pt-4 space-y-2">
             <div class="flex justify-between">
               <span class="text-gray-600">Tạm tính</span>
-              <span
-                >{{ new Intl.NumberFormat("vi-VN").format(cartTotal) }}₫</span
-              >
+              <span>{{ formatMoney(cartTotal) }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-600">Phí vận chuyển</span>
@@ -554,15 +596,13 @@ useSeoMeta({
                 {{
                   shippingFee === 0
                     ? "Miễn phí"
-                    : new Intl.NumberFormat("vi-VN").format(shippingFee) + "₫"
+                    : formatMoney(shippingFee)
                 }}
               </span>
             </div>
             <div class="flex justify-between text-lg font-bold pt-2 border-t">
               <span>Tổng cộng</span>
-              <span class="text-primary-600"
-                >{{ new Intl.NumberFormat("vi-VN").format(orderTotal) }}₫</span
-              >
+              <span class="text-primary-600">{{ formatMoney(orderTotal) }}</span>
             </div>
           </div>
 

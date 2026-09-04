@@ -9,14 +9,10 @@ export default defineNuxtConfig({
     '@nuxt/image',
   ],
 
-  // Product-detail components live in a nested directory but are referenced
-  // by their short names (for example <ProductGallery>). Disable directory
-  // name prefixes so Nuxt registers those components during SSR as well as
-  // on the client. Without this, Vue treats them as unknown custom elements
-  // and the server renders an empty PDP shell.
-  components: [
-    { path: '~/components', pathPrefix: false },
-  ],
+  // Keep component names stable across the product-detail subdirectory.
+  components: {
+    dirs: [{ path: '~/components', pathPrefix: false }],
+  },
 
   // CSS
   css: ['~/assets/css/main.css'],
@@ -33,7 +29,7 @@ export default defineNuxtConfig({
   // Nitro server config
   nitro: {
     routeRules: {
-      '/api/**': { proxy: (process.env.NUXT_API_PROXY_TARGET || 'http://nginx') + '/api/**' },
+      '/api/**': { isr: false, proxy: (process.env.NUXT_API_PROXY_TARGET || 'http://nginx') + '/api/**' },
     },
   },
 
@@ -55,11 +51,8 @@ export default defineNuxtConfig({
   // Route rules for rendering strategy
   routeRules: {
     '/': { isr: 300 },
-    // Product detail routes use direct SSR.  An ISR rule on the generic
-    // two-segment matcher (for example /phu-kien/:slug) makes Nuxt require a
-    // runtime _payload.json file, which is not reliably persisted by the
-    // Docker Node server between requests.
-    '/products/**': { ssr: true },
+    '/products/**': { isr: 60 },
+    '/**': { isr: 60 },
     '/categories/**': { isr: 300 },
     '/blog/**': { swr: 3600 },
     '/configurator/**': { ssr: false },
@@ -70,10 +63,6 @@ export default defineNuxtConfig({
 
   // Disable automatic prefetch on NuxtLinks (too many links → payload storm)
   experimental: {
-    // Keep SSR data in the initial document. This removes the second
-    // _payload.json request and prevents hydration from failing when a
-    // dynamic product page is served through the Docker reverse proxy.
-    payloadExtraction: false,
     defaults: {
       nuxtLink: {
         prefetch: false,

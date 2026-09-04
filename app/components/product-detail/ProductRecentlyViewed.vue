@@ -9,8 +9,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section v-if="products.length" class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:p-6">
-    <h2 class="text-lg font-bold text-slate-900 lg:text-xl">Sản phẩm đã xem</h2>
-    <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"><ProductCard v-for="product in products" :key="product.id" :product="product" /></div>
+  <section v-if="products.length" class="pdp-panel">
+    <h2 class="pdp-section-title">Sản phẩm đã xem</h2>
+    <div class="pdp-product-carousel mt-3"><ProductCard v-for="product in products" :key="product.id" :product="product" compact /></div>
   </section>
 </template>

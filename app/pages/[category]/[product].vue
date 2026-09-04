@@ -94,10 +94,10 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
           </div>
           <div class="hidden lg:col-span-3 lg:block"><ProductPurchaseSummary :product="product" :variant="selection.selectedVariant.value" :quantity="selection.quantity.value" :purchasable="selection.purchasable.value" @add="addToCart" @buy="buyNow" /></div>
         </section>
-        <ProductServiceBenefits class="mt-5" />
-        <ProductAnchorTabs class="mt-6" :has-compatibility="Boolean(product.component_type)" />
-        <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
-          <div class="space-y-6">
+        <ProductServiceBenefits class="mt-4 lg:mt-5" />
+        <ProductAnchorTabs class="mt-4 lg:mt-5" :has-compatibility="Boolean(product.component_type)" />
+        <div class="mt-4 grid gap-5 xl:grid-cols-[minmax(0,1fr)_330px] lg:mt-5">
+          <div class="space-y-5">
             <ProductDescription :description="product.description" :blocks="product.detail_blocks" />
             <ProductSpecificationTable :specifications="product.specifications" />
             <ProductCompatibility v-if="product.component_type" :slug="product.slug" />
@@ -108,7 +108,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
             <ProductQuestions :slug="product.slug" />
             <ProductRecentlyViewed :slug="product.slug" />
           </div>
-          <div class="space-y-6"><ProductDeliveryPreview :subtotal="selectedPrice * selection.quantity.value" /></div>
+          <div class="space-y-5"><ProductDeliveryPreview :subtotal="selectedPrice * selection.quantity.value" /></div>
         </div>
         <ProductMobilePurchaseBar :price="selectedPrice" :purchasable="selection.purchasable.value" @add="addToCart" @buy="buyNow" />
       </template>

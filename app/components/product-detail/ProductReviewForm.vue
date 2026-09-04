@@ -32,11 +32,11 @@ const submit = async () => {
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-5 lg:p-7">
-    <h2 class="text-xl font-bold text-slate-900">Viết đánh giá</h2>
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:p-6">
+    <h2 class="text-lg font-bold text-slate-900 lg:text-xl">Viết đánh giá</h2>
     <p class="mt-1 text-sm text-slate-600">Đánh giá được kiểm duyệt trước khi công khai.</p>
     <p v-if="isAuthenticated" class="mt-3 text-sm text-slate-600">Đang đăng nhập: {{ user?.name }}</p>
-    <form class="mt-4 space-y-4" @submit.prevent="submit">
+    <form class="mt-4 space-y-3" @submit.prevent="submit">
       <fieldset><legend class="mb-2 text-sm font-medium text-slate-700">Số sao</legend><div class="flex gap-1"><button v-for="star in 5" :key="star" type="button" class="rounded p-1 text-2xl" :class="star <= form.rating ? 'text-amber-500' : 'text-slate-300'" :aria-label="`${star} sao`" :aria-pressed="star === form.rating" @click="form.rating = star">★</button></div></fieldset>
       <div v-if="!isAuthenticated" class="grid gap-3 sm:grid-cols-2"><label class="text-sm font-medium text-slate-700">Họ tên<input v-model="form.guest_name" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label><label class="text-sm font-medium text-slate-700">Email<input v-model="form.guest_email" required type="email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label></div>
       <label class="block text-sm font-medium text-slate-700">Tiêu đề (không bắt buộc)<input v-model="form.title" maxlength="150" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-normal" /></label>

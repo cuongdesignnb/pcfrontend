@@ -18,10 +18,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section v-if="loading || products.length" class="rounded-2xl border border-slate-200 bg-white p-5 lg:p-7">
-    <h2 class="text-xl font-bold text-slate-900">{{ title }}</h2>
+  <section v-if="loading || products.length" class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:p-6">
+    <h2 class="text-lg font-bold text-slate-900 lg:text-xl">{{ title }}</h2>
     <p v-if="description" class="mt-1 text-sm text-slate-600">{{ description }}</p>
-    <p v-if="loading" class="mt-4 text-sm text-slate-500">Đang tải sản phẩm…</p>
-    <div v-else class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"><ProductCard v-for="product in products" :key="product.id" :product="product" /></div>
+    <p v-if="loading" class="mt-3 text-sm text-slate-500">Đang tải sản phẩm…</p>
+    <div v-else class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"><ProductCard v-for="product in products" :key="product.id" :product="product" /></div>
   </section>
 </template>

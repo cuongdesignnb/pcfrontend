@@ -5,7 +5,7 @@ const isFreeShipping = computed(() => shippingFreeThreshold.value > 0 && props.s
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-5">
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
     <h2 class="text-base font-bold text-slate-900">Giao hàng & nhận tại cửa hàng</h2>
     <p class="mt-2 text-sm text-slate-600">Phí giao hàng được xác nhận lại khi đặt đơn.</p>
     <div class="mt-3 flex items-center justify-between gap-4 text-sm"><span class="text-slate-600">Phí dự kiến</span><strong>{{ isFreeShipping ? 'Miễn phí' : formatMoney(shippingDefaultFee) }}</strong></div>

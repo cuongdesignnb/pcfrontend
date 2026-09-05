@@ -7,12 +7,16 @@ export interface Product {
   price: number
   sale_price: number | null
   quantity: number
+  is_purchasable: boolean
+  availability_label: string
+  kiot_availability_status?: 'available' | 'repairing' | 'reserved' | 'sold' | 'inactive' | 'deleted' | null
   description: string | null
   short_description: string | null
   meta_description?: string | null
   warranty_months: number | null
   is_active: boolean
   is_featured: boolean
+  show_on_pc_website?: boolean
   brand?: Brand
   category?: Category
   component_type?: ComponentType
@@ -20,6 +24,20 @@ export interface Product {
   specifications?: ProductSpecification[]
   parsed_specifications?: { label: string; value: string }[]
   reviews?: Review[]
+  variants?: ProductVariant[]
+  sold_count?: number
+}
+
+export interface ProductVariant {
+  id: number
+  name: string
+  sku: string | null
+  price: number
+  sale_price: number | null
+  stock_quantity: number
+  display_price: number
+  is_active: boolean
+  is_available: boolean
 }
 
 export interface ProductImage {
@@ -52,6 +70,7 @@ export interface Category {
   image: string | null
   icon: string | null
   parent_id: number | null
+  show_on_pc_website?: boolean
   children?: Category[]
 }
 

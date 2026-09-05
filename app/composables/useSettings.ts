@@ -1,6 +1,5 @@
 type SettingValue = string | number | boolean | null
 
-/** Shared public settings and display helpers used by storefront pages. */
 export const useSettings = () => {
   const config = useRuntimeConfig()
   const settings = useState<Record<string, SettingValue>>('site_settings', () => ({}))
@@ -71,6 +70,9 @@ export const useSettings = () => {
   const seoKeywords = computed(() => getString('seo_keywords'))
   const seoOgImage = computed(() => getString('seo_og_image', siteLogo.value))
 
+  const heroAutoplay = computed(() => getBoolean('homepage_hero_autoplay', true))
+  const heroInterval = computed(() => Math.max(1000, getNumber('homepage_hero_interval', 5000)))
+
   const paymentCodEnabled = computed(() => getBoolean('payment_cod_enabled', true))
   const shippingFreeThreshold = computed(() => Math.max(0, getNumber('shipping_free_threshold', 500000)))
   const shippingDefaultFee = computed(() => Math.max(0, getNumber('shipping_default_fee', 30000)))
@@ -113,6 +115,8 @@ export const useSettings = () => {
     seoDescription,
     seoKeywords,
     seoOgImage,
+    heroAutoplay,
+    heroInterval,
     paymentCodEnabled,
     shippingFreeThreshold,
     shippingDefaultFee,

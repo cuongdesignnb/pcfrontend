@@ -39,6 +39,7 @@ useSeoMeta({
       :products="payload.flash_sale.products"
     />
     <HomeTabbedProducts :best-sellers="payload.best_sellers" />
+    <HomeCategorySections :sections="payload.category_sections ?? []" />
     <HomePcBuilderBanner :banner="payload.pc_builder_banner" />
     <HomeFeatureColumns
       :combo-banners="payload.combo_banners"

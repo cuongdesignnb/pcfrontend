@@ -28,6 +28,12 @@ export interface HomepageCategoryCard {
   icon: string | null
 }
 
+export interface HomepageCategorySection {
+  category: HomepageCategoryCard & { description: string | null }
+  product_count: number
+  products: ProductCard[]
+}
+
 export interface HomepagePost {
   id: number
   title: string
@@ -53,6 +59,7 @@ export interface HomepageResponse {
   sidebar_banners: HomepageBanner[]
   category_sidebar: HomepageCategoryCard[]
   featured_categories: HomepageCategoryCard[]
+  category_sections: HomepageCategorySection[]
   flash_sale: {
     enabled: boolean
     ends_at: string | null

@@ -5,6 +5,7 @@ const emptyHomepage = (): HomepageResponse => ({
   sidebar_banners: [],
   category_sidebar: [],
   featured_categories: [],
+  category_sections: [],
   flash_sale: { enabled: false, ends_at: null, products: [] },
   best_sellers: { laptop: [], pc_gaming: [], components: [] },
   pc_builder_banner: null,

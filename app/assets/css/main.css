@@ -57,12 +57,12 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 .header-main-inner {
   min-height: 66px;
   display: grid;
-  grid-template-columns: 180px minmax(300px, 1fr) auto;
+  grid-template-columns: 195px minmax(300px, 1fr) auto;
   align-items: center;
   gap: 22px;
 }
-.site-brand { display: inline-flex; align-items: center; min-width: 0; gap: 7px; }
-.site-brand-image { max-width: 170px; max-height: 42px; object-fit: contain; }
+.site-brand { display: inline-flex; align-items: center; min-width: 0; }
+.site-brand-image { display: block; width: 190px; height: 50px; max-width: 100%; object-fit: contain; object-position: left center; }
 .site-brand-mark, .site-footer-mark {
   display: inline-flex;
   align-items: center;
@@ -76,9 +76,6 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   letter-spacing: -1px;
   font-size: 15px;
 }
-.site-brand-copy { display: flex; min-width: 0; flex-direction: column; line-height: 1.1; }
-.site-brand-name { color: var(--pc-blue); font-size: 16px; font-weight: 800; white-space: nowrap; }
-.site-brand-tagline { color: var(--pc-muted); font-size: 8px; font-weight: 600; white-space: nowrap; }
 .header-search { min-width: 0; }
 .search-box { position: relative; width: 100%; z-index: 70; }
 .search-box-form { position: relative; }
@@ -322,6 +319,16 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 .home-tabs button::after { position: absolute; right: 0; bottom: 0; left: 0; height: 2px; background: transparent; content: ''; }
 .home-tabs button:hover, .home-tabs button.is-active { color: var(--pc-blue); font-weight: 750; }
 .home-tabs button.is-active::after { background: var(--pc-blue); }
+.home-category-section-list { display: flex; flex-direction: column; gap: 14px; }
+.home-category-product-section { padding: 14px 14px 10px; background: #fff; border: 1px solid var(--pc-border); border-radius: 8px; box-shadow: var(--pc-shadow); }
+.home-category-product-heading { min-height: 37px; margin-bottom: 9px; }
+.home-category-product-title { display: flex; min-width: 0; align-items: center; gap: 9px; }
+.home-category-product-icon { display: grid; width: 29px; height: 29px; flex: 0 0 29px; place-items: center; color: var(--pc-blue); background: #eef5ff; border-radius: 6px; }
+.home-category-product-icon img { width: 19px; height: 19px; object-fit: contain; }
+.home-category-product-icon svg { width: 18px; height: 18px; }
+.home-category-product-title > span:last-child { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.home-category-product-title h2 { margin: 0; color: var(--pc-blue); font-size: 16px; font-weight: 800; line-height: 1.15; }
+.home-category-product-title small { color: var(--pc-muted); font-size: 9px; }
 .home-pc-builder-section { padding-top: 21px; }
 .home-pc-builder-banner { position: relative; display: flex; min-height: 150px; align-items: center; justify-content: space-between; overflow: hidden; padding: 23px 38px; color: #fff; background: var(--pc-navy); border-radius: 8px; }
 .home-pc-builder-banner > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .52; }
@@ -481,6 +488,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 
 @media (max-width: 1199px) {
   .header-main-inner { grid-template-columns: 165px minmax(250px, 1fr) auto; gap: 13px; }
+  .site-brand-image { width: 160px; height: 44px; }
   .header-actions { gap: 10px; }
   .header-hotline { display: none; }
   .header-navigation-link { padding-inline: 5px; font-size: 10px; }
@@ -496,8 +504,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   .header-mobile-menu-button { display: grid; width: 34px; height: 34px; padding: 0; place-items: center; color: var(--pc-blue); background: transparent; border: 0; }
   .header-mobile-menu-button svg { width: 21px; height: 21px; }
   .site-brand { justify-self: start; }
-  .site-brand-copy { display: none; }
-  .site-brand-mark { width: 39px; height: 32px; }
+  .site-brand-image { width: 150px; height: 42px; }
   .header-actions { gap: 7px; }
   .header-actions .header-action:nth-child(3) { display: none; }
   .header-action { min-width: 30px; }

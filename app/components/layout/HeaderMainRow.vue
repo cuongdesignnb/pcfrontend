@@ -4,7 +4,7 @@ const emit = defineEmits<{ openMobileMenu: [] }>()
 const auth = useAuth()
 const cart = useCart()
 const wishlist = useWishlist()
-const { siteLogo, siteName, siteTagline, siteHotline } = useSettings()
+const { siteLogo, siteName, siteHotline } = useSettings()
 
 const accountName = computed(() => {
   if (!auth.isAuthenticated.value) return 'Đăng nhập'
@@ -31,11 +31,6 @@ const phoneHref = computed(() => `tel:${siteHotline.value.replace(/\s/g, '')}`)
       <NuxtLink to="/" class="site-brand" :aria-label="`Trang chủ ${siteName}`">
         <img v-if="siteLogo" :src="siteLogo" :alt="siteName" class="site-brand-image">
         <span v-else class="site-brand-mark" aria-hidden="true">PC</span>
-        <span class="site-brand-copy">
-          <span class="site-brand-name">{{ siteName }}</span>
-          <span v-if="siteTagline" class="site-brand-tagline">{{ siteTagline }}</span>
-          <span v-else class="site-brand-tagline">Build Your Dream</span>
-        </span>
       </NuxtLink>
 
       <div class="header-search desktop-only">

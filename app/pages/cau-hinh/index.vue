@@ -1,960 +1,511 @@
 <script setup lang="ts">
-import type { ComponentType } from "~/types";
-import type { ProductDetailResponse } from '~/types/product-detail';
+import type { BuilderComponentType, BuilderFiltersState, BuilderPreset, BuilderProductOption, BuilderSelection, BuilderSort } from '~/types/pc-builder'
 
-interface BuilderProduct {
-  id: number;
-  name: string;
-  price: number | string;
-  sale_price: number | string | null;
-  brand?: { name: string } | null;
-  specifications?: Array<{
-    value: string;
-    specification_key?: { key: string };
-  }>;
+const route = useRoute()
+const config = useRuntimeConfig()
+const toast = useToast()
+const { siteName, siteTagline, siteHotline, siteLogo } = useSettings()
+const builder = usePcBuilder()
+const browser = useBuilderProducts()
+
+const presets = ref<BuilderPreset[]>([])
+const isInitialising = ref(true)
+const saveModalOpen = ref(false)
+const shareModalOpen = ref(false)
+const suggestedName = ref('PC Builder')
+const shareUrl = ref('')
+let filterTimer: ReturnType<typeof setTimeout> | null = null
+
+await builder.fetchComponentTypes()
+
+const activeType = computed(() => builder.componentTypes.value.find(type => type.slug === builder.activeTypeSlug.value))
+
+const parseSharedBuild = (): BuilderSelection | null => {
+  const value = typeof route.query.build === 'string' ? route.query.build : ''
+  if (!value) return null
+  const next: BuilderSelection = {}
+  for (const pair of value.split(',')) {
+    const [typeId, productId] = pair.split('-').map(Number)
+    if (Number.isInteger(typeId) && typeId > 0 && Number.isInteger(productId) && productId > 0) next[String(typeId)] = productId
+  }
+  return Object.keys(next).length ? next : null
 }
 
-const config = useRuntimeConfig();
-const route = useRoute();
-const cart = useCart();
-const toast = useToast();
-const {
-  siteName,
-  siteTagline,
-  siteLogo,
-  sitePhone,
-  siteEmail,
-  siteAddress,
-  formatMoney,
-} = useSettings();
+const loadActiveProducts = async (page = 1) => {
+  if (builder.activeTypeSlug.value) await browser.load(builder.activeTypeSlug.value, builder.build.value, page)
+}
 
-const { data: componentTypes } = await useFetch<ComponentType[]>(
-  `${config.public.apiBase}/builder/component-types`,
-);
+const selectType = async (slug: string, reset = true) => {
+  builder.setActiveType(slug)
+  if (reset) browser.resetFilters()
+  await loadActiveProducts()
+}
 
-const build = ref<Record<number, number>>({});
-const selectedProducts = ref<Record<number, BuilderProduct>>({});
-const compatibilityIssues = ref<any[]>([]);
-const totalPrice = ref(0);
-const totalTdp = ref(0);
-const isChecking = ref(false);
+const updateFilters = (filters: BuilderFiltersState) => {
+  browser.filters.value = filters
+  scheduleProductReload()
+}
 
-const activeTypeId = ref<number | null>(null);
-const availableProducts = ref<any[]>([]);
-const isLoadingProducts = ref(false);
-const searchQuery = ref("");
+const updateSort = (sort: BuilderSort) => {
+  browser.sort.value = sort
+  scheduleProductReload()
+}
 
-const filteredProducts = computed(() => {
-  let items = [...availableProducts.value];
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    items = items.filter(
-      (item: any) =>
-        item.product.name.toLowerCase().includes(q) ||
-        item.product.brand?.name?.toLowerCase().includes(q),
-    );
+const scheduleProductReload = () => {
+  if (!import.meta.client || !builder.activeTypeSlug.value) return
+  if (filterTimer) clearTimeout(filterTimer)
+  filterTimer = setTimeout(() => { loadActiveProducts().catch(() => undefined) }, 220)
+}
+
+const selectProduct = async (option: BuilderProductOption) => {
+  if (!activeType.value || !option.is_compatible || option.product.has_variants) return
+  await builder.selectProduct(activeType.value, option.product)
+  await loadActiveProducts()
+}
+
+const openProduct = async (option: BuilderProductOption) => {
+  const product = option.product
+  const url = product.category ? `/${product.category.slug}/${product.slug}` : `/products/${product.slug}`
+  await navigateTo(url)
+}
+
+const changeType = async (type: BuilderComponentType) => {
+  await selectType(type.slug)
+  await nextTick()
+  document.getElementById('builder-component-browser')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const removeType = async (type: BuilderComponentType) => {
+  await builder.removeProduct(type)
+  if (builder.activeTypeSlug.value === type.slug) await loadActiveProducts()
+}
+
+const focusType = async (typeId: number) => {
+  const type = builder.componentTypes.value.find(item => item.id === typeId)
+  if (!type) return
+  await changeType(type)
+  document.getElementById(`builder-selected-list`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const addConfigurationToCart = async () => {
+  const result = await builder.addAllToCart()
+  if (result.success > 0) await navigateTo('/gio-hang')
+}
+
+const openSaveModal = () => { saveModalOpen.value = true }
+const saveConfiguration = async (name: string) => {
+  const result = await builder.saveBuild(name)
+  if (result === 'login') {
+    saveModalOpen.value = false
+    await navigateTo({ path: '/dang-nhap', query: { redirect: '/cau-hinh' } })
+  } else if (result === 'saved') {
+    saveModalOpen.value = false
   }
-  // Compatible first, then by price asc
-  items.sort((a: any, b: any) => {
-    if (a.is_compatible !== b.is_compatible) return a.is_compatible ? -1 : 1;
-    const pa = Number(a.product.sale_price || a.product.price) || 0;
-    const pb = Number(b.product.sale_price || b.product.price) || 0;
-    return pa - pb;
-  });
-  return items;
-});
+}
 
-const compatibleCount = computed(
-  () => availableProducts.value.filter((i: any) => i.is_compatible).length,
-);
-const selectedCount = computed(
-  () => Object.keys(selectedProducts.value).length,
-);
-const requiredTypes = computed(
-  () => componentTypes.value?.filter((t) => t.is_required) || [],
-);
-const missingRequired = computed(() =>
-  requiredTypes.value.filter((t) => !selectedProducts.value[t.id]),
-);
-
-const selectComponentType = async (typeId: number) => {
-  if (activeTypeId.value === typeId) {
-    activeTypeId.value = null;
-    return;
-  }
-  activeTypeId.value = typeId;
-  searchQuery.value = "";
-  isLoadingProducts.value = true;
-  try {
-    const type = componentTypes.value?.find((t) => t.id === typeId);
-    if (!type) return;
-    const response = await $fetch<any>(
-      `${config.public.apiBase}/builder/compatible/${type.slug}`,
-      {
-        method: "POST",
-        body: { build: build.value },
-      },
-    );
-    availableProducts.value = response.products || [];
-  } catch (error) {
-    console.error("Error loading products:", error);
-    availableProducts.value = [];
-  } finally {
-    isLoadingProducts.value = false;
-  }
-};
-
-const addToBuild = async (typeId: number, productData: any) => {
-  const product = productData.product;
-  build.value[typeId] = product.id;
-  selectedProducts.value[typeId] = product;
-  activeTypeId.value = null;
-  calculateTotals();
-  await checkCompatibility();
-};
-
-const removeFromBuild = async (typeId: number) => {
-  delete build.value[typeId];
-  delete selectedProducts.value[typeId];
-  calculateTotals();
-  await checkCompatibility();
-};
-
-const calculateTotals = () => {
-  totalPrice.value = Object.values(selectedProducts.value).reduce(
-    (sum: number, p: any) => {
-      return sum + (Number(p.sale_price) || Number(p.price) || 0);
-    },
-    0,
-  );
-  totalTdp.value = Object.values(selectedProducts.value).reduce(
-    (sum: number, p: any) => {
-      const tdpSpec = p.specifications?.find(
-        (s: any) => s.specification_key?.key === "tdp",
-      );
-      return sum + (tdpSpec ? parseInt(tdpSpec.value) : 0);
-    },
-    0,
-  );
-};
-
-const checkCompatibility = async () => {
-  if (Object.keys(build.value).length < 2) {
-    compatibilityIssues.value = [];
-    return;
-  }
-  isChecking.value = true;
-  try {
-    const response = await $fetch<any>(
-      `${config.public.apiBase}/builder/check`,
-      {
-        method: "POST",
-        body: { build: build.value },
-      },
-    );
-    compatibilityIssues.value = response.issues || [];
-  } catch (error) {
-    console.error("Error checking compatibility:", error);
-  } finally {
-    isChecking.value = false;
-  }
-};
-
-const preselectRequestedProduct = async () => {
-  const slug = typeof route.query.product === 'string' ? route.query.product : '';
-  if (!slug || !componentTypes.value?.length) return;
-  try {
-    const response = await $fetch<ProductDetailResponse>(`${config.public.apiBase}/products/${encodeURIComponent(slug)}`);
-    const detail = response.product;
-    if (!detail.component_type) {
-      toast.add({ title: 'Sản phẩm này không dùng cho PC Builder', color: 'warning' });
-      return;
-    }
-    const type = componentTypes.value.find((item) => item.id === detail.component_type?.id);
-    if (!type) {
-      toast.add({ title: 'Chưa có khe tương ứng trong PC Builder', color: 'warning' });
-      return;
-    }
-    const builderProduct = {
-      id: detail.id,
-      name: detail.name,
-      price: detail.pricing.price,
-      sale_price: detail.pricing.sale_price,
-      brand: detail.brand,
-      specifications: detail.specifications.map((specification) => ({
-        value: specification.value,
-        specification_key: specification.key ? { key: specification.key } : undefined,
-      })),
-    } satisfies BuilderProduct;
-    build.value[type.id] = detail.id;
-    selectedProducts.value[type.id] = builderProduct;
-    calculateTotals();
-    await checkCompatibility();
-    await nextTick();
-    document.getElementById(`builder-component-${type.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } catch {
-    toast.add({ title: 'Không thể tải sản phẩm cho PC Builder', color: 'error' });
-  }
-};
-
-onMounted(() => { preselectRequestedProduct(); });
-
-const isAddingToCart = ref(false);
-
-const addAllToCart = async () => {
-  if (isAddingToCart.value) return;
-  isAddingToCart.value = true;
-  try {
-    let successCount = 0;
-    for (const product of Object.values(selectedProducts.value)) {
-      const ok = await cart.addItem(product.id, 1);
-      if (ok) successCount++;
-    }
-    if (successCount > 0) {
-      toast.add({
-        title: "Đã thêm vào giỏ hàng",
-        description: `${successCount} linh kiện đã được thêm vào giỏ.`,
-        icon: "i-heroicons-check-circle",
-        color: "success",
-      });
-      navigateTo("/gio-hang");
-    } else {
-      toast.add({
-        title: "Không thể thêm vào giỏ",
-        description: "Đã xảy ra lỗi. Vui lòng thử lại.",
-        icon: "i-heroicons-exclamation-triangle",
-        color: "error",
-      });
-    }
-  } catch (error) {
-    console.error("Error adding build to cart:", error);
-    toast.add({
-      title: "Lỗi",
-      description: "Không thể thêm cấu hình vào giỏ hàng.",
-      icon: "i-heroicons-exclamation-triangle",
-      color: "error",
-    });
-  } finally {
-    isAddingToCart.value = false;
-  }
-};
-
-const resetBuild = () => {
-  build.value = {};
-  selectedProducts.value = {};
-  compatibilityIssues.value = [];
-  totalPrice.value = 0;
-  totalTdp.value = 0;
-  activeTypeId.value = null;
-};
-
-const formatPrice = (v: any) => formatMoney(Number(v) || 0);
+const makeShareUrl = () => {
+  if (!import.meta.client) return ''
+  const encoded = Object.entries(builder.build.value).map(([typeId, productId]) => `${typeId}-${productId}`).join(',')
+  return `${window.location.origin}/cau-hinh?build=${encodeURIComponent(encoded)}`
+}
+const openShareModal = () => {
+  shareUrl.value = makeShareUrl()
+  if (shareUrl.value) shareModalOpen.value = true
+}
 
 const escapeHtml = (value: unknown) => String(value ?? '')
   .replaceAll('&', '&amp;')
   .replaceAll('<', '&lt;')
   .replaceAll('>', '&gt;')
   .replaceAll('"', '&quot;')
-  .replaceAll("'", '&#039;');
+  .replaceAll("'", '&#039;')
 
-// Print quotation
+const formatMoney = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)}đ`
 const printQuotation = () => {
-  const products = Object.entries(selectedProducts.value).map(
-    ([typeId, product]) => {
-      const type = componentTypes.value?.find((t) => t.id === Number(typeId));
-      const price = Number(product.sale_price) || Number(product.price) || 0;
-      return { typeName: type?.name || "", product, price, quantity: 1 };
-    },
-  );
-
-  const total = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
-  const date = new Date().toLocaleDateString("vi-VN");
-
-  const html = `<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <title>Báo giá cấu hình PC - ${escapeHtml(siteName.value)}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; padding: 40px; font-size: 13px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #2563eb; }
-    .logo-area { display: flex; align-items: center; gap: 12px; }
-    .logo-box { width: 48px; height: 48px; background: #2563eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; }
-    .logo-image { max-width: 160px; max-height: 56px; object-fit: contain; }
-    .logo-text { font-size: 22px; font-weight: 700; color: #1e293b; }
-    .logo-text small { display: block; font-size: 11px; font-weight: 400; color: #64748b; }
-    .company-info { text-align: right; font-size: 12px; color: #475569; line-height: 1.8; }
-    .company-info strong { color: #1e293b; }
-    .title { text-align: center; margin-bottom: 24px; }
-    .title h1 { font-size: 20px; color: #1e293b; margin-bottom: 4px; }
-    .title p { font-size: 12px; color: #64748b; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    thead th { background: #2563eb; color: white; padding: 10px 12px; font-size: 12px; font-weight: 600; text-align: left; }
-    thead th:first-child { border-radius: 6px 0 0 0; }
-    thead th:last-child { border-radius: 0 6px 0 0; text-align: right; }
-    thead th.center { text-align: center; }
-    thead th.right { text-align: right; }
-    tbody td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
-    tbody tr:hover { background: #f8fafc; }
-    .product-name { font-weight: 500; }
-    .product-brand { color: #64748b; font-size: 11px; }
-    .center { text-align: center; }
-    .right { text-align: right; }
-    .total-row { background: #f1f5f9; }
-    .total-row td { padding: 12px; font-weight: 700; font-size: 14px; border-bottom: none; }
-    .total-price { color: #2563eb; font-size: 16px; }
-    .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; }
-    .notes { margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .notes h3 { font-size: 13px; margin-bottom: 8px; color: #334155; }
-    .notes ul { list-style: disc; padding-left: 20px; font-size: 12px; color: #475569; line-height: 1.8; }
-    .tdp-info { margin-top: 12px; padding: 10px 16px; background: #eff6ff; border-radius: 8px; border: 1px solid #bfdbfe; font-size: 12px; color: #1e40af; }
-    @media print {
-      body { padding: 20px; }
-      .no-print { display: none !important; }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="logo-area">
-      ${siteLogo.value ? `<img class="logo-image" src="${escapeHtml(siteLogo.value)}" alt="${escapeHtml(siteName.value)}">` : '<div class="logo-box">PC</div>'}
-      <div class="logo-text">
-        ${escapeHtml(siteName.value)}
-        <small>${escapeHtml(siteTagline.value)}</small>
-      </div>
-    </div>
-    <div class="company-info">
-      <strong>${escapeHtml(siteName.value)}</strong><br>
-      ${escapeHtml(siteAddress.value)}<br>
-      Hotline: ${escapeHtml(sitePhone.value)}<br>
-      Email: ${escapeHtml(siteEmail.value)}<br>
-      Website: ${escapeHtml(window.location.host)}
-    </div>
-  </div>
-
-  <div class="title">
-    <h1>BÁO GIÁ CẤU HÌNH MÁY TÍNH</h1>
-    <p>Ngày: ${date}</p>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th style="width:40px">STT</th>
-        <th>Loại</th>
-        <th>Sản phẩm</th>
-        <th class="center" style="width:60px">SL</th>
-        <th class="right" style="width:130px">Đơn giá</th>
-        <th class="right" style="width:130px">Thành tiền</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${products
-        .map(
-          (p, i) => `
-      <tr>
-        <td class="center">${i + 1}</td>
-        <td>${p.typeName}</td>
-        <td>
-          <div class="product-name">${p.product.name}</div>
-          ${p.product.brand?.name ? `<div class="product-brand">${p.product.brand.name}</div>` : ""}
-        </td>
-        <td class="center">${p.quantity}</td>
-        <td class="right">${escapeHtml(formatMoney(p.price))}</td>
-        <td class="right">${escapeHtml(formatMoney(p.price * p.quantity))}</td>
-      </tr>`,
-        )
-        .join("")}
-      <tr class="total-row">
-        <td colspan="5" class="right">TỔNG CỘNG:</td>
-        <td class="right total-price">${escapeHtml(formatMoney(total))}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  ${totalTdp.value > 0 ? `<div class="tdp-info">⚡ Tổng công suất tiêu thụ (TDP): <strong>${totalTdp.value}W</strong></div>` : ""}
-
-  <div class="notes">
-    <h3>Ghi chú</h3>
-    <ul>
-      <li>Giá trên đã bao gồm VAT</li>
-      <li>Báo giá có hiệu lực trong 7 ngày</li>
-      <li>Bảo hành theo chính sách từng hãng</li>
-      <li>Miễn phí lắp ráp và cài đặt</li>
-    </ul>
-  </div>
-
-  <div class="footer">
-    <span>${escapeHtml(siteName.value)} - ${escapeHtml(window.location.host)}</span>
-    <span>Báo giá tự động từ hệ thống Build PC</span>
-  </div>
-
-
-</body>
-</html>`;
-
-  const printWindow = window.open("", "_blank");
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.onload = () => printWindow.print();
+  if (!import.meta.client || !builder.selectedCount.value) return
+  const rows = builder.componentTypes.value
+    .filter(type => builder.selectedProducts.value[String(type.id)])
+    .map(type => {
+      const product = builder.selectedProducts.value[String(type.id)]
+      return `<tr><td>${escapeHtml(type.name)}</td><td>${escapeHtml(product?.brand?.name || '')}</td><td>${escapeHtml(product?.name || '')}</td><td class="right">${formatMoney(product?.pricing.display_price || 0)}</td></tr>`
+    }).join('')
+  const logo = siteLogo.value
+  const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo giá cấu hình - ${escapeHtml(siteName.value)}</title><style>body{font-family:Arial,sans-serif;color:#172033;padding:32px;font-size:13px}header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1264d8;padding-bottom:16px;margin-bottom:24px}header img{max-width:180px;max-height:56px;object-fit:contain}.title{text-align:center;margin-bottom:20px}.title h1{font-size:22px;margin:0 0 6px}.title p{margin:0;color:#687386}table{border-collapse:collapse;width:100%;margin-bottom:18px}th{background:#1264d8;color:white;text-align:left;padding:10px}td{border-bottom:1px solid #e4e8ee;padding:10px}.right{text-align:right}.total{font-size:18px;font-weight:bold;color:#ef2f2f;text-align:right}.facts{padding:12px;background:#f6f8fb;border:1px solid #e4e8ee;border-radius:6px;color:#536176}footer{margin-top:28px;border-top:1px solid #e4e8ee;padding-top:12px;color:#687386;display:flex;justify-content:space-between}@media print{body{padding:12px}}</style></head><body><header>${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(siteName.value)}">` : `<strong>${escapeHtml(siteName.value)}</strong>`}<div>${escapeHtml(siteHotline.value)}</div></header><div class="title"><h1>Báo giá cấu hình PC</h1><p>${new Date().toLocaleDateString('vi-VN')} · ${escapeHtml(siteName.value)}</p></div><table><thead><tr><th>Nhóm</th><th>Hãng</th><th>Linh kiện</th><th class="right">Đơn giá</th></tr></thead><tbody>${rows}<tr><td colspan="3"><strong>Tổng tiền</strong></td><td class="right total">${formatMoney(builder.totalPrice.value)}</td></tr></tbody></table><div class="facts">TDP ước tính: ${builder.totalTdp.value}W${builder.recommendedPsuWattage.value ? ` · Khuyến nghị nguồn: ${builder.recommendedPsuWattage.value}W trở lên` : ''}</div><footer><span>Dữ liệu được lấy tại thời điểm tạo báo giá.</span><span>${escapeHtml(siteName.value)}</span></footer></body></html>`
+  const printWindow = window.open('', '_blank', 'noopener,noreferrer')
+  if (!printWindow) {
+    toast.add({ title: 'Trình duyệt đã chặn cửa sổ in', color: 'warning' })
+    return
   }
-};
+  printWindow.document.write(html)
+  printWindow.document.close()
+  printWindow.focus()
+  printWindow.print()
+}
 
-// Save configuration
-const isSaving = ref(false);
-const saveBuild = async () => {
-  if (isSaving.value || selectedCount.value === 0) return;
-  isSaving.value = true;
+const fetchPresets = async () => {
   try {
-    await $fetch(`${config.public.apiBase}/builder/save`, {
-      method: "POST",
-      body: {
-        build: build.value,
-        total_price: totalPrice.value,
-        total_tdp: totalTdp.value,
-      },
-    });
-    toast.add({
-      title: "Đã lưu cấu hình",
-      description: "Cấu hình đã được lưu vào tài khoản của bạn.",
-      icon: "i-heroicons-check-circle",
-      color: "success",
-    });
-  } catch (error: any) {
-    if (error?.response?.status === 401) {
-      toast.add({
-        title: "Cần đăng nhập",
-        description: "Vui lòng đăng nhập để lưu cấu hình.",
-        icon: "i-heroicons-exclamation-triangle",
-        color: "warning",
-      });
-      navigateTo("/dang-nhap?redirect=/cau-hinh");
-    } else {
-      console.error("Error saving build:", error);
-      toast.add({
-        title: "Lỗi",
-        description: "Không thể lưu cấu hình. Vui lòng thử lại.",
-        icon: "i-heroicons-exclamation-triangle",
-        color: "error",
-      });
-    }
-  } finally {
-    isSaving.value = false;
+    const response = await $fetch<{ presets: BuilderPreset[] }>(`${config.public.apiBase}/builder/presets`)
+    presets.value = response.presets || []
+  } catch {
+    presets.value = []
   }
-};
+}
+
+const usePreset = async (preset: BuilderPreset) => {
+  const next: BuilderSelection = {}
+  for (const type of builder.componentTypes.value) {
+    const productId = preset.products[type.slug]
+    if (Number.isInteger(productId) && productId > 0) next[String(type.id)] = productId
+  }
+  await builder.replaceBuild(next)
+  if (!builder.activeTypeSlug.value) builder.setActiveType(builder.componentTypes.value[0]?.slug || '')
+  await loadActiveProducts()
+}
+
+onMounted(async () => {
+  suggestedName.value = `PC Gaming ${new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })}`
+  const sharedBuild = parseSharedBuild()
+  if (sharedBuild) await builder.replaceBuild(sharedBuild)
+  else if (typeof route.query.product === 'string' && route.query.product) await builder.preselectRequestedProduct()
+  else await builder.restoreDraft()
+  await fetchPresets()
+  await loadActiveProducts()
+  isInitialising.value = false
+})
 
 useSeoMeta({
-  title: () => `Xây dựng cấu hình PC - ${siteName.value}`,
-  description:
-    "Công cụ xây dựng cấu hình PC thông minh với kiểm tra tương thích tự động",
-});
+  title: () => `PC Builder - ${siteName.value}`,
+  description: () => `Tự do lựa chọn linh kiện và kiểm tra tương thích cùng ${siteName.value}.`,
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <div class="container mx-auto px-4 py-6">
-      <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Xây dựng cấu hình PC</h1>
-        <p class="text-sm text-gray-500 mt-1">
-          Chọn linh kiện và hệ thống sẽ tự động kiểm tra tương thích
-        </p>
-      </div>
+  <main class="builder-page">
+    <div class="builder-container">
+      <BuilderBreadcrumb />
+      <BuilderHeader :site-name="siteName" :tagline="siteTagline" />
+      <BuilderSteps />
 
-      <div class="flex flex-col lg:flex-row gap-6">
-        <!-- LEFT: Component list -->
-        <div class="flex-1 min-w-0 space-y-2">
-          <template v-if="componentTypes">
-            <div v-for="type in componentTypes" :id="`builder-component-${type.id}`" :key="type.id">
-              <div
-                :class="[
-                  'bg-white rounded-lg border transition-all overflow-hidden',
-                  activeTypeId === type.id
-                    ? 'border-primary-500 shadow-sm'
-                    : selectedProducts[type.id]
-                      ? 'border-gray-200'
-                      : 'border-gray-200 hover:border-gray-300',
-                ]"
-              >
-                <!-- Slot row -->
-                <div
-                  class="flex items-center gap-3 px-4 py-3 cursor-pointer"
-                  @click="selectComponentType(type.id)"
-                >
-                  <!-- Number / check -->
-                  <div
-                    :class="[
-                      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0',
-                      selectedProducts[type.id]
-                        ? 'bg-primary-500 text-white'
-                        : 'bg-gray-100 text-gray-400',
-                    ]"
-                  >
-                    <svg
-                      v-if="selectedProducts[type.id]"
-                      class="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <span v-else>{{
-                      type.sort_order || componentTypes?.indexOf(type)! + 1
-                    }}</span>
-                  </div>
+      <div v-if="builder.error" class="builder-page-error" role="alert">{{ builder.error }}</div>
 
-                  <!-- Info -->
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-1.5">
-                      <span class="font-medium text-gray-900 text-sm">{{
-                        type.name
-                      }}</span>
-                      <span
-                        v-if="type.is_required"
-                        class="text-[10px] text-red-500 font-medium"
-                        >*</span
-                      >
-                    </div>
-                    <p
-                      v-if="selectedProducts[type.id]"
-                      class="text-xs text-gray-500 truncate"
-                    >
-                      {{ selectedProducts[type.id]?.brand?.name }}
-                      {{ selectedProducts[type.id]?.name }}
-                    </p>
-                  </div>
-
-                  <!-- Price / select -->
-                  <div class="flex items-center gap-2 shrink-0">
-                    <template v-if="selectedProducts[type.id]">
-                      <span class="text-sm font-semibold text-primary-600">
-                        {{
-                          formatPrice(
-                            selectedProducts[type.id]?.sale_price ||
-                              selectedProducts[type.id]?.price,
-                          )
-                        }}
-                      </span>
-                      <button
-                        class="text-gray-400 hover:text-red-500 transition-colors p-1"
-                        title="Xóa"
-                        @click.stop="removeFromBuild(type.id)"
-                      >
-                        <svg
-                          class="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </template>
-                    <span v-else class="text-xs text-gray-400">Chọn</span>
-                    <svg
-                      :class="[
-                        'w-4 h-4 text-gray-400 transition-transform',
-                        activeTypeId === type.id && 'rotate-180',
-                      ]"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- Expanded product list -->
-                <div
-                  v-if="activeTypeId === type.id"
-                  class="border-t border-gray-100"
-                >
-                  <!-- Search -->
-                  <div class="px-4 py-2 bg-gray-50 border-b border-gray-100">
-                    <div class="relative">
-                      <svg
-                        class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                      </svg>
-                      <input
-                        v-model="searchQuery"
-                        type="text"
-                        placeholder="Tìm kiếm..."
-                        class="w-full border border-gray-200 rounded-md pl-8 pr-3 py-1.5 text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Loading -->
-                  <div
-                    v-if="isLoadingProducts"
-                    class="flex items-center justify-center py-8 text-gray-400 text-sm"
-                  >
-                    <svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                        fill="none"
-                      />
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                    Đang tải...
-                  </div>
-
-                  <!-- Empty -->
-                  <div
-                    v-else-if="filteredProducts.length === 0"
-                    class="text-center py-8 text-gray-400 text-sm"
-                  >
-                    Không tìm thấy sản phẩm
-                  </div>
-
-                  <!-- Products -->
-                  <div v-else class="max-h-80 overflow-y-auto">
-                    <div
-                      v-for="item in filteredProducts"
-                      :key="item.product.id"
-                      :class="[
-                        'flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 last:border-b-0 transition-colors',
-                        item.is_compatible
-                          ? 'cursor-pointer hover:bg-primary-50/50'
-                          : 'opacity-40 cursor-not-allowed',
-                        selectedProducts[type.id]?.id === item.product.id &&
-                          'bg-primary-50',
-                      ]"
-                      @click="item.is_compatible && addToBuild(type.id, item)"
-                    >
-                      <!-- Image -->
-                      <div
-                        class="w-10 h-10 bg-gray-100 rounded overflow-hidden shrink-0 flex items-center justify-center"
-                      >
-                        <img
-                          v-if="item.product.images?.[0]"
-                          :src="item.product.images[0].url"
-                          :alt="item.product.name"
-                          class="w-full h-full object-cover"
-                        />
-                        <span v-else class="text-gray-300 text-xs">N/A</span>
-                      </div>
-
-                      <!-- Info -->
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-800 truncate">
-                          {{ item.product.name }}
-                        </p>
-                        <p
-                          v-if="item.product.brand"
-                          class="text-xs text-gray-400"
-                        >
-                          {{ item.product.brand.name }}
-                        </p>
-                        <p
-                          v-if="!item.is_compatible && item.issues?.[0]"
-                          class="text-xs text-red-500 mt-0.5"
-                        >
-                          {{ item.issues[0]?.message }}
-                        </p>
-                      </div>
-
-                      <!-- Price -->
-                      <div class="text-right shrink-0">
-                        <p class="text-sm font-semibold text-gray-900">
-                          {{
-                            formatPrice(
-                              item.product.sale_price || item.product.price,
-                            )
-                          }}
-                        </p>
-                        <p
-                          v-if="item.product.sale_price"
-                          class="text-xs text-gray-400 line-through"
-                        >
-                          {{ formatPrice(item.product.price) }}
-                        </p>
-                      </div>
-
-                      <!-- Radio -->
-                      <div v-if="item.is_compatible" class="shrink-0">
-                        <div
-                          :class="[
-                            'w-5 h-5 rounded-full border-2 flex items-center justify-center',
-                            selectedProducts[type.id]?.id === item.product.id
-                              ? 'border-primary-500 bg-primary-500'
-                              : 'border-gray-300',
-                          ]"
-                        >
-                          <div
-                            v-if="
-                              selectedProducts[type.id]?.id === item.product.id
-                            "
-                            class="w-2 h-2 rounded-full bg-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Footer -->
-                  <div
-                    class="px-4 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-400 flex justify-between"
-                  >
-                    <span>{{ compatibleCount }} sản phẩm tương thích</span>
-                    <button
-                      class="text-primary-500 hover:underline"
-                      @click="activeTypeId = null"
-                    >
-                      Đóng
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
+      <div class="builder-main-grid">
+        <div class="builder-main-column">
+          <BuilderSelectedList
+            id="builder-selected-list"
+            :component-types="builder.componentTypes"
+            :selected-products="builder.selectedProducts"
+            :issues="builder.checkResult.issues"
+            :active-type-slug="builder.activeTypeSlug"
+            @change="changeType"
+            @remove="removeType"
+            @reset="builder.resetBuild"
+          />
+          <BuilderComponentBrowser
+            :component-types="builder.componentTypes"
+            :active-type-slug="builder.activeTypeSlug"
+            :options="browser.options"
+            :selected-product-id="activeType ? builder.build[String(activeType.id)] : undefined"
+            :filter-options="browser.filterOptions"
+            :filters="browser.filters"
+            :sort="browser.sort"
+            :loading="browser.isLoading || builder.isLoadingTypes"
+            :total="browser.meta.total"
+            :current-page="browser.meta.current_page"
+            :last-page="browser.meta.last_page"
+            @select-type="selectType($event)"
+            @select-product="selectProduct"
+            @open-product="openProduct"
+            @update:filters="updateFilters"
+            @update:sort="updateSort"
+            @page="loadActiveProducts"
+          />
+          <BuilderPresetSection :presets="presets" @use="usePreset" />
         </div>
 
-        <!-- RIGHT: Summary -->
-        <div class="lg:w-80 shrink-0">
-          <div
-            class="bg-white rounded-lg border border-gray-200 sticky top-20 overflow-hidden"
-          >
-            <div class="px-4 py-3 border-b border-gray-100">
-              <h2 class="font-semibold text-gray-900">Cấu hình đã chọn</h2>
-            </div>
-
-            <!-- Selected list -->
-            <div class="divide-y divide-gray-50">
-              <template v-if="componentTypes">
-                <template v-for="type in componentTypes" :key="type.id">
-                  <div
-                    v-if="selectedProducts[type.id]"
-                    class="flex items-center gap-2 px-4 py-2"
-                  >
-                    <div class="flex-1 min-w-0">
-                      <p class="text-[11px] text-gray-400 uppercase">
-                        {{ type.name }}
-                      </p>
-                      <p class="text-xs text-gray-700 truncate">
-                        {{ selectedProducts[type.id]?.name }}
-                      </p>
-                    </div>
-                    <span class="text-xs font-medium text-gray-900 shrink-0">
-                      {{
-                        formatPrice(
-                          selectedProducts[type.id]?.sale_price ||
-                            selectedProducts[type.id]?.price,
-                        )
-                      }}
-                    </span>
-                  </div>
-                </template>
-              </template>
-              <div
-                v-if="selectedCount === 0"
-                class="px-4 py-6 text-center text-gray-400 text-sm"
-              >
-                Chưa chọn linh kiện nào
-              </div>
-            </div>
-
-            <!-- Missing -->
-            <div
-              v-if="missingRequired.length > 0 && selectedCount > 0"
-              class="px-4 py-2 bg-amber-50 border-t border-amber-100"
-            >
-              <p class="text-[11px] text-amber-600 font-medium mb-1">
-                Còn thiếu:
-              </p>
-              <div class="flex flex-wrap gap-1">
-                <span
-                  v-for="t in missingRequired"
-                  :key="t.id"
-                  class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 cursor-pointer hover:bg-amber-200"
-                  @click="selectComponentType(t.id)"
-                >
-                  {{ t.name }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Compatibility -->
-            <div
-              v-if="compatibilityIssues.length > 0"
-              class="px-4 py-2 border-t border-gray-100 space-y-1"
-            >
-              <div
-                v-for="(issue, idx) in compatibilityIssues"
-                :key="idx"
-                :class="[
-                  'text-xs p-2 rounded',
-                  issue.type === 'error'
-                    ? 'bg-red-50 text-red-600'
-                    : 'bg-amber-50 text-amber-600',
-                ]"
-              >
-                {{ issue.message }}
-              </div>
-            </div>
-            <div
-              v-else-if="selectedCount >= 2"
-              class="px-4 py-2 border-t border-gray-100"
-            >
-              <p class="text-xs text-green-600 bg-green-50 rounded p-2">
-                Tất cả linh kiện tương thích
-              </p>
-            </div>
-
-            <!-- Total -->
-            <div class="px-4 py-3 border-t border-gray-200 bg-gray-50">
-              <div
-                v-if="totalTdp > 0"
-                class="flex justify-between text-xs text-gray-500 mb-2"
-              >
-                <span>Tổng TDP</span>
-                <span>{{ totalTdp }}W</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-600">Tổng tiền</span>
-                <span class="text-xl font-bold text-primary-600">{{
-                  formatPrice(totalPrice)
-                }}</span>
-              </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="px-4 py-3 border-t border-gray-100 space-y-2">
-              <button
-                :disabled="
-                  selectedCount === 0 ||
-                  isAddingToCart ||
-                  compatibilityIssues.some((i) => i.type === 'error')
-                "
-                class="w-full py-2.5 rounded-lg text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-                @click="addAllToCart"
-              >
-                <span
-                  v-if="isAddingToCart"
-                  class="flex items-center justify-center gap-2"
-                >
-                  <svg
-                    class="animate-spin h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    />
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  Đang thêm...
-                </span>
-                <span v-else>Thêm tất cả vào giỏ hàng</span>
-              </button>
-              <button
-                :disabled="selectedCount === 0"
-                class="w-full py-2 rounded-lg text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
-                @click="printQuotation"
-              >
-                <svg
-                  class="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                  />
-                </svg>
-                In báo giá
-              </button>
-              <div class="flex gap-2">
-                <button
-                  :disabled="selectedCount === 0 || isSaving"
-                  class="flex-1 py-2 rounded-lg text-xs border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  @click="saveBuild"
-                >
-                  {{ isSaving ? "Đang lưu..." : "Lưu cấu hình" }}
-                </button>
-                <button
-                  :disabled="selectedCount === 0"
-                  class="flex-1 py-2 rounded-lg text-xs border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  @click="resetBuild"
-                >
-                  Làm lại
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <BuilderSummary
+          :component-types="builder.componentTypes"
+          :selected-products="builder.selectedProducts"
+          :check="builder.checkResult"
+          :issues="builder.checkResult.issues"
+          :selected-count="builder.selectedCount"
+          :hotline="siteHotline"
+          :site-name="siteName"
+          :adding="builder.isAddingToCart"
+          :saving="builder.isSaving"
+          :checking="builder.isChecking"
+          @buy="addConfigurationToCart"
+          @cart="addConfigurationToCart"
+          @save="openSaveModal"
+          @share="openShareModal"
+          @print="printQuotation"
+          @focus="focusType"
+        />
       </div>
+
+      <p v-if="isInitialising" class="builder-loading-note">Đang tải dữ liệu cấu hình…</p>
     </div>
 
-    <!-- Mobile bottom bar -->
-    <div
-      class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 px-4 py-3 shadow-lg"
-    >
-      <div class="flex items-center gap-3">
-        <div class="flex-1">
-          <p class="text-xs text-gray-400">{{ selectedCount }} linh kiện</p>
-          <p class="text-lg font-bold text-primary-600">
-            {{ formatPrice(totalPrice) }}
-          </p>
-        </div>
-        <button
-          :disabled="selectedCount === 0"
-          class="px-6 py-2.5 rounded-lg text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-          @click="addAllToCart"
-        >
-          Mua ngay
-        </button>
-      </div>
-    </div>
-  </div>
+    <BuilderMobileSummary
+      :selected-count="builder.selectedCount"
+      :total-price="builder.totalPrice"
+      :complete="builder.canPurchase"
+      :adding="builder.isAddingToCart"
+      @buy="addConfigurationToCart"
+      @details="focusType(builder.activeTypeSlug ? builder.componentTypes.find(type => type.slug === builder.activeTypeSlug)?.id || 0 : 0)"
+    />
+    <BuilderSaveModal :open="saveModalOpen" :default-name="suggestedName" :saving="builder.isSaving" @close="saveModalOpen = false" @save="saveConfiguration" />
+    <BuilderShareModal :open="shareModalOpen" :url="shareUrl" @close="shareModalOpen = false" />
+  </main>
 </template>
+
+<style>
+.builder-page { --builder-blue: #1264d8; --builder-blue-dark: #0754bd; --builder-navy: #102c58; --builder-red: #ef2f2f; --builder-green: #16a765; --builder-border: #e2e8f0; --builder-muted: #6d7b90; --builder-soft: #f5f8fc; background: #fff; color: #172033; }
+.builder-container { width: min(100% - 32px, 1480px); margin-inline: auto; padding-bottom: 48px; }
+.builder-breadcrumb { display: flex; align-items: center; gap: 9px; min-height: 38px; color: #74839a; font-size: 11px; }
+.builder-breadcrumb a:hover { color: var(--builder-blue); }
+.builder-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 8px 0 14px; }
+.builder-page-header h1 { margin: 0; color: #12234c; font-size: 32px; font-weight: 850; letter-spacing: -.035em; line-height: 1.08; }
+.builder-page-header p { margin: 7px 0 0; color: #607088; font-size: 13px; }
+.builder-page-header-note { max-width: 420px; color: #7c8ba2; font-size: 11px; text-align: right; }
+.builder-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 72px; margin-bottom: 14px; overflow: hidden; border: 1px solid #e3ecfa; border-radius: 8px; background: linear-gradient(100deg, #f7fbff, #edf5ff); }
+.builder-step { position: relative; display: flex; min-width: 0; align-items: center; gap: 10px; padding: 12px 18px; }
+.builder-step + .builder-step { border-left: 1px solid #dae8fa; }
+.builder-step-number { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; color: #fff; background: linear-gradient(135deg, #2083ee, #1264d8); border-radius: 50%; box-shadow: 0 3px 7px rgba(18,100,216,.2); font-size: 14px; font-weight: 800; }
+.builder-step-copy { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.builder-step-copy strong { color: #1f3564; font-size: 12px; font-weight: 800; }
+.builder-step-copy small { overflow: hidden; color: #7790b1; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.builder-main-grid { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start; }
+.builder-main-column { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
+.builder-panel, .builder-summary { min-width: 0; border: 1px solid var(--builder-border); border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(15,23,42,.035); }
+.builder-panel-heading { display: flex; min-height: 53px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; border-bottom: 1px solid #edf1f5; }
+.builder-panel-heading h2 { margin: 0; color: #172b57; font-size: 17px; font-weight: 800; }
+.builder-panel-heading p { margin: 4px 0 0; color: var(--builder-muted); font-size: 10px; }
+.builder-text-button { padding: 6px 0; color: var(--builder-blue); background: transparent; border: 0; font-size: 10px; font-weight: 700; }
+.builder-text-button:hover { color: var(--builder-blue-dark); }
+.builder-selected-rows { padding: 6px 12px 9px; }
+.builder-selected-row { display: grid; min-height: 72px; grid-template-columns: 34px 104px 58px minmax(130px, 1fr) 104px 100px 86px 30px; align-items: center; gap: 9px; padding: 5px 7px; border-bottom: 1px solid #eef2f6; transition: background .16s ease, border-color .16s ease; }
+.builder-selected-row:last-child { border-bottom: 0; }
+.builder-selected-row:hover, .builder-selected-row--active { background: #fbfdff; }
+.builder-selected-row--error { background: #fffafa; }
+.builder-type-icon { display: grid; width: 30px; height: 30px; place-items: center; color: var(--builder-blue); background: #eef5ff; border-radius: 6px; }
+.builder-type-icon svg { width: 20px; height: 20px; }
+.builder-selected-type strong { color: #2a3c5f; font-size: 12px; font-weight: 800; }
+.builder-selected-type em { color: var(--builder-red); font-style: normal; }
+.builder-selected-image { display: grid; width: 58px; height: 52px; place-items: center; overflow: hidden; color: #a1b1c8; }
+.builder-selected-image img { width: 100%; height: 100%; object-fit: contain; }
+.builder-selected-image svg { width: 29px; height: 29px; }
+.builder-selected-product { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.builder-selected-product strong { overflow: hidden; color: #25375b; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.builder-selected-product small { overflow: hidden; color: #7b8ba2; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.builder-selected-state { display: inline-flex; min-width: 0; align-items: center; gap: 4px; color: var(--builder-green); font-size: 9px; white-space: nowrap; }
+.builder-selected-state svg { width: 16px; height: 16px; flex: 0 0 16px; }
+.builder-selected-state.is-warning { color: #bd7a00; }
+.builder-selected-state.is-error { color: var(--builder-red); }
+.builder-selected-price { color: var(--builder-red); font-size: 12px; white-space: nowrap; }
+.builder-selected-empty { grid-column: 3 / span 3; color: #9aa6b8; font-size: 11px; }
+.builder-outline-button, .builder-primary-button { display: inline-flex; min-height: 31px; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; border-radius: 5px; font-size: 10px; font-weight: 750; transition: background .16s ease, color .16s ease, border-color .16s ease; }
+.builder-outline-button { color: var(--builder-blue); background: #fff; border: 1px solid #9fc3f8; }
+.builder-outline-button:hover:not(:disabled) { color: #fff; background: var(--builder-blue); border-color: var(--builder-blue); }
+.builder-primary-button { color: #fff; background: var(--builder-blue); border: 1px solid var(--builder-blue); }
+.builder-primary-button:hover:not(:disabled) { background: var(--builder-blue-dark); border-color: var(--builder-blue-dark); }
+.builder-change-button { min-height: 29px; padding-inline: 8px; font-size: 9px; }
+.builder-select-button { grid-column: 7 / span 2; justify-self: end; min-height: 29px; font-size: 9px; }
+.builder-icon-button { display: grid; width: 28px; height: 28px; padding: 0; place-items: center; color: #93a1b5; background: transparent; border: 0; border-radius: 50%; }
+.builder-icon-button:hover { color: var(--builder-red); background: #fff1f1; }
+.builder-icon-button svg { width: 16px; height: 16px; }
+.builder-summary { position: sticky; top: 82px; overflow: hidden; }
+.builder-summary > .builder-panel-heading { min-height: 54px; }
+.builder-compatibility { display: flex; align-items: center; gap: 10px; margin: 13px 14px 8px; }
+.builder-compatibility-mark { display: grid; width: 33px; height: 33px; flex: 0 0 33px; place-items: center; color: #fff; background: var(--builder-green); border-radius: 50%; font-size: 18px; font-weight: 800; }
+.builder-compatibility-mark svg { width: 19px; height: 19px; }
+.builder-compatibility-copy { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.builder-compatibility-copy strong { color: var(--builder-green); font-size: 12px; font-weight: 800; }
+.builder-compatibility-copy small { color: #8592a6; font-size: 9px; }
+.builder-compatibility--error .builder-compatibility-mark { background: var(--builder-red); }
+.builder-compatibility--error .builder-compatibility-copy strong { color: var(--builder-red); }
+.builder-compatibility--warning .builder-compatibility-mark, .builder-compatibility--incomplete .builder-compatibility-mark, .builder-compatibility--checking .builder-compatibility-mark { color: #9a6500; background: #fff0c8; }
+.builder-compatibility--warning .builder-compatibility-copy strong, .builder-compatibility--incomplete .builder-compatibility-copy strong { color: #a76d00; }
+.builder-issue-list { display: flex; flex-direction: column; gap: 5px; margin: 0 14px 10px; }
+.builder-issue { display: flex; min-width: 0; align-items: center; gap: 6px; padding: 7px 8px; color: #9a6500; background: #fff9e8; border: 1px solid #ffedb6; border-radius: 5px; text-align: left; font-size: 9px; }
+.builder-issue:disabled { cursor: default; }
+.builder-issue--error { color: #c43636; background: #fff5f5; border-color: #ffd7d7; }
+.builder-issue-icon { display: inline-flex; flex: 0 0 auto; }
+.builder-issue-icon svg { width: 15px; height: 15px; }
+.builder-issue > span:nth-child(2) { flex: 1; }
+.builder-issue small { flex: 0 0 auto; color: #a28d65; font-size: 8px; }
+.builder-summary-selected { max-height: 230px; overflow-y: auto; padding: 5px 14px; border-top: 1px solid #edf1f5; border-bottom: 1px solid #edf1f5; }
+.builder-summary-selected-row { display: flex; min-height: 28px; align-items: center; justify-content: space-between; gap: 8px; }
+.builder-summary-selected-row span { overflow: hidden; color: #718097; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.builder-summary-selected-row strong { color: #384866; font-size: 10px; white-space: nowrap; }
+.builder-summary-empty { margin: 12px 0; color: #95a1b3; font-size: 10px; text-align: center; }
+.builder-summary-total { display: flex; flex-direction: column; gap: 8px; padding: 13px 14px; background: #fbfcfe; }
+.builder-summary-total > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.builder-summary-total span { color: #718097; font-size: 10px; }
+.builder-summary-total strong { color: #384866; font-size: 11px; }
+.builder-summary-total > div:first-child strong { color: var(--builder-red); font-size: 20px; }
+.builder-summary-actions { display: flex; flex-direction: column; gap: 8px; padding: 13px 14px; }
+.builder-summary-buy, .builder-summary-cart { width: 100%; min-height: 38px; font-size: 12px; }
+.builder-summary-buy span { margin-left: auto; font-size: 16px; }
+.builder-summary-secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.builder-summary-secondary button { min-height: 31px; color: #65748b; background: #fff; border: 1px solid #e0e6ee; border-radius: 5px; font-size: 9px; }
+.builder-summary-secondary button:hover:not(:disabled) { color: var(--builder-blue); border-color: #99bff4; }
+.builder-support-card { display: flex; gap: 9px; margin: 0 14px 14px; padding: 11px; color: #35517d; background: #eef6ff; border-radius: 6px; }
+.builder-support-icon { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; color: var(--builder-blue); }
+.builder-support-icon svg { width: 27px; height: 27px; }
+.builder-support-card strong { font-size: 11px; }
+.builder-support-card p { margin: 2px 0 5px; color: #7187a7; font-size: 9px; }
+.builder-support-card a { display: inline-block; color: var(--builder-blue); font-size: 11px; font-weight: 800; }
+.builder-browser-heading { align-items: flex-start; padding-top: 11px; padding-bottom: 10px; }
+.builder-browser-heading > a { color: var(--builder-blue); font-size: 10px; font-weight: 700; }
+.builder-component-tabs { display: flex; min-width: 0; overflow-x: auto; border-bottom: 1px solid #e8edf4; scrollbar-width: thin; }
+.builder-component-tabs button { position: relative; flex: 0 0 auto; min-height: 43px; padding: 0 14px; color: #66758e; background: transparent; border: 0; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.builder-component-tabs button::after { position: absolute; right: 12px; bottom: -1px; left: 12px; height: 2px; background: transparent; content: ''; }
+.builder-component-tabs button:hover, .builder-component-tabs button.is-active { color: var(--builder-blue); }
+.builder-component-tabs button.is-active::after { background: var(--builder-blue); }
+.builder-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 10px 12px; background: #fbfcfe; border-bottom: 1px solid #edf1f5; }
+.builder-filter-search { display: flex; min-width: 150px; height: 31px; flex: 1 1 180px; align-items: center; gap: 6px; padding: 0 8px; color: #93a1b5; background: #fff; border: 1px solid #dce4ee; border-radius: 5px; }
+.builder-filter-search svg { width: 14px; height: 14px; flex: 0 0 14px; }
+.builder-filter-search input { min-width: 0; width: 100%; padding: 0; color: #263858; background: transparent; border: 0; outline: 0; font-size: 10px; }
+.builder-filter-group { position: relative; min-width: 150px; max-width: 210px; }
+.builder-filter-group summary { display: flex; min-height: 31px; align-items: center; justify-content: space-between; gap: 10px; padding: 0 8px; color: #53637d; background: #fff; border: 1px solid #dce4ee; border-radius: 5px; cursor: pointer; font-size: 10px; list-style: none; }
+.builder-filter-group summary::-webkit-details-marker { display: none; }
+.builder-filter-group summary span { color: #94a1b4; }
+.builder-filter-group[open] summary { color: var(--builder-blue); border-color: #a9c9f5; border-radius: 5px 5px 0 0; }
+.builder-filter-group > .builder-check-option, .builder-filter-group > .builder-price-inputs { position: relative; z-index: 2; display: flex; }
+.builder-filter-group[open] > .builder-check-option, .builder-filter-group[open] > .builder-price-inputs { min-width: 100%; padding: 5px 8px; background: #fff; border-right: 1px solid #a9c9f5; border-left: 1px solid #a9c9f5; }
+.builder-filter-group[open] > .builder-check-option:last-child, .builder-filter-group[open] > .builder-price-inputs:last-child { border-bottom: 1px solid #a9c9f5; border-radius: 0 0 5px 5px; }
+.builder-check-option { min-height: 26px; align-items: center; gap: 6px; color: #65738b; font-size: 10px; }
+.builder-check-option input, .builder-switch-option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.builder-checkbox { display: inline-block; width: 13px; height: 13px; flex: 0 0 13px; border: 1px solid #aebbd0; border-radius: 2px; }
+.builder-check-option input:checked + .builder-checkbox { background: var(--builder-blue); border-color: var(--builder-blue); }
+.builder-check-option input:checked + .builder-checkbox::after { display: block; width: 6px; height: 3px; margin: 3px 0 0 2px; border-bottom: 1.5px solid #fff; border-left: 1.5px solid #fff; content: ''; transform: rotate(-45deg); }
+.builder-check-option span:nth-last-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.builder-check-option small { margin-left: auto; color: #9ba7b8; font-size: 9px; }
+.builder-price-inputs { align-items: center; gap: 5px; padding: 6px 0; color: #8e9bad; }
+.builder-price-inputs input { width: 80px; height: 27px; padding: 0 6px; color: #34445f; border: 1px solid #dce4ee; border-radius: 4px; outline: 0; font-size: 9px; }
+.builder-switch-option { position: relative; display: inline-flex; min-height: 31px; align-items: center; gap: 5px; color: #6b7990; font-size: 9px; white-space: nowrap; }
+.builder-switch { position: relative; display: inline-block; width: 28px; height: 16px; flex: 0 0 28px; background: #cad5e4; border-radius: 12px; }
+.builder-switch::after { position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; background: #fff; border-radius: 50%; content: ''; transition: transform .16s ease; }
+.builder-switch-option input:checked + .builder-switch { background: var(--builder-blue); }
+.builder-switch-option input:checked + .builder-switch::after { transform: translateX(12px); }
+.builder-sort-control { display: flex; min-height: 31px; align-items: center; gap: 5px; margin-left: auto; color: #8290a4; font-size: 9px; }
+.builder-sort-control select { height: 31px; padding: 0 7px; color: #34445f; background: #fff; border: 1px solid #dce4ee; border-radius: 5px; outline: 0; font-size: 9px; }
+.builder-product-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+.builder-product-card { position: relative; display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 7px; background: #fff; transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+.builder-product-card:hover { border-color: #9fc3f8; box-shadow: 0 5px 14px rgba(15,23,42,.08); transform: translateY(-1px); }
+.builder-product-card.is-selected { border: 2px solid var(--builder-blue); }
+.builder-product-card.is-incompatible { background: #fbfcfd; }
+.builder-product-card.is-incompatible .builder-product-image, .builder-product-card.is-incompatible .builder-product-body { opacity: .55; }
+.builder-selected-badge { position: absolute; top: 7px; left: 7px; z-index: 1; padding: 3px 5px; color: #fff; background: var(--builder-blue); border-radius: 3px; font-size: 8px; font-weight: 750; }
+.builder-wishlist { position: absolute; top: 6px; right: 6px; z-index: 1; display: grid; width: 24px; height: 24px; padding: 0; place-items: center; color: #8e9bb0; background: #fff; border: 0; border-radius: 50%; }
+.builder-wishlist:hover { color: var(--builder-red); }
+.builder-wishlist svg { width: 16px; height: 16px; }
+.builder-product-image { display: grid; height: 136px; margin: 6px; place-items: center; color: #a2afc1; }
+.builder-product-image img { width: 100%; height: 100%; object-fit: contain; }
+.builder-product-image svg { width: 50px; height: 50px; }
+.builder-product-body { display: flex; min-width: 0; flex: 1; flex-direction: column; padding: 2px 8px 8px; }
+.builder-product-name { display: -webkit-box; min-height: 34px; overflow: hidden; color: #20355e; font-size: 10px; font-weight: 750; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.builder-product-name:hover { color: var(--builder-blue); }
+.builder-product-specs { display: -webkit-box; min-height: 26px; margin: 4px 0 0; overflow: hidden; color: #8190a5; font-size: 8px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.builder-product-price { display: flex; min-height: 22px; flex-wrap: wrap; align-items: baseline; gap: 5px; margin-top: 4px; }
+.builder-product-price strong { color: var(--builder-red); font-size: 13px; }
+.builder-product-price del { color: #9ba5b4; font-size: 8px; }
+.builder-product-meta { display: flex; min-height: 16px; justify-content: space-between; gap: 4px; color: #8a97aa; font-size: 8px; }
+.builder-rating-mark { color: #f5a400; }
+.builder-product-issue { display: -webkit-box; min-height: 22px; margin: 3px 0; overflow: hidden; color: #cf4545; font-size: 8px; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.builder-product-action { display: flex; min-height: 28px; align-items: center; justify-content: center; gap: 4px; margin-top: auto; padding: 0 5px; color: var(--builder-blue); background: #fff; border: 1px solid #82b0f4; border-radius: 4px; font-size: 9px; font-weight: 750; }
+.builder-product-action:hover:not(:disabled) { color: #fff; background: var(--builder-blue); }
+.builder-product-action:disabled { color: #a9b3c1; background: #f5f7f9; border-color: #e1e6ec; }
+.builder-product-action svg { width: 13px; height: 13px; }
+.builder-product-skeleton { min-height: 300px; border-radius: 7px; background: linear-gradient(100deg, #f0f3f7 20%, #fbfcfe 38%, #f0f3f7 56%); background-size: 300% 100%; animation: builder-loading 1.4s ease infinite; }
+@keyframes builder-loading { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.builder-product-empty { grid-column: 1 / -1; min-height: 180px; margin: 0; padding: 50px 20px; color: #8b98aa; text-align: center; font-size: 11px; }
+.builder-pagination { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 2px 12px 14px; }
+.builder-pagination button { display: grid; min-width: 28px; height: 28px; place-items: center; color: #61718a; background: #fff; border: 1px solid #dce4ee; border-radius: 4px; font-size: 10px; }
+.builder-pagination button:hover:not(:disabled), .builder-pagination button.is-active { color: #fff; background: var(--builder-blue); border-color: var(--builder-blue); }
+.builder-presets { overflow: hidden; }
+.builder-preset-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+.builder-preset-card { display: flex; min-width: 0; align-items: center; gap: 8px; padding: 8px; border: 1px solid #e4e9f0; border-radius: 6px; }
+.builder-preset-card:hover { border-color: #a5c7f5; }
+.builder-preset-image { display: grid; width: 92px; height: 68px; flex: 0 0 92px; place-items: center; overflow: hidden; color: #9daec4; background: #f4f8fd; border-radius: 5px; }
+.builder-preset-image img { width: 100%; height: 100%; object-fit: cover; }
+.builder-preset-image svg { width: 31px; height: 31px; }
+.builder-preset-copy { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px; }
+.builder-preset-copy h3 { margin: 0; color: #24385f; font-size: 11px; }
+.builder-preset-copy p { display: -webkit-box; min-height: 25px; margin: 0; overflow: hidden; color: #7d8ca2; font-size: 8px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.builder-preset-copy strong { color: var(--builder-red); font-size: 10px; }
+.builder-preset-copy .builder-outline-button { min-height: 26px; margin-top: 2px; padding-inline: 7px; font-size: 8px; }
+.builder-mobile-summary { display: none; }
+.builder-modal-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; padding: 18px; place-items: center; background: rgba(6,24,49,.48); }
+.builder-modal { position: relative; width: min(100%, 430px); padding: 22px; background: #fff; border-radius: 9px; box-shadow: 0 18px 45px rgba(7,24,48,.22); }
+.builder-modal h2 { margin: 0; color: #172b57; font-size: 19px; }
+.builder-modal p { margin: 7px 0 17px; color: #718097; font-size: 11px; }
+.builder-modal-close { position: absolute; top: 8px; right: 9px; width: 28px; height: 28px; color: #8d99aa; background: transparent; border: 0; font-size: 22px; line-height: 1; }
+.builder-modal-label { display: block; margin-bottom: 6px; color: #4f607a; font-size: 10px; font-weight: 750; }
+.builder-modal-input { display: block; width: 100%; height: 36px; padding: 0 10px; color: #263858; border: 1px solid #dbe3ed; border-radius: 5px; outline: 0; font-size: 11px; }
+.builder-modal-input:focus { border-color: #8bb7f2; box-shadow: 0 0 0 3px rgba(18,100,216,.1); }
+.builder-modal-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 18px; }
+.builder-page-error { margin: 0 0 14px; padding: 10px 12px; color: #b53d3d; background: #fff5f5; border: 1px solid #ffdada; border-radius: 6px; font-size: 11px; }
+.builder-loading-note { margin: 16px 0 0; color: #7e8da4; font-size: 11px; text-align: center; }
+
+@media (max-width: 1320px) {
+  .builder-product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .builder-selected-row { grid-template-columns: 34px 90px 52px minmax(100px, 1fr) 96px 92px 80px 28px; }
+}
+@media (max-width: 1050px) {
+  .builder-main-grid { grid-template-columns: minmax(0, 1fr) 310px; }
+  .builder-selected-row { grid-template-columns: 30px 78px 48px minmax(90px, 1fr) 86px 78px 28px; }
+  .builder-selected-state { display: none; }
+  .builder-step { padding-inline: 10px; }
+  .builder-step-copy small { display: none; }
+  .builder-preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 820px) {
+  .builder-container { width: min(100% - 20px, 680px); padding-bottom: 85px; }
+  .builder-page-header { align-items: flex-start; flex-direction: column; }
+  .builder-page-header-note { text-align: left; }
+  .builder-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .builder-step:nth-child(3) { border-left: 0; border-top: 1px solid #dae8fa; }
+  .builder-step:nth-child(4) { border-top: 1px solid #dae8fa; }
+  .builder-main-grid { grid-template-columns: minmax(0, 1fr); }
+  .builder-summary { display: none; }
+  .builder-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .builder-mobile-summary { position: fixed; right: 0; bottom: 0; left: 0; z-index: 90; display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #fff; border-top: 1px solid #dce4ee; box-shadow: 0 -4px 14px rgba(15,23,42,.1); }
+  .builder-mobile-summary-details { display: flex; min-width: 0; flex: 1; flex-direction: column; align-items: flex-start; padding: 0; color: #6f7e95; background: transparent; border: 0; text-align: left; }
+  .builder-mobile-summary-details span { font-size: 9px; }
+  .builder-mobile-summary-details strong { color: var(--builder-red); font-size: 16px; }
+  .builder-mobile-summary > .builder-primary-button { min-height: 38px; padding-inline: 18px; font-size: 11px; }
+}
+@media (max-width: 560px) {
+  .builder-page-header h1 { font-size: 27px; }
+  .builder-page-header p { font-size: 11px; }
+  .builder-steps { min-height: 64px; }
+  .builder-step { gap: 7px; padding: 9px 8px; }
+  .builder-step-number { width: 25px; height: 25px; flex-basis: 25px; font-size: 11px; }
+  .builder-step-copy strong { font-size: 10px; }
+  .builder-selected-rows { padding-inline: 5px; }
+  .builder-selected-row { grid-template-columns: 28px 46px minmax(0, 1fr) 74px 25px; gap: 6px; min-height: 65px; padding-inline: 4px; }
+  .builder-selected-type { display: none; }
+  .builder-selected-image { width: 46px; height: 44px; }
+  .builder-selected-product strong { font-size: 10px; }
+  .builder-selected-product small { font-size: 8px; }
+  .builder-selected-price { font-size: 10px; }
+  .builder-change-button { display: none; }
+  .builder-select-button { grid-column: 4; min-height: 27px; padding-inline: 5px; }
+  .builder-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 8px; }
+  .builder-product-image { height: 118px; }
+  .builder-product-name { font-size: 10px; }
+  .builder-product-price strong { font-size: 12px; }
+  .builder-filters { align-items: stretch; }
+  .builder-filter-search { flex-basis: 100%; }
+  .builder-filter-group { min-width: calc(50% - 4px); flex: 1 1 calc(50% - 4px); }
+  .builder-switch-option { flex-basis: 100%; }
+  .builder-sort-control { width: 100%; margin-left: 0; justify-content: space-between; }
+  .builder-sort-control select { flex: 1; }
+  .builder-preset-grid { grid-template-columns: minmax(0, 1fr); }
+  .builder-preset-image { width: 82px; flex-basis: 82px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .builder-page *, .builder-page *::before, .builder-page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+</style>

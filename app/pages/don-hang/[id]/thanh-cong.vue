@@ -9,9 +9,10 @@ const loading = ref(true)
 const accessDenied = ref(false)
 const orderAccessToken = ref('')
 
-const orderHeaders = () => orderAccessToken.value
-  ? { 'X-Order-Access-Token': orderAccessToken.value }
-  : {}
+const orderHeaders = (): Record<string, string> => {
+  if (!orderAccessToken.value) return {}
+  return { 'X-Order-Access-Token': orderAccessToken.value }
+}
 
 const refreshOrder = async () => {
   if (!orderAccessToken.value) {

@@ -39,13 +39,17 @@ export const useCart = () => {
     }
   }
   
-  const addItem = async (productId: number, quantity: number = 1) => {
+  const addItem = async (productId: number, quantity: number = 1, variantId?: number | null) => {
     loading.value = true
     try {
       await $fetch(`${config.public.apiBase}/cart/items`, {
         method: 'POST',
         headers: getHeaders(),
-        body: { product_id: productId, quantity },
+        body: {
+          product_id: productId,
+          quantity,
+          ...(variantId ? { variant_id: variantId } : {}),
+        },
       })
       await fetchCart()
       return true

@@ -25,6 +25,7 @@ export interface ProductCard {
   sold_count?: number
   warranty_months: number | null
   is_featured?: boolean
+  has_variants?: boolean
 }
 
 export interface ProductVariant {

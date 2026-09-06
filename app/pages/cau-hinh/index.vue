@@ -5,8 +5,14 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const toast = useToast()
 const { siteName, siteTagline, siteHotline, siteLogo } = useSettings()
-const builder = usePcBuilder()
-const browser = useBuilderProducts()
+const builderState = usePcBuilder()
+const browserState = useBuilderProducts()
+
+// A composable result is a plain object containing refs. Vue only unwraps
+// refs at the top level of setup state, so expose reactive view objects to
+// child components to avoid passing Ref instances as props during SSR.
+const builder = reactive(builderState)
+const browser = reactive(browserState)
 
 const presets = ref<BuilderPreset[]>([])
 const isInitialising = ref(true)
@@ -16,9 +22,9 @@ const suggestedName = ref('PC Builder')
 const shareUrl = ref('')
 let filterTimer: ReturnType<typeof setTimeout> | null = null
 
-await builder.fetchComponentTypes()
+await builderState.fetchComponentTypes()
 
-const activeType = computed(() => builder.componentTypes.value.find(type => type.slug === builder.activeTypeSlug.value))
+const activeType = computed(() => builderState.componentTypes.value.find(type => type.slug === builderState.activeTypeSlug.value))
 
 const parseSharedBuild = (): BuilderSelection | null => {
   const value = typeof route.query.build === 'string' ? route.query.build : ''
@@ -32,34 +38,34 @@ const parseSharedBuild = (): BuilderSelection | null => {
 }
 
 const loadActiveProducts = async (page = 1) => {
-  if (builder.activeTypeSlug.value) await browser.load(builder.activeTypeSlug.value, builder.build.value, page)
+  if (builderState.activeTypeSlug.value) await browserState.load(builderState.activeTypeSlug.value, builderState.build.value, page)
 }
 
 const selectType = async (slug: string, reset = true) => {
-  builder.setActiveType(slug)
-  if (reset) browser.resetFilters()
+  builderState.setActiveType(slug)
+  if (reset) browserState.resetFilters()
   await loadActiveProducts()
 }
 
 const updateFilters = (filters: BuilderFiltersState) => {
-  browser.filters.value = filters
+  browserState.filters.value = filters
   scheduleProductReload()
 }
 
 const updateSort = (sort: BuilderSort) => {
-  browser.sort.value = sort
+  browserState.sort.value = sort
   scheduleProductReload()
 }
 
 const scheduleProductReload = () => {
-  if (!import.meta.client || !builder.activeTypeSlug.value) return
+  if (!import.meta.client || !builderState.activeTypeSlug.value) return
   if (filterTimer) clearTimeout(filterTimer)
   filterTimer = setTimeout(() => { loadActiveProducts().catch(() => undefined) }, 220)
 }
 
 const selectProduct = async (option: BuilderProductOption) => {
   if (!activeType.value || !option.is_compatible || option.product.has_variants) return
-  await builder.selectProduct(activeType.value, option.product)
+  await builderState.selectProduct(activeType.value, option.product)
   await loadActiveProducts()
 }
 
@@ -76,25 +82,25 @@ const changeType = async (type: BuilderComponentType) => {
 }
 
 const removeType = async (type: BuilderComponentType) => {
-  await builder.removeProduct(type)
-  if (builder.activeTypeSlug.value === type.slug) await loadActiveProducts()
+  await builderState.removeProduct(type)
+  if (builderState.activeTypeSlug.value === type.slug) await loadActiveProducts()
 }
 
 const focusType = async (typeId: number) => {
-  const type = builder.componentTypes.value.find(item => item.id === typeId)
+  const type = builderState.componentTypes.value.find(item => item.id === typeId)
   if (!type) return
   await changeType(type)
   document.getElementById(`builder-selected-list`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const addConfigurationToCart = async () => {
-  const result = await builder.addAllToCart()
+  const result = await builderState.addAllToCart()
   if (result.success > 0) await navigateTo('/gio-hang')
 }
 
 const openSaveModal = () => { saveModalOpen.value = true }
 const saveConfiguration = async (name: string) => {
-  const result = await builder.saveBuild(name)
+  const result = await builderState.saveBuild(name)
   if (result === 'login') {
     saveModalOpen.value = false
     await navigateTo({ path: '/dang-nhap', query: { redirect: '/cau-hinh' } })
@@ -105,7 +111,7 @@ const saveConfiguration = async (name: string) => {
 
 const makeShareUrl = () => {
   if (!import.meta.client) return ''
-  const encoded = Object.entries(builder.build.value).map(([typeId, productId]) => `${typeId}-${productId}`).join(',')
+  const encoded = Object.entries(builderState.build.value).map(([typeId, productId]) => `${typeId}-${productId}`).join(',')
   return `${window.location.origin}/cau-hinh?build=${encodeURIComponent(encoded)}`
 }
 const openShareModal = () => {
@@ -122,15 +128,15 @@ const escapeHtml = (value: unknown) => String(value ?? '')
 
 const formatMoney = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)}đ`
 const printQuotation = () => {
-  if (!import.meta.client || !builder.selectedCount.value) return
-  const rows = builder.componentTypes.value
-    .filter(type => builder.selectedProducts.value[String(type.id)])
+  if (!import.meta.client || !builderState.selectedCount.value) return
+  const rows = builderState.componentTypes.value
+    .filter(type => builderState.selectedProducts.value[String(type.id)])
     .map(type => {
-      const product = builder.selectedProducts.value[String(type.id)]
+      const product = builderState.selectedProducts.value[String(type.id)]
       return `<tr><td>${escapeHtml(type.name)}</td><td>${escapeHtml(product?.brand?.name || '')}</td><td>${escapeHtml(product?.name || '')}</td><td class="right">${formatMoney(product?.pricing.display_price || 0)}</td></tr>`
     }).join('')
   const logo = siteLogo.value
-  const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo giá cấu hình - ${escapeHtml(siteName.value)}</title><style>body{font-family:Arial,sans-serif;color:#172033;padding:32px;font-size:13px}header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1264d8;padding-bottom:16px;margin-bottom:24px}header img{max-width:180px;max-height:56px;object-fit:contain}.title{text-align:center;margin-bottom:20px}.title h1{font-size:22px;margin:0 0 6px}.title p{margin:0;color:#687386}table{border-collapse:collapse;width:100%;margin-bottom:18px}th{background:#1264d8;color:white;text-align:left;padding:10px}td{border-bottom:1px solid #e4e8ee;padding:10px}.right{text-align:right}.total{font-size:18px;font-weight:bold;color:#ef2f2f;text-align:right}.facts{padding:12px;background:#f6f8fb;border:1px solid #e4e8ee;border-radius:6px;color:#536176}footer{margin-top:28px;border-top:1px solid #e4e8ee;padding-top:12px;color:#687386;display:flex;justify-content:space-between}@media print{body{padding:12px}}</style></head><body><header>${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(siteName.value)}">` : `<strong>${escapeHtml(siteName.value)}</strong>`}<div>${escapeHtml(siteHotline.value)}</div></header><div class="title"><h1>Báo giá cấu hình PC</h1><p>${new Date().toLocaleDateString('vi-VN')} · ${escapeHtml(siteName.value)}</p></div><table><thead><tr><th>Nhóm</th><th>Hãng</th><th>Linh kiện</th><th class="right">Đơn giá</th></tr></thead><tbody>${rows}<tr><td colspan="3"><strong>Tổng tiền</strong></td><td class="right total">${formatMoney(builder.totalPrice.value)}</td></tr></tbody></table><div class="facts">TDP ước tính: ${builder.totalTdp.value}W${builder.recommendedPsuWattage.value ? ` · Khuyến nghị nguồn: ${builder.recommendedPsuWattage.value}W trở lên` : ''}</div><footer><span>Dữ liệu được lấy tại thời điểm tạo báo giá.</span><span>${escapeHtml(siteName.value)}</span></footer></body></html>`
+  const html = `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo giá cấu hình - ${escapeHtml(siteName.value)}</title><style>body{font-family:Arial,sans-serif;color:#172033;padding:32px;font-size:13px}header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1264d8;padding-bottom:16px;margin-bottom:24px}header img{max-width:180px;max-height:56px;object-fit:contain}.title{text-align:center;margin-bottom:20px}.title h1{font-size:22px;margin:0 0 6px}.title p{margin:0;color:#687386}table{border-collapse:collapse;width:100%;margin-bottom:18px}th{background:#1264d8;color:white;text-align:left;padding:10px}td{border-bottom:1px solid #e4e8ee;padding:10px}.right{text-align:right}.total{font-size:18px;font-weight:bold;color:#ef2f2f;text-align:right}.facts{padding:12px;background:#f6f8fb;border:1px solid #e4e8ee;border-radius:6px;color:#536176}footer{margin-top:28px;border-top:1px solid #e4e8ee;padding-top:12px;color:#687386;display:flex;justify-content:space-between}@media print{body{padding:12px}}</style></head><body><header>${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(siteName.value)}">` : `<strong>${escapeHtml(siteName.value)}</strong>`}<div>${escapeHtml(siteHotline.value)}</div></header><div class="title"><h1>Báo giá cấu hình PC</h1><p>${new Date().toLocaleDateString('vi-VN')} · ${escapeHtml(siteName.value)}</p></div><table><thead><tr><th>Nhóm</th><th>Hãng</th><th>Linh kiện</th><th class="right">Đơn giá</th></tr></thead><tbody>${rows}<tr><td colspan="3"><strong>Tổng tiền</strong></td><td class="right total">${formatMoney(builderState.totalPrice.value)}</td></tr></tbody></table><div class="facts">TDP ước tính: ${builderState.totalTdp.value}W${builderState.recommendedPsuWattage.value ? ` · Khuyến nghị nguồn: ${builderState.recommendedPsuWattage.value}W trở lên` : ''}</div><footer><span>Dữ liệu được lấy tại thời điểm tạo báo giá.</span><span>${escapeHtml(siteName.value)}</span></footer></body></html>`
   const printWindow = window.open('', '_blank', 'noopener,noreferrer')
   if (!printWindow) {
     toast.add({ title: 'Trình duyệt đã chặn cửa sổ in', color: 'warning' })
@@ -153,21 +159,21 @@ const fetchPresets = async () => {
 
 const usePreset = async (preset: BuilderPreset) => {
   const next: BuilderSelection = {}
-  for (const type of builder.componentTypes.value) {
+  for (const type of builderState.componentTypes.value) {
     const productId = preset.products[type.slug]
     if (Number.isInteger(productId) && productId > 0) next[String(type.id)] = productId
   }
-  await builder.replaceBuild(next)
-  if (!builder.activeTypeSlug.value) builder.setActiveType(builder.componentTypes.value[0]?.slug || '')
+  await builderState.replaceBuild(next)
+  if (!builderState.activeTypeSlug.value) builderState.setActiveType(builderState.componentTypes.value[0]?.slug || '')
   await loadActiveProducts()
 }
 
 onMounted(async () => {
   suggestedName.value = `PC Gaming ${new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })}`
   const sharedBuild = parseSharedBuild()
-  if (sharedBuild) await builder.replaceBuild(sharedBuild)
-  else if (typeof route.query.product === 'string' && route.query.product) await builder.preselectRequestedProduct()
-  else await builder.restoreDraft()
+  if (sharedBuild) await builderState.replaceBuild(sharedBuild)
+  else if (typeof route.query.product === 'string' && route.query.product) await builderState.preselectRequestedProduct()
+  else await builderState.restoreDraft()
   await fetchPresets()
   await loadActiveProducts()
   isInitialising.value = false

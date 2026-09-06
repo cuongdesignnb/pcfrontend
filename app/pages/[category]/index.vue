@@ -1,656 +1,271 @@
 <script setup lang="ts">
-import type { Category, Product, Brand } from '~/types'
-
-interface FilterGroupValue {
-  label: string
-  slug: string
-  count: number
-}
-
-interface FilterGroup {
-  id: number
-  name: string
-  slug: string
-  type: 'checkbox' | 'price_range'
-  match_field: string
-  values: FilterGroupValue[]
-}
-
-interface SpecFilter {
-  key_id: number
-  label: string
-  unit: string | null
-  type: string
-  values: string[]
-}
-
-interface FiltersData {
-  brands: Brand[]
-  price_range: { min: number; max: number }
-  groups: FilterGroup[]
-  specs: SpecFilter[]
-}
-
-interface CategoryResponse {
-  category: Category & { parent?: Category }
-  products: {
-    data: Product[]
-    current_page: number
-    last_page: number
-    per_page: number
-    total: number
-  }
-  filters: FiltersData
-}
+import { categorySortOptions, useCategoryListing } from '~/composables/useCategoryListing'
+import type {
+  CategoryActiveFilter,
+  CategoryListingFilters,
+  CategoryTrustItem,
+} from '~/types/category-listing'
 
 const config = useRuntimeConfig()
 const route = useRoute()
-const router = useRouter()
+const { siteName, getString } = useSettings()
+const slug = computed(() => String(route.params.category || ''))
+const listing = useCategoryListing(slug)
+const {
+  data,
+  status,
+  error,
+  page,
+  sort,
+  selectedBrands,
+  selectedSubCategory,
+  minPrice,
+  maxPrice,
+  inStock,
+  dynamicFilters,
+  specFilters,
+  viewMode,
+} = listing
 
-const slug = route.params.category as string
-const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n)
+const category = computed(() => data.value?.category || null)
+const filters = computed<CategoryListingFilters>(() => {
+  const responseFilters = data.value?.filters
+  return {
+    brands: responseFilters?.brands || [],
+    price_range: responseFilters?.price_range || { min: 0, max: 0 },
+    price_presets: responseFilters?.price_presets || [],
+    groups: responseFilters?.groups || [],
+    specs: responseFilters?.specs || [],
+  }
+})
+const pricePresets = computed(() => filters.value.price_presets)
+const products = computed(() => data.value?.products.data || [])
+const recommendations = computed(() => data.value?.recommendations || [])
+const promoBanner = computed(() => data.value?.promo_banner || null)
+const isLoading = computed(() => status.value === 'pending')
+const totalProducts = computed(() => data.value?.products.total || 0)
+const currentPage = computed(() => data.value?.products.current_page || page.value)
+const lastPage = computed(() => data.value?.products.last_page || 1)
+const pageSize = computed(() => data.value?.products.per_page || 24)
+const resultFrom = computed(() => totalProducts.value ? (currentPage.value - 1) * pageSize.value + 1 : 0)
+const resultTo = computed(() => totalProducts.value ? Math.min(currentPage.value * pageSize.value, totalProducts.value) : 0)
 
-// ---- Reactive filter state ----
-const page = ref(Number(route.query.page) || 1)
-const sort = ref((route.query.sort as string) || 'newest')
-const selectedBrands = ref<string[]>(route.query.brands ? (route.query.brands as string).split(',') : [])
-const selectedSubCat = ref<string>((route.query.sub_category as string) || '')
-const minPrice = ref<number | undefined>(route.query.min_price ? Number(route.query.min_price) : undefined)
-const maxPrice = ref<number | undefined>(route.query.max_price ? Number(route.query.max_price) : undefined)
-const inStock = ref(route.query.in_stock === '1')
-const specFilters = ref<Record<string, string[]>>({})
-const dynamicFilters = ref<Record<string, string[]>>({}) // f_<slug> based filters
-const viewMode = ref<'grid' | 'list'>('grid')
 const collapsedGroups = ref<Record<string, boolean>>({})
+const showMobileFilters = ref(false)
+let listingMounted = false
 
-// Initialize spec filters from query
-for (const [key, value] of Object.entries(route.query)) {
-  if (key.startsWith('spec_') && value) {
-    specFilters.value[key] = (value as string).split(',')
-  }
-  if (key.startsWith('f_') && value) {
-    dynamicFilters.value[key] = (value as string).split(',')
-  }
-}
+const trustItems = computed<CategoryTrustItem[]>(() => {
+  const definitions: Array<[string, string, CategoryTrustItem['icon']]> = [
+    ['homepage_service_authenticity_title', 'homepage_service_authenticity_text', 'shield'],
+    ['homepage_service_shipping_title', 'homepage_service_shipping_text', 'truck'],
+    ['homepage_service_support_title', 'homepage_service_support_text', 'support'],
+    ['homepage_service_returns_title', 'homepage_service_returns_text', 'refresh'],
+  ]
 
-// Build query params
-const queryParams = computed(() => {
-  const params: Record<string, any> = {
-    page: page.value,
-    sort: sort.value,
-    per_page: 20,
-  }
-  if (selectedBrands.value.length) params.brands = selectedBrands.value.join(',')
-  if (selectedSubCat.value) params.sub_category = selectedSubCat.value
-  if (minPrice.value) params.min_price = minPrice.value
-  if (maxPrice.value) params.max_price = maxPrice.value
-  if (inStock.value) params.in_stock = '1'
-  for (const [key, vals] of Object.entries(specFilters.value)) {
-    if (vals.length) params[key] = vals.join(',')
-  }
-  for (const [key, vals] of Object.entries(dynamicFilters.value)) {
-    if (vals.length) params[key] = vals.join(',')
-  }
-  return params
+  return definitions.flatMap(([titleKey, textKey, icon]) => {
+    const title = getString(titleKey)
+    const text = getString(textKey)
+    return title && text ? [{ key: titleKey, title, text, icon }] : []
+  })
 })
 
-// Fetch data
-const { data, refresh, status } = await useFetch<CategoryResponse>(
-  `${config.public.apiBase}/categories/${slug}`,
-  {
-    params: queryParams,
-    watch: [queryParams],
+const activeFilters = computed<CategoryActiveFilter[]>(() => {
+  const chips: CategoryActiveFilter[] = []
+  for (const brandSlug of listing.selectedBrands.value) {
+    const brand = filters.value.brands.find(item => item.slug === brandSlug)
+    chips.push({ id: `brand:${brandSlug}`, label: brand?.name || brandSlug })
   }
-)
 
-const category = computed(() => data.value?.category)
-const products = computed(() => data.value?.products?.data ?? [])
-const totalProducts = computed(() => data.value?.products?.total ?? 0)
-const totalPages = computed(() => data.value?.products?.last_page ?? 1)
-const filters = computed(() => data.value?.filters)
-
-// Update URL when filters change
-watch(queryParams, (params) => {
-  const query: Record<string, string> = {}
-  if (params.page > 1) query.page = String(params.page)
-  if (params.sort !== 'newest') query.sort = params.sort
-  if (params.brands) query.brands = params.brands
-  if (params.sub_category) query.sub_category = params.sub_category
-  if (params.min_price) query.min_price = String(params.min_price)
-  if (params.max_price) query.max_price = String(params.max_price)
-  if (params.in_stock) query.in_stock = '1'
-  for (const [key, val] of Object.entries(params)) {
-    if (key.startsWith('spec_') || key.startsWith('f_')) query[key] = val
+  if (listing.selectedSubCategory.value) {
+    const child = category.value?.children?.find(item => item.slug === listing.selectedSubCategory.value)
+    chips.push({ id: 'subcategory', label: child?.name || listing.selectedSubCategory.value })
   }
-  router.replace({ query })
+  if (listing.minPrice.value !== undefined || listing.maxPrice.value !== undefined) {
+    chips.push({ id: 'price', label: priceLabel(listing.minPrice.value, listing.maxPrice.value) })
+  }
+  if (listing.inStock.value) chips.push({ id: 'stock', label: 'Còn hàng' })
+
+  for (const [filterSlug, values] of Object.entries(listing.dynamicFilters.value)) {
+    const group = filters.value.groups.find(item => item.slug === filterSlug)
+    for (const valueSlug of values) {
+      const value = group?.values.find(item => item.slug === valueSlug)
+      chips.push({ id: `dynamic:${filterSlug}:${valueSlug}`, label: value?.label || valueSlug })
+    }
+  }
+  for (const [filterKey, values] of Object.entries(listing.specFilters.value)) {
+    const spec = filters.value.specs.find(item => `spec_${item.key_id}` === filterKey)
+    for (const value of values) {
+      chips.push({ id: `spec:${filterKey}:${encodeURIComponent(value)}`, label: `${spec?.label || filterKey}: ${value}` })
+    }
+  }
+  return chips
+})
+
+function priceLabel(min: number | undefined, max: number | undefined): string {
+  const format = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)}đ`
+  if (min !== undefined && max !== undefined) return `${format(min)} - ${format(max)}`
+  if (min !== undefined) return `Từ ${format(min)}`
+  return `Đến ${format(max || 0)}`
+}
+
+function toggleGroup(slug: string) {
+  collapsedGroups.value = { ...collapsedGroups.value, [slug]: !collapsedGroups.value[slug] }
+}
+
+function toggleStock() {
+  listing.inStock.value = !listing.inStock.value
+  listing.resetPage()
+}
+
+function changeSort(value: string) {
+  sort.value = value
+  listing.resetPage()
+}
+
+function changeView(value: 'grid' | 'list') {
+  viewMode.value = value
+}
+
+function changePage(value: number) {
+  page.value = value
+  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function handlePriceApply(min: number | undefined, max: number | undefined) {
+  listing.applyPrice(min, max)
+}
+
+function scrollToToolbar() {
+  if (!import.meta.client) return
+  const toolbar = document.getElementById('category-toolbar')
+  if (!toolbar) return
+  toolbar.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    block: 'start',
+  })
+}
+
+onMounted(() => {
+  listingMounted = true
+})
+
+watch(() => route.query, () => {
+  if (listingMounted) scrollToToolbar()
 }, { deep: true })
 
-// Reset page when filters change
-function resetPage() {
-  page.value = 1
-}
-
-// Toggle brand
-function toggleBrand(brandSlug: string) {
-  const idx = selectedBrands.value.indexOf(brandSlug)
-  if (idx > -1) selectedBrands.value.splice(idx, 1)
-  else selectedBrands.value.push(brandSlug)
-  resetPage()
-}
-
-// Toggle spec value (legacy)
-function toggleSpec(key: string, value: string) {
-  if (!specFilters.value[key]) specFilters.value[key] = []
-  const idx = specFilters.value[key].indexOf(value)
-  if (idx > -1) specFilters.value[key].splice(idx, 1)
-  else specFilters.value[key].push(value)
-  resetPage()
-}
-
-// Toggle dynamic filter value (new system)
-function toggleDynamicFilter(filterSlug: string, valueSlug: string) {
-  const key = `f_${filterSlug}`
-  if (!dynamicFilters.value[key]) dynamicFilters.value[key] = []
-  const idx = dynamicFilters.value[key].indexOf(valueSlug)
-  if (idx > -1) dynamicFilters.value[key].splice(idx, 1)
-  else dynamicFilters.value[key].push(valueSlug)
-  resetPage()
-}
-
-// Toggle collapse
-function toggleCollapse(slug: string) {
-  collapsedGroups.value[slug] = !collapsedGroups.value[slug]
-}
-
-// Clear all filters
-function clearAllFilters() {
-  selectedBrands.value = []
-  selectedSubCat.value = ''
-  minPrice.value = undefined
-  maxPrice.value = undefined
-  inStock.value = false
-  specFilters.value = {}
-  dynamicFilters.value = {}
-  sort.value = 'newest'
-  resetPage()
-}
-
-// Price presets
-const pricePresets = [
-  { label: 'Dưới 5 triệu', min: 0, max: 5000000 },
-  { label: '5 - 10 triệu', min: 5000000, max: 10000000 },
-  { label: '10 - 20 triệu', min: 10000000, max: 20000000 },
-  { label: '20 - 50 triệu', min: 20000000, max: 50000000 },
-  { label: 'Trên 50 triệu', min: 50000000, max: undefined },
-]
-
-function applyPricePreset(preset: { min: number; max: number | undefined }) {
-  minPrice.value = preset.min || undefined
-  maxPrice.value = preset.max
-  resetPage()
-}
-
-const sortOptions = [
-  { value: 'newest', label: 'Mới nhất' },
-  { value: 'price_asc', label: 'Giá thấp → cao' },
-  { value: 'price_desc', label: 'Giá cao → thấp' },
-  { value: 'popular', label: 'Bán chạy' },
-  { value: 'name_asc', label: 'A → Z' },
-]
-
-const activeFilterCount = computed(() => {
-  let count = 0
-  if (selectedBrands.value.length) count++
-  if (selectedSubCat.value) count++
-  if (minPrice.value || maxPrice.value) count++
-  if (inStock.value) count++
-  count += Object.values(specFilters.value).filter(v => v.length > 0).length
-  count += Object.values(dynamicFilters.value).filter(v => v.length > 0).length
-  return count
+const canonical = computed(() => {
+  try {
+    return new URL(`/${slug.value}`, config.public.siteUrl).toString()
+  } catch {
+    return `/${slug.value}`
+  }
 })
-
-const getDiscount = (p: Product) => {
-  if (!p.sale_price) return 0
-  return Math.round((1 - p.sale_price / p.price) * 100)
-}
-
-// Mobile filter sidebar
-const showMobileFilters = ref(false)
 
 useSeoMeta({
-  title: () => category.value?.name ? `${category.value.name} - PC Shop` : 'Danh mục - PC Shop',
-  description: () => category.value?.description || `Khám phá sản phẩm ${category.value?.name} tại PC Shop`,
+  title: () => {
+    const title = category.value?.meta_title || category.value?.name
+    return title ? `${title} - ${siteName.value}` : `Danh mục - ${siteName.value}`
+  },
+  description: () => category.value?.meta_description || category.value?.description || undefined,
+  ogTitle: () => category.value?.meta_title || category.value?.name || siteName.value,
+  ogDescription: () => category.value?.meta_description || category.value?.description || undefined,
+  ogImage: () => category.value?.image || undefined,
 })
+
+useHead(() => ({
+  link: [{ rel: 'canonical', href: canonical.value }],
+}))
 </script>
 
 <template>
-  <div class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-6">
-      <!-- Breadcrumb -->
-      <nav class="mb-5 text-sm flex items-center gap-1.5 flex-wrap">
-        <NuxtLink to="/" class="text-gray-500 hover:text-primary-600">Trang chủ</NuxtLink>
-        <span class="text-gray-300">/</span>
-        <template v-if="category?.parent">
-          <NuxtLink :to="`/${category.parent.slug}`" class="text-gray-500 hover:text-primary-600">
-            {{ category.parent.name }}
-          </NuxtLink>
-          <span class="text-gray-300">/</span>
-        </template>
-        <span class="text-gray-900 font-medium">{{ category?.name ?? 'Đang tải...' }}</span>
-      </nav>
+  <div class="category-page">
+    <div class="category-container">
+      <CategoryBreadcrumb :category="category" />
 
-      <!-- Category Header -->
-      <div class="bg-white rounded-xl p-6 mb-6 shadow-sm">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">{{ category?.name }}</h1>
-            <p v-if="category?.description" class="text-gray-500 mt-1">{{ category.description }}</p>
-            <p class="text-sm text-gray-400 mt-1">{{ totalProducts }} sản phẩm</p>
-          </div>
-          <!-- Subcategory chips -->
-          <div v-if="category?.children?.length" class="flex flex-wrap gap-2">
-            <button
-              @click="selectedSubCat = ''; resetPage()"
-              :class="[
-                'px-3 py-1.5 rounded-full text-sm font-medium transition-all',
-                !selectedSubCat
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              ]"
-            >
-              Tất cả
-            </button>
-            <button
-              v-for="child in category.children"
-              :key="child.id"
-              @click="selectedSubCat = child.slug; resetPage()"
-              :class="[
-                'px-3 py-1.5 rounded-full text-sm font-medium transition-all',
-                selectedSubCat === child.slug
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              ]"
-            >
-              {{ child.name }}
-            </button>
-          </div>
-        </div>
-      </div>
+      <div class="category-layout">
+        <CategoryFilterSidebar
+          :category="category"
+          :filters="filters"
+          :selected-brands="selectedBrands"
+          :selected-sub-category="selectedSubCategory"
+          :min-price="minPrice"
+          :max-price="maxPrice"
+          :in-stock="inStock"
+          :dynamic-filters="dynamicFilters"
+          :spec-filters="specFilters"
+          :collapsed-groups="collapsedGroups"
+          :price-presets="pricePresets"
+          @toggle-brand="listing.toggleBrand"
+          @toggle-sub-category="listing.toggleSubCategory"
+          @apply-price="handlePriceApply"
+          @toggle-stock="toggleStock"
+          @toggle-dynamic="listing.toggleDynamicFilter"
+          @toggle-spec="listing.toggleSpec"
+          @toggle-group="toggleGroup"
+          @clear="listing.clearAllFilters"
+        />
 
-      <div class="flex gap-6">
-        <!-- ===== SIDEBAR FILTERS (Desktop) ===== -->
-        <aside class="w-64 shrink-0 hidden lg:block space-y-4">
-          <!-- Active filter badge + clear -->
-          <div v-if="activeFilterCount > 0" class="bg-white rounded-xl p-4 shadow-sm">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-semibold text-gray-900">Bộ lọc đang chọn ({{ activeFilterCount }})</span>
-              <button @click="clearAllFilters" class="text-xs text-red-500 hover:text-red-700">Xóa tất cả</button>
+        <main class="category-main">
+          <CategoryHero :category="category" :trust-items="trustItems" />
+          <CategoryPromoBanner :banner="promoBanner" />
+
+          <CategoryToolbar
+            :from="resultFrom"
+            :to="resultTo"
+            :total="totalProducts"
+            :sort="sort"
+            :view-mode="viewMode"
+            :sort-options="categorySortOptions"
+            :active-filter-count="activeFilters.length"
+            :pending="isLoading"
+            @open-filters="showMobileFilters = true"
+            @update-sort="changeSort"
+            @update-view="changeView"
+          />
+          <CategoryActiveFilters :filters="activeFilters" @remove="listing.removeFilter" @clear="listing.clearAllFilters" />
+
+          <div v-if="error" class="category-error" role="alert">
+            Không thể tải danh mục lúc này. Vui lòng thử lại sau.
+          </div>
+          <template v-else>
+            <CategoryProductGrid v-if="viewMode === 'grid' && (isLoading || products.length)" :products="products" :loading="isLoading" />
+            <CategoryProductList v-else-if="viewMode === 'list' && products.length" :products="products" />
+            <div v-else-if="!isLoading" class="category-empty">
+              <svg aria-hidden="true" viewBox="0 0 64 64" fill="none" stroke="currentColor"><circle cx="28" cy="28" r="17" stroke-width="2" /><path stroke-linecap="round" stroke-width="2" d="m41 41 13 13M20 28h16M28 20v16" /></svg>
+              <h2>Không tìm thấy sản phẩm phù hợp</h2>
+              <p>Thử thay đổi bộ lọc hoặc xóa bộ lọc hiện tại.</p>
+              <button type="button" @click="listing.clearAllFilters">Xóa tất cả bộ lọc</button>
             </div>
-            <div class="flex flex-wrap gap-1.5">
-              <span v-for="b in selectedBrands" :key="b"
-                class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 rounded-full text-xs"
-              >
-                {{ b }}
-                <button @click="toggleBrand(b)" class="text-primary-400 hover:text-primary-600">✕</button>
-              </span>
-              <span v-if="minPrice || maxPrice" class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs">
-                {{ minPrice ? fmt(minPrice) : '0' }}₫ - {{ maxPrice ? fmt(maxPrice) : '∞' }}₫
-                <button @click="minPrice = undefined; maxPrice = undefined; resetPage()" class="text-green-400 hover:text-green-600">✕</button>
-              </span>
-              <span v-if="inStock" class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">
-                Còn hàng
-                <button @click="inStock = false; resetPage()" class="text-blue-400 hover:text-blue-600">✕</button>
-              </span>
-            </div>
-          </div>
+          </template>
 
-          <!-- Brand filter -->
-          <div v-if="filters?.brands?.length" class="bg-white rounded-xl p-4 shadow-sm">
-            <h3 class="font-semibold text-gray-900 mb-3 text-sm">Thương hiệu</h3>
-            <div class="space-y-2 max-h-48 overflow-y-auto">
-              <label v-for="brand in filters.brands" :key="brand.id" class="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  :checked="selectedBrands.includes(brand.slug)"
-                  @change="toggleBrand(brand.slug)"
-                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                >
-                <span class="text-sm text-gray-700 group-hover:text-gray-900">{{ brand.name }}</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Price Range -->
-          <div class="bg-white rounded-xl p-4 shadow-sm">
-            <h3 class="font-semibold text-gray-900 mb-3 text-sm">Khoảng giá</h3>
-            <div class="space-y-2 mb-3">
-              <button
-                v-for="preset in pricePresets"
-                :key="preset.label"
-                @click="applyPricePreset(preset)"
-                :class="[
-                  'w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors',
-                  (minPrice === preset.min && maxPrice === preset.max)
-                    ? 'bg-primary-50 text-primary-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-50'
-                ]"
-              >
-                {{ preset.label }}
-              </button>
-            </div>
-            <div class="flex gap-2">
-              <input
-                v-model.number="minPrice"
-                type="number"
-                placeholder="Từ"
-                @change="resetPage()"
-                class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-primary-500"
-              >
-              <span class="text-gray-400 self-center">-</span>
-              <input
-                v-model.number="maxPrice"
-                type="number"
-                placeholder="Đến"
-                @change="resetPage()"
-                class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-primary-500"
-              >
-            </div>
-          </div>
-
-          <!-- In stock -->
-          <div class="bg-white rounded-xl p-4 shadow-sm">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" v-model="inStock" @change="resetPage()" class="rounded border-gray-300 text-primary-600">
-              <span class="text-sm text-gray-700 font-medium">Chỉ hiện hàng còn</span>
-            </label>
-          </div>
-
-          <!-- Dynamic Filter Groups (from admin) -->
-          <div v-for="group in (filters?.groups ?? [])" :key="group.id" class="bg-white rounded-xl p-4 shadow-sm">
-            <button @click="toggleCollapse(group.slug)" class="w-full flex items-center justify-between mb-3">
-              <h3 class="font-semibold text-gray-900 text-sm">{{ group.name }}</h3>
-              <svg :class="collapsedGroups[group.slug] ? '' : 'rotate-180'" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
-            <div v-show="!collapsedGroups[group.slug]" class="space-y-2 max-h-48 overflow-y-auto">
-              <label v-for="val in group.values" :key="val.slug" class="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  :checked="(dynamicFilters[`f_${group.slug}`] ?? []).includes(val.slug)"
-                  @change="toggleDynamicFilter(group.slug, val.slug)"
-                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                >
-                <span class="text-sm text-gray-700 group-hover:text-gray-900 flex-1">{{ val.label }}</span>
-                <span class="text-xs text-gray-400">({{ val.count }})</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Legacy Dynamic Spec Filters (fallback when no filter groups assigned) -->
-          <div v-for="specF in (filters?.specs ?? [])" :key="specF.key_id" class="bg-white rounded-xl p-4 shadow-sm">
-            <h3 class="font-semibold text-gray-900 mb-3 text-sm">
-              {{ specF.label }}
-              <span v-if="specF.unit" class="text-gray-400 font-normal">({{ specF.unit }})</span>
-            </h3>
-            <div class="space-y-2 max-h-40 overflow-y-auto">
-              <label v-for="val in specF.values" :key="val" class="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  :checked="(specFilters[`spec_${specF.key_id}`] ?? []).includes(val)"
-                  @change="toggleSpec(`spec_${specF.key_id}`, val)"
-                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                >
-                <span class="text-sm text-gray-700 group-hover:text-gray-900">{{ val }}{{ specF.unit ? ` ${specF.unit}` : '' }}</span>
-              </label>
-            </div>
-          </div>
-        </aside>
-
-        <!-- ===== MAIN CONTENT ===== -->
-        <div class="flex-1 min-w-0">
-          <!-- Toolbar -->
-          <div class="bg-white rounded-xl p-3 mb-4 shadow-sm flex items-center justify-between gap-3 flex-wrap">
-            <div class="flex items-center gap-3">
-              <!-- Mobile filter trigger -->
-              <button @click="showMobileFilters = true" class="lg:hidden flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200">
-                <span>🔍</span> Bộ lọc
-                <span v-if="activeFilterCount" class="bg-primary-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{{ activeFilterCount }}</span>
-              </button>
-              <!-- Sort -->
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-gray-500 hidden sm:inline">Sắp xếp:</span>
-                <select
-                  v-model="sort"
-                  @change="resetPage()"
-                  class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-primary-500 bg-white"
-                >
-                  <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-gray-400">{{ totalProducts }} kết quả</span>
-              <!-- View mode toggle -->
-              <button
-                @click="viewMode = 'grid'"
-                :class="['p-1.5 rounded', viewMode === 'grid' ? 'bg-gray-200 text-gray-900' : 'text-gray-400 hover:text-gray-600']"
-              >
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                  <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
-                  <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
-                </svg>
-              </button>
-              <button
-                @click="viewMode = 'list'"
-                :class="['p-1.5 rounded', viewMode === 'list' ? 'bg-gray-200 text-gray-900' : 'text-gray-400 hover:text-gray-600']"
-              >
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                  <rect x="1" y="1" width="14" height="3" rx="1"/><rect x="1" y="6" width="14" height="3" rx="1"/>
-                  <rect x="1" y="11" width="14" height="3" rx="1"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Loading state -->
-          <div v-if="status === 'pending'" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div v-for="i in 8" :key="i" class="bg-white rounded-xl overflow-hidden border border-gray-100 animate-pulse">
-              <div class="aspect-square bg-gray-200"></div>
-              <div class="p-4 space-y-2">
-                <div class="h-3 bg-gray-200 rounded w-1/3"></div>
-                <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                <div class="h-5 bg-gray-200 rounded w-2/5 mt-2"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Products Grid View -->
-          <div v-else-if="products.length > 0 && viewMode === 'grid'" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <NuxtLink
-              v-for="product in products"
-              :key="product.id"
-              :to="`/${category.slug}/${product.slug}`"
-              class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg hover:border-primary-200 transition-all group"
-            >
-              <div class="relative aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
-                <img v-if="product.images?.[0]" :src="product.images[0].url" :alt="product.name"
-                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                >
-                <span v-else class="text-6xl">📦</span>
-                <div v-if="getDiscount(product)" class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
-                  -{{ getDiscount(product) }}%
-                </div>
-                <div v-if="product.is_featured" class="absolute top-2 right-2 bg-amber-400 text-gray-900 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  HOT
-                </div>
-              </div>
-              <div class="p-4">
-                <p class="text-xs text-gray-400 mb-1 uppercase tracking-wide">{{ product.brand?.name }}</p>
-                <h3 class="font-semibold text-sm text-gray-900 line-clamp-2 mb-1 group-hover:text-primary-600 transition-colors">{{ product.name }}</h3>
-                <p class="text-xs text-gray-500 line-clamp-1 mb-3">{{ product.short_description }}</p>
-                <div class="flex items-end gap-2">
-                  <span class="text-lg font-bold text-red-600">{{ fmt(product.sale_price || product.price) }}₫</span>
-                  <span v-if="product.sale_price" class="text-xs text-gray-400 line-through mb-0.5">{{ fmt(product.price) }}₫</span>
-                </div>
-              </div>
-            </NuxtLink>
-          </div>
-
-          <!-- Products List View -->
-          <div v-else-if="products.length > 0 && viewMode === 'list'" class="space-y-3">
-            <NuxtLink
-              v-for="product in products"
-              :key="product.id"
-              :to="`/${category.slug}/${product.slug}`"
-              class="bg-white rounded-xl border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all flex overflow-hidden group"
-            >
-              <div class="w-32 h-32 md:w-40 md:h-40 bg-gray-50 flex items-center justify-center shrink-0 overflow-hidden">
-                <img v-if="product.images?.[0]" :src="product.images[0].url" :alt="product.name"
-                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                >
-                <span v-else class="text-4xl">📦</span>
-              </div>
-              <div class="flex-1 p-4 flex flex-col justify-between min-w-0">
-                <div>
-                  <p class="text-xs text-gray-400 mb-0.5 uppercase tracking-wide">{{ product.brand?.name }}</p>
-                  <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary-600 transition-colors line-clamp-1">{{ product.name }}</h3>
-                  <p class="text-sm text-gray-500 line-clamp-2">{{ product.short_description }}</p>
-                </div>
-                <div class="flex items-center gap-3 mt-2">
-                  <span class="text-xl font-bold text-red-600">{{ fmt(product.sale_price || product.price) }}₫</span>
-                  <span v-if="product.sale_price" class="text-sm text-gray-400 line-through">{{ fmt(product.price) }}₫</span>
-                  <span v-if="getDiscount(product)" class="bg-red-50 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                    -{{ getDiscount(product) }}%
-                  </span>
-                </div>
-              </div>
-            </NuxtLink>
-          </div>
-
-          <!-- Empty state -->
-          <div v-else class="text-center py-16 bg-white rounded-xl shadow-sm">
-            <p class="text-5xl mb-4">🔍</p>
-            <p class="text-gray-600 font-medium mb-2">Không tìm thấy sản phẩm phù hợp</p>
-            <p class="text-sm text-gray-400 mb-4">Thử thay đổi bộ lọc hoặc xóa bộ lọc hiện tại</p>
-            <button @click="clearAllFilters" class="text-primary-600 hover:text-primary-700 font-medium text-sm">
-              Xóa tất cả bộ lọc
-            </button>
-          </div>
-
-          <!-- Pagination -->
-          <div v-if="totalPages > 1" class="mt-8 flex justify-center gap-1">
-            <button
-              v-for="p in totalPages"
-              :key="p"
-              @click="page = p"
-              :class="[
-                'w-9 h-9 rounded-lg text-sm font-medium transition-colors',
-                page === p
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-              ]"
-            >
-              {{ p }}
-            </button>
-          </div>
-        </div>
+          <CategoryPagination v-if="!error" :current-page="currentPage" :last-page="lastPage" @change="changePage" />
+          <CategoryRecommendations :products="recommendations" :category-slug="slug" />
+        </main>
       </div>
     </div>
 
-    <!-- ===== MOBILE FILTER DRAWER ===== -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div v-if="showMobileFilters" class="fixed inset-0 bg-black/50 z-50 lg:hidden" @click.self="showMobileFilters = false">
-          <Transition
-            enter-active-class="transition duration-300 ease-out"
-            enter-from-class="-translate-x-full"
-            enter-to-class="translate-x-0"
-            leave-active-class="transition duration-200 ease-in"
-            leave-from-class="translate-x-0"
-            leave-to-class="-translate-x-full"
-          >
-            <div v-if="showMobileFilters" class="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white overflow-y-auto">
-              <div class="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
-                <h3 class="font-semibold text-gray-900">Bộ lọc</h3>
-                <button @click="showMobileFilters = false" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
-              </div>
-              <div class="p-4 space-y-5">
-                <!-- Brands -->
-                <div v-if="filters?.brands?.length">
-                  <h4 class="font-medium text-gray-900 mb-2 text-sm">Thương hiệu</h4>
-                  <div class="space-y-2">
-                    <label v-for="brand in filters.brands" :key="brand.id" class="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" :checked="selectedBrands.includes(brand.slug)" @change="toggleBrand(brand.slug)"
-                        class="rounded border-gray-300 text-primary-600">
-                      <span class="text-sm text-gray-700">{{ brand.name }}</span>
-                    </label>
-                  </div>
-                </div>
-                <!-- Price -->
-                <div>
-                  <h4 class="font-medium text-gray-900 mb-2 text-sm">Khoảng giá</h4>
-                  <div class="space-y-1.5">
-                    <button v-for="preset in pricePresets" :key="preset.label" @click="applyPricePreset(preset)"
-                      :class="['w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors',
-                        (minPrice === preset.min && maxPrice === preset.max) ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
-                      ]">
-                      {{ preset.label }}
-                    </button>
-                  </div>
-                </div>
-                <!-- In stock -->
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" v-model="inStock" @change="resetPage()" class="rounded border-gray-300 text-primary-600">
-                  <span class="text-sm text-gray-700 font-medium">Chỉ hiện hàng còn</span>
-                </label>
-                <!-- Dynamic filter groups (new) -->
-                <div v-for="group in (filters?.groups ?? [])" :key="group.id">
-                  <h4 class="font-medium text-gray-900 mb-2 text-sm">{{ group.name }}</h4>
-                  <div class="space-y-2">
-                    <label v-for="val in group.values" :key="val.slug" class="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" :checked="(dynamicFilters[`f_${group.slug}`] ?? []).includes(val.slug)"
-                        @change="toggleDynamicFilter(group.slug, val.slug)"
-                        class="rounded border-gray-300 text-primary-600">
-                      <span class="text-sm text-gray-700 flex-1">{{ val.label }}</span>
-                      <span class="text-xs text-gray-400">({{ val.count }})</span>
-                    </label>
-                  </div>
-                </div>
-                <!-- Legacy spec filters -->
-                <div v-for="specF in (filters?.specs ?? [])" :key="specF.key_id">
-                  <h4 class="font-medium text-gray-900 mb-2 text-sm">{{ specF.label }}</h4>
-                  <div class="space-y-2">
-                    <label v-for="val in specF.values" :key="val" class="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" :checked="(specFilters[`spec_${specF.key_id}`] ?? []).includes(val)"
-                        @change="toggleSpec(`spec_${specF.key_id}`, val)"
-                        class="rounded border-gray-300 text-primary-600">
-                      <span class="text-sm text-gray-700">{{ val }}</span>
-                    </label>
-                  </div>
-                </div>
-                <!-- Clear + Apply -->
-                <div class="flex gap-3 pt-2">
-                  <button @click="clearAllFilters" class="flex-1 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-                    Xóa bộ lọc
-                  </button>
-                  <button @click="showMobileFilters = false" class="flex-1 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">
-                    Áp dụng
-                  </button>
-                </div>
-              </div>
-            </div>
-          </Transition>
-        </div>
-      </Transition>
-    </Teleport>
+    <CategoryMobileFilters :open="showMobileFilters" :active-count="activeFilters.length" :result-count="totalProducts" @close="showMobileFilters = false" @clear="listing.clearAllFilters">
+      <CategoryFilterSidebar
+        :category="category"
+        :filters="filters"
+        :selected-brands="selectedBrands"
+        :selected-sub-category="selectedSubCategory"
+        :min-price="minPrice"
+        :max-price="maxPrice"
+        :in-stock="inStock"
+        :dynamic-filters="dynamicFilters"
+        :spec-filters="specFilters"
+        :collapsed-groups="collapsedGroups"
+        :price-presets="pricePresets"
+        @toggle-brand="listing.toggleBrand"
+        @toggle-sub-category="listing.toggleSubCategory"
+        @apply-price="handlePriceApply"
+        @toggle-stock="toggleStock"
+        @toggle-dynamic="listing.toggleDynamicFilter"
+        @toggle-spec="listing.toggleSpec"
+        @toggle-group="toggleGroup"
+        @clear="listing.clearAllFilters"
+      />
+    </CategoryMobileFilters>
   </div>
 </template>

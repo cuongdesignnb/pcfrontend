@@ -9,7 +9,7 @@ defineProps<{
 <template>
   <section class="news-hero" aria-label="Bài viết nổi bật">
     <template v-if="articles.length">
-      <NewsHeroMain :article="articles[0]" />
+      <NewsHeroMain :article="articles[0]!" />
       <div class="news-hero-side">
         <NewsHeroSideCard v-for="article in articles.slice(1, 3)" :key="article.id" :article="article" />
       </div>

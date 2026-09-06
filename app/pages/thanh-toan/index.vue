@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { BuyNowItem, ProductDetail, ProductDetailResponse } from '~/types/product-detail'
+import type { CartItem, CartResponse } from '~/types/cart'
 import { createUuid } from '~/utils/createUuid'
 
 const config = useRuntimeConfig();
 const router = useRouter();
 const route = useRoute();
 const { getHeaders: getCartHeaders } = useCartSession();
+const { token } = useAuth();
 const { read: readBuyNow, clear: clearBuyNow } = useBuyNow();
 const {
   siteName,
@@ -20,16 +22,6 @@ const checkoutMode = ref<'cart' | 'buy_now'>('cart');
 const buyNowItem = ref<BuyNowItem | null>(null);
 const buyNowProduct = ref<ProductDetail | null>(null);
 const buyNowLoading = ref(false);
-
-interface CartResponseItem {
-  id: number;
-  product_id: number;
-  variant_id: number | null;
-  quantity: number;
-  price: number | string;
-  variant?: { id: number; name: string } | null;
-  product: { name: string; images?: { url: string | null }[] };
-}
 
 interface CheckoutLine {
   product_id: number;
@@ -55,9 +47,51 @@ const form = reactive({
 });
 
 // Fetch cart
-const { data: cartData } = await useFetch<{ items: CartResponseItem[]; total: number }>(
+const { data: cartData } = await useFetch<CartResponse>(
   `${config.public.apiBase}/cart`,
-  { default: () => ({ items: [], total: 0 }), headers: getCartHeaders() },
+  {
+    default: () => ({
+      id: 0,
+      cart: { id: 0, item_count: 0, quantity: 0, selected_quantity: 0 },
+      items: [],
+      summary: {
+        item_count: 0,
+        selected_item_count: 0,
+        line_count: 0,
+        selected_line_count: 0,
+        original_subtotal: 0,
+        product_discount: 0,
+        subtotal: 0,
+        coupon_discount: 0,
+        payable_before_shipping: 0,
+        quantity: 0,
+        shipping_fee: 0,
+        total: 0,
+        shipping: {
+          default_fee: 0,
+          free_threshold: 0,
+          amount_remaining_for_free_shipping: 0,
+          eligible_for_free_shipping: false,
+          estimated_fee: 0,
+          free_shipping_remaining: 0,
+          is_free: false,
+        },
+      },
+      coupon: null,
+      recommendations: [],
+      accessories: [],
+      benefits: [],
+      payment_methods: [],
+      support: { hotline: '', hours: '' },
+      total: 0,
+      count: 0,
+      selected_count: 0,
+    }),
+    headers: {
+      ...getCartHeaders(),
+      ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
+    },
+  },
 );
 
 const cartItems = computed(() => cartData.value?.items || []);
@@ -76,14 +110,14 @@ const checkoutItems = computed<CheckoutLine[]>(() => {
       unit_price: variant?.pricing.display_price || buyNowProduct.value.pricing.display_price,
     }];
   }
-  return cartItems.value.map(item => ({
+  return cartItems.value.filter((item: CartItem) => item.selected !== false).map((item: CartItem) => ({
     product_id: item.product_id,
     variant_id: item.variant_id || null,
     quantity: item.quantity,
-    name: item.product.name,
-    image: item.product.images?.[0]?.url || null,
+    name: item.product?.name || 'Sản phẩm',
+    image: item.product?.images?.[0]?.url || null,
     variant_name: item.variant?.name || null,
-    unit_price: Number(item.price),
+    unit_price: item.pricing.unit_price,
   }));
 });
 const cartTotal = computed(() => checkoutItems.value.reduce((total, item) => total + item.unit_price * item.quantity, 0));
@@ -167,7 +201,7 @@ const placeOrder = async () => {
   try {
     const response = await $fetch<any>(`${config.public.apiBase}/orders`, {
       method: "POST",
-      headers: getCartHeaders(),
+      headers: { ...getCartHeaders(), ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}) },
       body: {
         ...form,
         checkout_mode: checkoutMode.value,

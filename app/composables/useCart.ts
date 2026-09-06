@@ -1,128 +1,183 @@
-interface CartItem {
-  id: number
-  product_id: number
-  quantity: number
-  product: {
-    id: number
-    name: string
-    slug: string
-    price: number
-    sale_price: number | null
-    quantity: number
-    images?: { url: string }[]
+import type { CartResponse, CartSummary } from '~/types/cart'
+
+const emptySummary = (): CartSummary => ({
+  item_count: 0,
+  selected_item_count: 0,
+  original_subtotal: 0,
+  payable_before_shipping: 0,
+  line_count: 0,
+  selected_line_count: 0,
+  quantity: 0,
+  subtotal: 0,
+  product_discount: 0,
+  coupon_discount: 0,
+  shipping_fee: 0,
+  total: 0,
+  shipping: {
+    default_fee: 0,
+    free_threshold: 0,
+    amount_remaining_for_free_shipping: 0,
+    eligible_for_free_shipping: false,
+    estimated_fee: 0,
+    free_shipping_remaining: 0,
+    is_free: false,
+  },
+})
+
+const emptyCart = (): CartResponse => ({
+  id: 0,
+  cart: { id: 0, item_count: 0, quantity: 0, selected_quantity: 0 },
+  items: [],
+  summary: emptySummary(),
+  accessories: [],
+  recommendations: [],
+  benefits: [],
+  payment_methods: [],
+  support: { hotline: '', hours: '' },
+  total: 0,
+  count: 0,
+  selected_count: 0,
+  coupon: null,
+})
+
+function normalizeResponse(response: Partial<CartResponse>): CartResponse {
+  const items = Array.isArray(response.items) ? response.items : []
+  const selectedItems = items.filter(item => item.selected !== false)
+  const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)
+  const selectedQuantity = selectedItems.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)
+  const fallbackOriginalSubtotal = selectedItems.reduce((sum, item) => sum + Number(item.pricing?.line_original ?? item.original_unit_price ?? item.price ?? 0), 0)
+  const fallbackSubtotal = items
+    .filter(item => item.selected !== false)
+    .reduce((sum, item) => sum + Number(item.pricing?.line_total ?? item.unit_price ?? item.price ?? 0) * (item.pricing?.line_total === undefined ? Number(item.quantity ?? 0) : 1), 0)
+  const summary = {
+    ...emptySummary(),
+    ...(response.summary || {}),
+    item_count: Number(response.summary?.item_count ?? totalQuantity),
+    selected_item_count: Number(response.summary?.selected_item_count ?? selectedQuantity),
+    line_count: Number(response.summary?.line_count ?? items.length),
+    selected_line_count: Number(response.summary?.selected_line_count ?? selectedItems.length),
+    original_subtotal: Number(response.summary?.original_subtotal ?? fallbackOriginalSubtotal),
+    subtotal: Number(response.summary?.subtotal ?? fallbackSubtotal),
+    payable_before_shipping: Number(response.summary?.payable_before_shipping ?? response.summary?.subtotal ?? fallbackSubtotal),
+    total: Number(response.summary?.total ?? response.total ?? response.summary?.payable_before_shipping ?? fallbackSubtotal),
+  }
+
+  return {
+    ...emptyCart(),
+    ...response,
+    cart: { ...emptyCart().cart, ...(response.cart || {}) },
+    items,
+    summary: {
+      ...summary,
+      shipping: {
+        ...emptySummary().shipping,
+        ...(response.summary?.shipping || {}),
+        amount_remaining_for_free_shipping: Number(response.summary?.shipping?.amount_remaining_for_free_shipping ?? response.summary?.shipping?.free_shipping_remaining ?? 0),
+        eligible_for_free_shipping: Boolean(response.summary?.shipping?.eligible_for_free_shipping ?? response.summary?.shipping?.is_free ?? false),
+        estimated_fee: Number(response.summary?.shipping?.estimated_fee ?? response.summary?.shipping?.default_fee ?? response.summary?.shipping_fee ?? 0),
+      },
+    },
+    accessories: Array.isArray(response.accessories) ? response.accessories : [],
+    recommendations: Array.isArray(response.recommendations) ? response.recommendations : [],
+    benefits: Array.isArray(response.benefits) ? response.benefits : [],
+    payment_methods: Array.isArray(response.payment_methods) ? response.payment_methods : [],
+    support: { ...emptyCart().support, ...(response.support || {}) },
+    total: Number(response.total ?? summary.total),
+    count: Number(response.count ?? totalQuantity),
+    selected_count: Number(response.selected_count ?? selectedQuantity),
+    coupon: response.coupon ?? null,
   }
 }
 
 export const useCart = () => {
   const config = useRuntimeConfig()
   const { getHeaders } = useCartSession()
-  
-  const items = useState<CartItem[]>('cart-items', () => [])
-  const total = useState<number>('cart-total', () => 0)
+  const { token } = useAuth()
+  const state = useState<CartResponse>('cart-response', emptyCart)
   const loading = useState<boolean>('cart-loading', () => false)
-  
-  const itemCount = computed(() => items.value.reduce((sum, item) => sum + item.quantity, 0))
-  
-  const fetchCart = async () => {
-    loading.value = true
-    try {
-      const response = await $fetch<{ items: CartItem[], total: number }>(
-        `${config.public.apiBase}/cart`,
-        { headers: getHeaders() }
-      )
-      items.value = response.items || []
-      total.value = response.total || 0
-    } catch (error) {
-      console.error('Error fetching cart:', error)
-    } finally {
-      loading.value = false
-    }
+  const error = useState<unknown | null>('cart-error', () => null)
+
+  const items = computed(() => state.value.items)
+  const total = computed(() => state.value.summary.total)
+  const itemCount = computed(() => state.value.count)
+  const selectedCount = computed(() => state.value.selected_count)
+  const selectedItemCount = computed(() => state.value.summary.selected_item_count)
+
+  const apply = (response: Partial<CartResponse>) => {
+    state.value = normalizeResponse(response)
+    error.value = null
+    return state.value
   }
-  
-  const addItem = async (productId: number, quantity: number = 1, variantId?: number | null) => {
+
+  const request = async (path: string, options: Record<string, unknown> = {}) => {
     loading.value = true
+    error.value = null
     try {
-      await $fetch(`${config.public.apiBase}/cart/items`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: {
-          product_id: productId,
-          quantity,
-          ...(variantId ? { variant_id: variantId } : {}),
+      const response = await $fetch<Partial<CartResponse>>(`${config.public.apiBase}${path}`, {
+        ...options,
+        headers: {
+          ...getHeaders(),
+          ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
+          ...((options.headers as Record<string, string> | undefined) || {}),
         },
       })
-      await fetchCart()
-      return true
-    } catch (error) {
-      console.error('Error adding to cart:', error)
-      return false
+      return apply(response)
+    } catch (caught) {
+      error.value = caught
+      console.error('[useCart] Request failed:', caught)
+      return null
     } finally {
       loading.value = false
     }
   }
-  
-  const updateItem = async (itemId: number, quantity: number) => {
-    loading.value = true
-    try {
-      await $fetch(`${config.public.apiBase}/cart/items/${itemId}`, {
-        method: 'PATCH',
-        headers: getHeaders(),
-        body: { quantity },
-      })
-      await fetchCart()
-      return true
-    } catch (error) {
-      console.error('Error updating cart:', error)
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  const removeItem = async (itemId: number) => {
-    loading.value = true
-    try {
-      await $fetch(`${config.public.apiBase}/cart/items/${itemId}`, {
-        method: 'DELETE',
-        headers: getHeaders(),
-      })
-      await fetchCart()
-      return true
-    } catch (error) {
-      console.error('Error removing from cart:', error)
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  const clearCart = async () => {
-    loading.value = true
-    try {
-      await $fetch(`${config.public.apiBase}/cart`, {
-        method: 'DELETE',
-        headers: getHeaders(),
-      })
-      items.value = []
-      total.value = 0
-      return true
-    } catch (error) {
-      console.error('Error clearing cart:', error)
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-  
+
+  const fetchCart = async () => request('/cart')
+
+  const addItem = async (productId: number, quantity = 1, variantId?: number | null) => Boolean(await request('/cart/items', {
+    method: 'POST',
+    body: { product_id: productId, quantity, ...(variantId ? { variant_id: variantId } : {}) },
+  }))
+
+  const updateItem = async (itemId: number, quantity: number) => Boolean(await request(`/cart/items/${itemId}`, {
+    method: 'PATCH',
+    body: { quantity },
+  }))
+
+  const setItemSelected = async (itemId: number, selected: boolean) => Boolean(await request(`/cart/items/${itemId}/selection`, {
+    method: 'PATCH',
+    body: { selected },
+  }))
+
+  const selectAll = async (selected: boolean) => Boolean(await request('/cart/selection', {
+    method: 'PATCH',
+    body: { selected },
+  }))
+
+  const removeItem = async (itemId: number) => Boolean(await request(`/cart/items/${itemId}`, { method: 'DELETE' }))
+
+  const removeItems = async (itemIds: number[]) => Boolean(await request('/cart/items', {
+    method: 'DELETE',
+    body: { item_ids: itemIds },
+  }))
+
+  const clearCart = async () => Boolean(await request('/cart', { method: 'DELETE' }))
+
   return {
+    state,
     items,
     total,
     loading,
+    error,
     itemCount,
+    selectedCount,
+    selectedItemCount,
     fetchCart,
     addItem,
     updateItem,
+    setItemSelected,
+    selectAll,
     removeItem,
+    removeItems,
     clearCart,
   }
 }

@@ -5,9 +5,11 @@ const props = withDefaults(defineProps<{
   product: ProductCardData
   variant?: 'default' | 'homepage' | 'compact' | 'category'
   compact?: boolean
+  showAction?: boolean
 }>(), {
   variant: 'default',
   compact: false,
+  showAction: false,
 })
 
 const { formatMoney } = useSettings()
@@ -20,6 +22,7 @@ const cardVariant = computed(() => props.compact ? 'compact' : props.variant)
 const isCompact = computed(() => cardVariant.value === 'compact')
 const isHomepage = computed(() => cardVariant.value === 'homepage')
 const isCategory = computed(() => cardVariant.value === 'category')
+const showProductAction = computed(() => isCategory.value || props.showAction)
 const discountPercent = computed(() => {
   const price = Number(props.product.pricing.price)
   const salePrice = props.product.pricing.sale_price
@@ -130,9 +133,9 @@ async function handleCategoryAction(event: MouseEvent) {
     </button>
 
     <button
-      v-if="isCategory"
+      v-if="showProductAction"
       type="button"
-      class="product-card-category-action"
+      class="product-card-category-action product-card-compact-action"
       :disabled="categoryActionDisabled"
       @click="handleCategoryAction"
     >

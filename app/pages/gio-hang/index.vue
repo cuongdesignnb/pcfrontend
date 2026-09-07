@@ -34,9 +34,16 @@ useSeoMeta({
   description: () => `Giỏ hàng của ${siteName.value}`,
 })
 
+const refreshRestoredCart = (event: PageTransitionEvent) => {
+  if (event.persisted) void refresh()
+}
+
 onMounted(() => {
   void start()
+  window.addEventListener('pageshow', refreshRestoredCart)
 })
+
+onBeforeUnmount(() => window.removeEventListener('pageshow', refreshRestoredCart))
 </script>
 
 <template>

@@ -96,6 +96,11 @@ export const useCart = () => {
   const state = useState<CartResponse>('cart-response', emptyCart)
   const loading = useState<boolean>('cart-loading', () => false)
   const error = useState<unknown | null>('cart-error', () => null)
+  const requestSequence = useState<number>('cart-request-sequence', () => 0)
+  const latestReadSequence = useState<number>('cart-latest-read-sequence', () => 0)
+  const mutationSequence = useState<number>('cart-mutation-sequence', () => 0)
+  const pendingMutations = useState<number>('cart-pending-mutations', () => 0)
+  const activeRequests = useState<number>('cart-active-requests', () => 0)
 
   const items = computed(() => state.value.items)
   const total = computed(() => state.value.summary.total)
@@ -110,24 +115,56 @@ export const useCart = () => {
   }
 
   const request = async (path: string, options: Record<string, unknown> = {}) => {
+    const method = String(options.method ?? 'GET').toUpperCase()
+    const isRead = method === 'GET' || method === 'HEAD'
+    const requestId = requestSequence.value + 1
+    requestSequence.value = requestId
+    const mutationVersionAtStart = mutationSequence.value
+    const pendingMutationsAtStart = pendingMutations.value
+    let mutationId = 0
+
+    if (isRead) {
+      latestReadSequence.value = requestId
+    } else {
+      mutationId = mutationSequence.value + 1
+      mutationSequence.value = mutationId
+      pendingMutations.value += 1
+    }
+
+    activeRequests.value += 1
     loading.value = true
     error.value = null
     try {
       const response = await $fetch<Partial<CartResponse>>(`${config.public.apiBase}${path}`, {
         ...options,
+        ...(isRead ? { cache: 'no-store' } : {}),
         headers: {
           ...getHeaders(),
+          ...(isRead ? { 'Cache-Control': 'no-cache' } : {}),
           ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
           ...((options.headers as Record<string, string> | undefined) || {}),
         },
       })
-      return apply(response)
+
+      // Header and page fetches can overlap with a cart mutation. Never let a
+      // response that started before/while a mutation was pending overwrite
+      // the cart snapshot returned by the mutation.
+      const canApply = isRead
+        ? latestReadSequence.value === requestId
+          && mutationSequence.value === mutationVersionAtStart
+          && pendingMutationsAtStart === 0
+          && pendingMutations.value === 0
+        : mutationSequence.value === mutationId
+
+      return canApply ? apply(response) : state.value
     } catch (caught) {
-      error.value = caught
+      if (!isRead || latestReadSequence.value === requestId) error.value = caught
       console.error('[useCart] Request failed:', caught)
       return null
     } finally {
-      loading.value = false
+      if (!isRead) pendingMutations.value = Math.max(0, pendingMutations.value - 1)
+      activeRequests.value = Math.max(0, activeRequests.value - 1)
+      loading.value = activeRequests.value > 0
     }
   }
 

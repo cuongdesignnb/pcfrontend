@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   },
 
   // CSS
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/checkout.css'],
 
   // Runtime config
   runtimeConfig: {
@@ -59,6 +59,41 @@ export default defineNuxtConfig({
     '/configurator/**': { ssr: false },
     '/cart': { ssr: false },
     '/checkout/**': { ssr: false },
+    '/gio-hang': {
+      ssr: false,
+      isr: false,
+      swr: false,
+      prerender: false,
+      headers: { 'cache-control': 'private, no-store' },
+    },
+    '/gio-hang/**': {
+      ssr: false,
+      isr: false,
+      swr: false,
+      prerender: false,
+      headers: { 'cache-control': 'private, no-store' },
+    },
+    '/thanh-toan': {
+      ssr: false,
+      isr: false,
+      swr: false,
+      prerender: false,
+      headers: { 'cache-control': 'private, no-store' },
+    },
+    '/thanh-toan/**': {
+      ssr: false,
+      isr: false,
+      swr: false,
+      prerender: false,
+      headers: { 'cache-control': 'private, no-store' },
+    },
+    '/don-hang/**': {
+      ssr: false,
+      isr: false,
+      swr: false,
+      prerender: false,
+      headers: { 'cache-control': 'private, no-store' },
+    },
     '/account/**': { ssr: false },
   },
 

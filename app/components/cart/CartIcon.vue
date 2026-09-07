@@ -36,6 +36,34 @@ const props = withDefaults(defineProps<{
     <template v-else-if="props.name === 'receipt'">
       <path d="M5 3h14v18l-2.5-1.5L14 21l-2-1.5L10 21l-2.5-1.5L5 21V3Z" /><path d="M8 8h8M8 12h8M8 16h5" />
     </template>
+    <template v-else-if="props.name === 'cart'">
+      <path d="M3 4h2l1.4 10.2a2 2 0 0 0 2 1.8h8.8a2 2 0 0 0 1.9-1.4L21 7H6" />
+      <circle cx="9" cy="20" r="1.2" /><circle cx="18" cy="20" r="1.2" />
+    </template>
+    <template v-else-if="props.name === 'user'">
+      <circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" />
+    </template>
+    <template v-else-if="props.name === 'location'">
+      <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.4" />
+    </template>
+    <template v-else-if="props.name === 'card'">
+      <rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 9h18M7 14h4" />
+    </template>
+    <template v-else-if="props.name === 'file'">
+      <path d="M6 3h8l4 4v14H6z" /><path d="M14 3v5h4M9 13h6M9 17h6" />
+    </template>
+    <template v-else-if="props.name === 'package'">
+      <path d="m4 7 8-4 8 4-8 4-8-4Z" /><path d="M4 7v10l8 4 8-4V7M12 11v10" />
+    </template>
+    <template v-else-if="props.name === 'qr'">
+      <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v6h-6v-2h4z" />
+    </template>
+    <template v-else-if="props.name === 'cash'">
+      <rect x="3" y="6" width="18" height="12" rx="2" /><circle cx="12" cy="12" r="3" /><path d="M6 9h.01M18 15h.01" />
+    </template>
+    <template v-else-if="props.name === 'info'">
+      <circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" />
+    </template>
     <template v-else-if="props.name === 'trash'">
       <path d="M5 7h14M10 11v6M14 11v6M9 7V4h6v3M7 7l1 14h8l1-14" />
     </template>

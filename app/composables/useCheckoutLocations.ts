@@ -1,4 +1,14 @@
+import bundledLocationDataset from '~/data/locations.json'
 import type { CheckoutLocation, CheckoutLocationDataset } from '~/types/checkout'
+
+type LocationCollectionResponse =
+  | CheckoutLocation[]
+  | {
+      provinces?: CheckoutLocation[]
+      wards?: CheckoutLocation[]
+    }
+
+const bundledDataset = bundledLocationDataset as unknown as CheckoutLocationDataset
 
 export const useCheckoutLocations = () => {
   const config = useRuntimeConfig()
@@ -13,6 +23,12 @@ export const useCheckoutLocations = () => {
 
   const loadLocalDataset = async (): Promise<CheckoutLocationDataset | null> => {
     if (localDataset.value) return localDataset.value
+
+    if (Array.isArray(bundledDataset.provinces)) {
+      localDataset.value = bundledDataset
+      return localDataset.value
+    }
+
     try {
       const dataset = await $fetch<CheckoutLocationDataset>('/data/locations.json')
       if (Array.isArray(dataset.provinces)) localDataset.value = dataset
@@ -25,17 +41,18 @@ export const useCheckoutLocations = () => {
   const loadProvinces = async () => {
     provincesLoading.value = true
     error.value = null
+
+    const dataset = await loadLocalDataset()
+    if (dataset) provinces.value = dataset.provinces.map(normaliseLocation)
+
     try {
-      const data = await $fetch<CheckoutLocation[]>(`${config.public.apiBase}/locations/provinces`)
-      provinces.value = data.map(normaliseLocation)
-      return
+      const data = await $fetch<LocationCollectionResponse>(`${config.public.apiBase}/locations/provinces`, {
+        timeout: 8000,
+      })
+      const remoteProvinces = extractLocations(data, 'provinces')
+      if (remoteProvinces.length) provinces.value = remoteProvinces.map(normaliseLocation)
     } catch {
-      const dataset = await loadLocalDataset()
-      if (dataset) {
-        provinces.value = dataset.provinces.map(normaliseLocation)
-        return
-      }
-      error.value = 'Không thể tải danh sách tỉnh/thành phố.'
+      if (!provinces.value.length) error.value = 'Không thể tải danh sách tỉnh/thành phố.'
     } finally {
       provincesLoading.value = false
     }
@@ -47,18 +64,22 @@ export const useCheckoutLocations = () => {
     wardError.value = null
     if (!provinceCode) return
     wardsLoading.value = true
+
+    const dataset = await loadLocalDataset()
+    const localProvince = dataset?.provinces.find(item => item.code === provinceCode)
+    if (requestId === wardRequestId && localProvince) {
+      wards.value = localProvince.wards.map(normaliseLocation)
+      wardsLoading.value = false
+    }
+
     try {
-      const data = await $fetch<CheckoutLocation[]>(`${config.public.apiBase}/locations/provinces/${encodeURIComponent(provinceCode)}/wards`)
-      if (requestId === wardRequestId) wards.value = data.map(normaliseLocation)
-      return
+      const data = await $fetch<LocationCollectionResponse>(`${config.public.apiBase}/locations/provinces/${encodeURIComponent(provinceCode)}/wards`, {
+        timeout: 8000,
+      })
+      const remoteWards = extractLocations(data, 'wards')
+      if (requestId === wardRequestId && remoteWards.length) wards.value = remoteWards.map(normaliseLocation)
     } catch {
-      const dataset = await loadLocalDataset()
-      const province = dataset?.provinces.find(item => item.code === provinceCode)
-      if (requestId === wardRequestId && province) {
-        wards.value = province.wards.map(normaliseLocation)
-        return
-      }
-      if (requestId === wardRequestId) wardError.value = 'Không thể tải danh sách xã/phường.'
+      if (requestId === wardRequestId && !wards.value.length) wardError.value = 'Không thể tải danh sách xã/phường.'
     } finally {
       if (requestId === wardRequestId) wardsLoading.value = false
     }
@@ -79,6 +100,11 @@ export const useCheckoutLocations = () => {
     retryProvinces,
     retryWards,
   }
+}
+
+const extractLocations = (payload: LocationCollectionResponse, key: 'provinces' | 'wards'): CheckoutLocation[] => {
+  if (Array.isArray(payload)) return payload
+  return Array.isArray(payload[key]) ? payload[key] : []
 }
 
 const normaliseLocation = (location: CheckoutLocation): CheckoutLocation => ({

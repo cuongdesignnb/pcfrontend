@@ -70,6 +70,24 @@
   list-style: none;
 }
 
+.checkout-page .checkout-auth-prompt {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 12px;
+  padding: 10px 13px;
+  background: #f1f7ff;
+  border: 1px solid #d6e8ff;
+  border-radius: 6px;
+}
+.checkout-page .checkout-auth-prompt-icon { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; color: var(--checkout-blue); background: #dcecff; border-radius: 50%; }
+.checkout-page .checkout-auth-prompt > div { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.checkout-page .checkout-auth-prompt strong { color: var(--checkout-text); font-size: 11px; }
+.checkout-page .checkout-auth-prompt p { margin: 0; color: var(--checkout-muted); font-size: 10px; }
+.checkout-page .checkout-auth-prompt > a { display: inline-flex; align-items: center; gap: 5px; color: var(--checkout-blue); font-size: 10px; font-weight: 800; white-space: nowrap; }
+.checkout-page .checkout-auth-prompt > a:hover { text-decoration: underline; }
+
 .checkout-page .checkout-progress li:not(.checkout-progress-line) {
   display: grid;
   justify-items: center;

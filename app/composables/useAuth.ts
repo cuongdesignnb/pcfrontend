@@ -1,89 +1,123 @@
+import { useCartSession } from './useCartSession'
+
+export interface AuthUser {
+  id: number
+  name: string
+  email: string
+  phone?: string | null
+  avatar?: string | null
+  default_address?: Record<string, unknown> | null
+  [key: string]: unknown
+}
+
+export interface CommerceMergeResult {
+  cart_merged: boolean
+  cart_warnings: Array<Record<string, unknown>>
+}
+
+interface AuthResponse {
+  user: AuthUser
+  token: string
+  commerce?: CommerceMergeResult
+}
+
+const cookieMaxAge = 60 * 60 * 24 * 30
+
 export const useAuth = () => {
   const config = useRuntimeConfig()
   const router = useRouter()
-  
-  const token = useCookie('auth_token')
-  const userCookie = useCookie('auth_user')
-  
-  const user = computed(() => {
+  const cartSession = useCartSession()
+  const token = useCookie<string | null>('auth_token', {
+    maxAge: cookieMaxAge,
+    path: '/',
+    sameSite: 'lax',
+  })
+  const userCookie = useCookie<string | null>('auth_user', {
+    maxAge: cookieMaxAge,
+    path: '/',
+    sameSite: 'lax',
+  })
+
+  const user = computed<AuthUser | null>(() => {
     try {
-      return userCookie.value ? JSON.parse(userCookie.value as string) : null
+      return userCookie.value ? JSON.parse(userCookie.value) as AuthUser : null
     } catch {
       return null
     }
   })
-  
-  const isAuthenticated = computed(() => !!token.value)
-  
-  const login = async (email: string, password: string, remember: boolean = false) => {
-    const response = await $fetch<{ user: any; token: string }>(
-      `${config.public.apiBase}/auth/login`,
-      {
-        method: 'POST',
-        body: { email, password },
-      }
-    )
-    
-    const maxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24
-    
+  const isAuthenticated = computed(() => Boolean(token.value))
+  const lastCommerce = useState<CommerceMergeResult | null>('auth-last-commerce', () => null)
+
+  const saveSession = (response: AuthResponse) => {
     token.value = response.token
     userCookie.value = JSON.stringify(response.user)
-    
+    lastCommerce.value = response.commerce ?? null
     return response
   }
-  
+
+  const login = async (email: string, password: string, remember = false) => {
+    const response = await $fetch<AuthResponse>(`${config.public.apiBase}/auth/login`, {
+      method: 'POST',
+      headers: cartSession.getHeaders(),
+      body: { email: email.trim().toLowerCase(), password, remember },
+      cache: 'no-store',
+    })
+    return saveSession(response)
+  }
+
   const register = async (data: {
     name: string
     email: string
     phone?: string
     password: string
     password_confirmation: string
+    terms_accepted: boolean
   }) => {
-    const response = await $fetch<{ user: any; token: string }>(
-      `${config.public.apiBase}/auth/register`,
-      {
-        method: 'POST',
-        body: data,
-      }
-    )
-    
-    token.value = response.token
-    userCookie.value = JSON.stringify(response.user)
-    
+    const response = await $fetch<AuthResponse>(`${config.public.apiBase}/auth/register`, {
+      method: 'POST',
+      headers: cartSession.getHeaders(),
+      body: { ...data, email: data.email.trim().toLowerCase() },
+      cache: 'no-store',
+    })
+    return saveSession(response)
+  }
+
+  const mergeCommerce = async () => {
+    if (!token.value) return null
+    const response = await authFetch<CommerceMergeResult>(`${config.public.apiBase}/auth/commerce/merge`, {
+      method: 'POST',
+    })
+    lastCommerce.value = response
     return response
   }
-  
+
   const logout = async () => {
     try {
-      await $fetch(`${config.public.apiBase}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-        },
-      })
+      if (token.value) {
+        await $fetch(`${config.public.apiBase}/auth/logout`, {
+          method: 'POST',
+          headers: { ...cartSession.getHeaders(), Authorization: `Bearer ${token.value}` },
+          cache: 'no-store',
+        })
+      }
     } catch {
-      // Ignore errors
+      // Local cleanup must still happen when the network is unavailable.
     }
-    
+
     token.value = null
     userCookie.value = null
-    
-    router.push('/')
+    lastCommerce.value = null
+    cartSession.rotate()
+    await router.replace('/')
   }
-  
+
   const fetchUser = async () => {
     if (!token.value) return null
-    
+
     try {
-      const response = await $fetch<{ user: any }>(
-        `${config.public.apiBase}/user`,
-        {
-          headers: {
-            Authorization: `Bearer ${token.value}`,
-          },
-        }
-      )
-      
+      const response = await authFetch<{ user: AuthUser }>(`${config.public.apiBase}/auth/me`, {
+        method: 'GET',
+      })
       userCookie.value = JSON.stringify(response.user)
       return response.user
     } catch {
@@ -92,23 +126,28 @@ export const useAuth = () => {
       return null
     }
   }
-  
-  const authFetch = <T>(url: string, options: any = {}) => {
+
+  const authFetch = <T>(url: string, options: Record<string, unknown> = {}) => {
+    const optionHeaders = (options.headers as Record<string, string> | undefined) ?? {}
     return $fetch<T>(url, {
       ...options,
+      cache: options.cache ?? 'no-store',
       headers: {
-        ...options.headers,
-        Authorization: `Bearer ${token.value}`,
+        ...cartSession.getHeaders(),
+        ...optionHeaders,
+        ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),
       },
     })
   }
-  
+
   return {
     user,
     token,
     isAuthenticated,
+    lastCommerce,
     login,
     register,
+    mergeCommerce,
     logout,
     fetchUser,
     authFetch,

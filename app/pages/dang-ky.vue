@@ -1,10 +1,15 @@
 <script setup lang="ts">
-const config = useRuntimeConfig()
-const router = useRouter()
-
 definePageMeta({
   middleware: 'guest',
+  ssr: false,
 })
+
+const route = useRoute()
+const router = useRouter()
+const auth = useAuth()
+const cart = useCart()
+const toast = useToast()
+const { siteName } = useSettings()
 
 const form = reactive({
   name: '',
@@ -12,163 +17,143 @@ const form = reactive({
   phone: '',
   password: '',
   password_confirmation: '',
+  terms_accepted: false,
 })
-
+const showPassword = ref(false)
+const showConfirmation = ref(false)
 const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
+const redirectTarget = computed(() => getSafeRedirect(route.query.redirect))
+
+const firstMessage = (value: unknown): string => {
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : ''
+  return typeof value === 'string' ? value : ''
+}
+
+const readError = (caught: unknown): Record<string, string> => {
+  if (!caught || typeof caught !== 'object') return { general: 'Đăng ký thất bại. Vui lòng thử lại.' }
+  const payload = (caught as { data?: { message?: unknown; errors?: Record<string, unknown> } }).data
+  const fieldErrors = Object.fromEntries(Object.entries(payload?.errors ?? {}).map(([key, value]) => [key, firstMessage(value)]).filter(([, value]) => value))
+  if (!fieldErrors.general) fieldErrors.general = firstMessage(payload?.message) || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.'
+  return fieldErrors
+}
 
 const register = async () => {
-  isSubmitting.value = true
   errors.value = {}
-  
+  if (!form.terms_accepted) {
+    errors.value.terms_accepted = 'Vui lòng đồng ý với điều khoản sử dụng và chính sách bảo mật.'
+    return
+  }
+  if (form.password !== form.password_confirmation) {
+    errors.value.password_confirmation = 'Mật khẩu xác nhận không khớp.'
+    return
+  }
+
+  isSubmitting.value = true
   try {
-    const response = await $fetch<{ user: any; token: string }>(
-      `${config.public.apiBase}/auth/register`,
-      {
-        method: 'POST',
-        body: form,
-      }
-    )
-    
-    // Store token
-    const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 })
-    tokenCookie.value = response.token
-    
-    // Store user
-    const userCookie = useCookie('auth_user', { maxAge: 60 * 60 * 24 })
-    userCookie.value = JSON.stringify(response.user)
-    
-    // Redirect to account
-    router.push('/tai-khoan')
-  } catch (error: any) {
-    if (error.data?.errors) {
-      errors.value = error.data.errors
-    } else {
-      errors.value.general = error.data?.message || 'Đăng ký thất bại'
+    const response = await auth.register(form)
+    await cart.fetchCart()
+    if (response.commerce?.cart_warnings?.length) {
+      toast.add({
+        title: 'Giỏ hàng đã được đồng bộ',
+        description: 'Một số sản phẩm đã được điều chỉnh theo tồn kho hiện tại.',
+        color: 'warning',
+      })
     }
+    await router.replace(redirectTarget.value)
+  } catch (caught) {
+    errors.value = readError(caught)
   } finally {
     isSubmitting.value = false
   }
 }
 
-useSeoMeta({
-  title: 'Đăng ký - PC Shop',
-})
+useSeoMeta({ title: `Đăng ký - ${siteName.value}` })
 </script>
 
 <template>
-  <div class="min-h-[80vh] flex items-center justify-center px-4 py-8">
-    <div class="w-full max-w-md">
-      <div class="bg-white rounded-2xl shadow-lg p-8">
-        <div class="text-center mb-8">
-          <h1 class="text-3xl font-bold mb-2">Đăng ký</h1>
-          <p class="text-gray-600">Tạo tài khoản PC Shop</p>
+  <main class="auth-page auth-page--register">
+    <div class="pc-container auth-container">
+      <nav class="auth-breadcrumb" aria-label="Breadcrumb">
+        <NuxtLink to="/">Trang chủ</NuxtLink><span>/</span><strong>Đăng ký</strong>
+      </nav>
+
+      <section class="auth-shell">
+        <AuthPromoPanel />
+
+        <div class="auth-form-panel">
+          <div class="auth-form-heading">
+            <span class="auth-eyebrow">PC CENTER MEMBER</span>
+            <h1>Tạo tài khoản</h1>
+            <p>Tham gia cộng đồng công nghệ cùng {{ siteName }}.</p>
+          </div>
+
+          <form class="auth-form auth-form--register" @submit.prevent="register">
+            <div v-if="errors.general" class="auth-alert" role="alert">{{ errors.general }}</div>
+
+            <div class="auth-field">
+              <label for="register-name">Họ và tên</label>
+              <div class="auth-input-wrap" :class="{ 'is-invalid': errors.name }">
+                <CartIcon name="user" size="19" />
+                <input id="register-name" v-model="form.name" type="text" autocomplete="name" placeholder="Nhập họ và tên" required :aria-invalid="Boolean(errors.name)">
+              </div>
+              <small v-if="errors.name" class="auth-field-error">{{ errors.name }}</small>
+            </div>
+
+            <div class="auth-field-row">
+              <div class="auth-field">
+                <label for="register-email">Email</label>
+                <div class="auth-input-wrap" :class="{ 'is-invalid': errors.email }">
+                  <CartIcon name="mail" size="19" />
+                  <input id="register-email" v-model="form.email" type="email" autocomplete="email" placeholder="Email của bạn" required :aria-invalid="Boolean(errors.email)">
+                </div>
+                <small v-if="errors.email" class="auth-field-error">{{ errors.email }}</small>
+              </div>
+              <div class="auth-field">
+                <label for="register-phone">Số điện thoại <em>(không bắt buộc)</em></label>
+                <div class="auth-input-wrap" :class="{ 'is-invalid': errors.phone }">
+                  <CartIcon name="phone" size="19" />
+                  <input id="register-phone" v-model="form.phone" type="tel" autocomplete="tel" maxlength="20" placeholder="Số điện thoại">
+                </div>
+                <small v-if="errors.phone" class="auth-field-error">{{ errors.phone }}</small>
+              </div>
+            </div>
+
+            <div class="auth-field-row">
+              <div class="auth-field">
+                <label for="register-password">Mật khẩu</label>
+                <div class="auth-input-wrap" :class="{ 'is-invalid': errors.password }">
+                  <CartIcon name="lock" size="19" />
+                  <input id="register-password" v-model="form.password" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" placeholder="Tối thiểu 8 ký tự" minlength="8" required :aria-invalid="Boolean(errors.password)">
+                  <button type="button" class="auth-input-action" :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'" @click="showPassword = !showPassword"><CartIcon :name="showPassword ? 'eye-off' : 'eye'" size="18" /></button>
+                </div>
+                <small v-if="errors.password" class="auth-field-error">{{ errors.password }}</small>
+              </div>
+              <div class="auth-field">
+                <label for="register-password-confirmation">Xác nhận mật khẩu</label>
+                <div class="auth-input-wrap" :class="{ 'is-invalid': errors.password_confirmation }">
+                  <CartIcon name="lock" size="19" />
+                  <input id="register-password-confirmation" v-model="form.password_confirmation" :type="showConfirmation ? 'text' : 'password'" autocomplete="new-password" placeholder="Nhập lại mật khẩu" minlength="8" required :aria-invalid="Boolean(errors.password_confirmation)">
+                  <button type="button" class="auth-input-action" :aria-label="showConfirmation ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'" @click="showConfirmation = !showConfirmation"><CartIcon :name="showConfirmation ? 'eye-off' : 'eye'" size="18" /></button>
+                </div>
+                <small v-if="errors.password_confirmation" class="auth-field-error">{{ errors.password_confirmation }}</small>
+              </div>
+            </div>
+
+            <label class="auth-terms-label"><input v-model="form.terms_accepted" type="checkbox"><span class="auth-check-box" aria-hidden="true" /><span>Tôi đồng ý với điều khoản sử dụng và chính sách bảo mật của {{ siteName }}.</span></label>
+            <small v-if="errors.terms_accepted" class="auth-field-error auth-terms-error">{{ errors.terms_accepted }}</small>
+
+            <button type="submit" class="auth-submit-button" :disabled="isSubmitting">
+              <span>{{ isSubmitting ? 'Đang tạo tài khoản…' : 'Đăng ký ngay' }}</span><CartIcon name="arrow-right" size="19" />
+            </button>
+          </form>
+
+          <p class="auth-switch">Đã có tài khoản? <NuxtLink :to="{ path: '/dang-nhap', query: route.query }">Đăng nhập</NuxtLink></p>
         </div>
+      </section>
 
-        <form @submit.prevent="register" class="space-y-4">
-          <!-- General Error -->
-          <div 
-            v-if="errors.general" 
-            class="p-3 bg-red-50 text-red-600 rounded-lg text-sm"
-          >
-            {{ errors.general }}
-          </div>
-
-          <!-- Name -->
-          <div>
-            <label class="block text-sm font-medium mb-1">Họ tên</label>
-            <input 
-              v-model="form.name"
-              type="text"
-              class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              :class="{ 'border-red-500': errors.name }"
-              placeholder="Nguyễn Văn A"
-              required
-            >
-            <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
-          </div>
-
-          <!-- Email -->
-          <div>
-            <label class="block text-sm font-medium mb-1">Email</label>
-            <input 
-              v-model="form.email"
-              type="email"
-              class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              :class="{ 'border-red-500': errors.email }"
-              placeholder="email@example.com"
-              required
-            >
-            <p v-if="errors.email" class="text-red-500 text-sm mt-1">{{ errors.email }}</p>
-          </div>
-
-          <!-- Phone -->
-          <div>
-            <label class="block text-sm font-medium mb-1">Số điện thoại</label>
-            <input 
-              v-model="form.phone"
-              type="tel"
-              class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              :class="{ 'border-red-500': errors.phone }"
-              placeholder="0912345678"
-            >
-            <p v-if="errors.phone" class="text-red-500 text-sm mt-1">{{ errors.phone }}</p>
-          </div>
-
-          <!-- Password -->
-          <div>
-            <label class="block text-sm font-medium mb-1">Mật khẩu</label>
-            <input 
-              v-model="form.password"
-              type="password"
-              class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              :class="{ 'border-red-500': errors.password }"
-              placeholder="••••••••"
-              required
-            >
-            <p v-if="errors.password" class="text-red-500 text-sm mt-1">{{ errors.password }}</p>
-          </div>
-
-          <!-- Confirm Password -->
-          <div>
-            <label class="block text-sm font-medium mb-1">Xác nhận mật khẩu</label>
-            <input 
-              v-model="form.password_confirmation"
-              type="password"
-              class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="••••••••"
-              required
-            >
-          </div>
-
-          <!-- Terms -->
-          <p class="text-sm text-gray-500">
-            Bằng việc đăng ký, bạn đồng ý với 
-            <NuxtLink to="/terms" class="text-primary-600 hover:underline">Điều khoản</NuxtLink>
-            và
-            <NuxtLink to="/privacy" class="text-primary-600 hover:underline">Chính sách bảo mật</NuxtLink>
-          </p>
-
-          <!-- Submit -->
-          <UButton 
-            type="submit" 
-            size="lg" 
-            block
-            :loading="isSubmitting"
-            :disabled="isSubmitting"
-          >
-            Đăng ký
-          </UButton>
-        </form>
-
-        <!-- Login Link -->
-        <p class="text-center text-gray-600 mt-6">
-          Đã có tài khoản?
-          <NuxtLink to="/dang-nhap" class="text-primary-600 font-medium hover:underline">
-            Đăng nhập
-          </NuxtLink>
-        </p>
-      </div>
+      <AuthTrustStrip />
+      <p class="auth-quote">PC Center - Đồng hành cùng bạn trên hành trình chinh phục công nghệ</p>
     </div>
-  </div>
+  </main>
 </template>

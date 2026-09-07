@@ -11,6 +11,7 @@ let requestVersion = 0
 
 async function loadProducts() {
   const version = ++requestVersion
+  await wishlist.ready()
   wishlist.hydrate()
   const ids = [...wishlist.ids.value]
   loadError.value = false

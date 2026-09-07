@@ -73,6 +73,30 @@ const props = withDefaults(defineProps<{
     <template v-else-if="props.name === 'lock'">
       <rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
     </template>
+    <template v-else-if="props.name === 'mail'">
+      <rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" />
+    </template>
+    <template v-else-if="props.name === 'eye'">
+      <path d="M2.5 12s3.2-5 9.5-5 9.5 5 9.5 5-3.2 5-9.5 5-9.5-5-9.5-5Z" /><circle cx="12" cy="12" r="2.5" />
+    </template>
+    <template v-else-if="props.name === 'eye-off'">
+      <path d="m3 3 18 18M10.6 6.9A10.8 10.8 0 0 1 12 6.8c6.3 0 9.5 5.2 9.5 5.2a17 17 0 0 1-3.1 3.4M6.4 6.7C3.7 8.2 2.5 12 2.5 12s3.2 5.2 9.5 5.2c.6 0 1.2-.1 1.7-.2" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    </template>
+    <template v-else-if="props.name === 'settings'">
+      <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 1.7-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-2.4v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L8 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H6v-2.4h.9a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L8 8.6l1.7-1.7.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h2.4v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.7 1.7-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V14h-.2a1.7 1.7 0 0 0-1.5 1Z" />
+    </template>
+    <template v-else-if="props.name === 'badge'">
+      <path d="m12 3 2.2 1.2 2.5-.1 1.2 2.2 2.1 1.3-.4 2.4.9 2.3-1.7 1.8-.3 2.5-2.5.5-2 1.5-2-1.5-2.5-.5-.3-2.5-1.7-1.8.9-2.3-.4-2.4 2.1-1.3 1.2-2.2 2.5.1L12 3Z" /><path d="m8.5 12 2.2 2.2 4.8-5" />
+    </template>
+    <template v-else-if="props.name === 'logout'">
+      <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 16l4-4-4-4M18 12H8" />
+    </template>
+    <template v-else-if="props.name === 'phone'">
+      <path d="M6.5 3.5h3l1.2 4-2 1.5a14 14 0 0 0 6.3 6.3l1.5-2 4 1.2v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2Z" />
+    </template>
+    <template v-else-if="props.name === 'gift'">
+      <path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7H8.5a2.5 2.5 0 1 1 2.1-3.9C11.7 4.1 12 7 12 7ZM12 7h3.5a2.5 2.5 0 1 0-2.1-3.9C12.3 4.1 12 7 12 7Z" />
+    </template>
     <template v-else-if="props.name === 'refresh'">
       <path d="M20 11a8 8 0 0 0-14.8-3L3 10M4 4v6h6M4 13a8 8 0 0 0 14.8 3L21 14m-1 6v-6h-6" />
     </template>

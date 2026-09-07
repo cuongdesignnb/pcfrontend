@@ -1,145 +1,120 @@
 <script setup lang="ts">
-const config = useRuntimeConfig()
-const router = useRouter()
-
 definePageMeta({
   middleware: 'guest',
+  ssr: false,
 })
+
+const route = useRoute()
+const router = useRouter()
+const auth = useAuth()
+const cart = useCart()
+const toast = useToast()
+const { siteName } = useSettings()
 
 const form = reactive({
   email: '',
   password: '',
   remember: false,
 })
-
+const showPassword = ref(false)
 const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
+const redirectTarget = computed(() => getSafeRedirect(route.query.redirect))
+const isCheckoutIntent = computed(() => redirectTarget.value.startsWith('/thanh-toan'))
+
+const firstMessage = (value: unknown): string => {
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : ''
+  return typeof value === 'string' ? value : ''
+}
+
+const readError = (caught: unknown): Record<string, string> => {
+  if (!caught || typeof caught !== 'object') return { general: 'Đăng nhập thất bại. Vui lòng thử lại.' }
+  const payload = (caught as { data?: { message?: unknown; errors?: Record<string, unknown> } }).data
+  const fieldErrors = Object.fromEntries(Object.entries(payload?.errors ?? {}).map(([key, value]) => [key, firstMessage(value)]).filter(([, value]) => value))
+  if (!fieldErrors.general) fieldErrors.general = firstMessage(payload?.message) || fieldErrors.email || 'Đăng nhập thất bại. Vui lòng thử lại.'
+  return fieldErrors
+}
 
 const login = async () => {
-  isSubmitting.value = true
   errors.value = {}
-  
+  isSubmitting.value = true
   try {
-    const response = await $fetch<{ user: any; token: string }>(
-      `${config.public.apiBase}/auth/login`,
-      {
-        method: 'POST',
-        body: form,
-      }
-    )
-    
-    // Store token
-    const tokenCookie = useCookie('auth_token', { 
-      maxAge: form.remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 // 30 days or 1 day
-    })
-    tokenCookie.value = response.token
-    
-    // Store user
-    const userCookie = useCookie('auth_user', {
-      maxAge: form.remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24
-    })
-    userCookie.value = JSON.stringify(response.user)
-    
-    // Redirect to intended page or home
-    const redirect = router.currentRoute.value.query.redirect as string
-    router.push(redirect || '/tai-khoan')
-  } catch (error: any) {
-    if (error.data?.errors) {
-      errors.value = error.data.errors
-    } else {
-      errors.value.general = error.data?.message || 'Đăng nhập thất bại'
+    const response = await auth.login(form.email, form.password, form.remember)
+    await cart.fetchCart()
+    if (response.commerce?.cart_warnings?.length) {
+      toast.add({
+        title: 'Giỏ hàng đã được đồng bộ',
+        description: 'Một số sản phẩm đã được điều chỉnh theo tồn kho hiện tại.',
+        color: 'warning',
+      })
     }
+    await router.replace(redirectTarget.value)
+  } catch (caught) {
+    errors.value = readError(caught)
   } finally {
     isSubmitting.value = false
   }
 }
 
-useSeoMeta({
-  title: 'Đăng nhập - PC Shop',
-})
+useSeoMeta({ title: `Đăng nhập - ${siteName.value}` })
 </script>
 
 <template>
-  <div class="min-h-[80vh] flex items-center justify-center px-4">
-    <div class="w-full max-w-md">
-      <div class="bg-white rounded-2xl shadow-lg p-8">
-        <div class="text-center mb-8">
-          <h1 class="text-3xl font-bold mb-2">Đăng nhập</h1>
-          <p class="text-gray-600">Chào mừng trở lại PC Shop</p>
+  <main class="auth-page">
+    <div class="pc-container auth-container">
+      <nav class="auth-breadcrumb" aria-label="Breadcrumb">
+        <NuxtLink to="/">Trang chủ</NuxtLink><span>/</span><strong>Đăng nhập</strong>
+      </nav>
+
+      <section class="auth-shell">
+        <AuthPromoPanel />
+
+        <div class="auth-form-panel">
+          <div class="auth-form-heading">
+            <span class="auth-eyebrow">PC CENTER MEMBER</span>
+            <h1>Đăng nhập</h1>
+            <p>Chào mừng bạn quay trở lại {{ siteName }}.</p>
+            <small v-if="isCheckoutIntent" class="auth-intent-note">Đăng nhập để tiếp tục thanh toán và đồng bộ giỏ hàng của bạn.</small>
+          </div>
+
+          <form class="auth-form" @submit.prevent="login">
+            <div v-if="errors.general" class="auth-alert" role="alert">{{ errors.general }}</div>
+
+            <div class="auth-field">
+              <label for="login-email">Email</label>
+              <div class="auth-input-wrap" :class="{ 'is-invalid': errors.email }">
+                <CartIcon name="mail" size="19" />
+                <input id="login-email" v-model="form.email" type="email" autocomplete="email" placeholder="Nhập địa chỉ email của bạn" required :aria-invalid="Boolean(errors.email)">
+              </div>
+              <small v-if="errors.email" class="auth-field-error">{{ errors.email }}</small>
+            </div>
+
+            <div class="auth-field">
+              <label for="login-password">Mật khẩu</label>
+              <div class="auth-input-wrap" :class="{ 'is-invalid': errors.password }">
+                <CartIcon name="lock" size="19" />
+                <input id="login-password" v-model="form.password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" placeholder="Nhập mật khẩu" minlength="8" required :aria-invalid="Boolean(errors.password)">
+                <button type="button" class="auth-input-action" :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'" @click="showPassword = !showPassword"><CartIcon :name="showPassword ? 'eye-off' : 'eye'" size="18" /></button>
+              </div>
+              <small v-if="errors.password" class="auth-field-error">{{ errors.password }}</small>
+            </div>
+
+            <div class="auth-form-options">
+              <label class="auth-check-label"><input v-model="form.remember" type="checkbox"><span class="auth-check-box" aria-hidden="true" /> <span>Ghi nhớ đăng nhập</span></label>
+              <NuxtLink to="/lien-he" class="auth-support-link">Cần hỗ trợ đăng nhập?</NuxtLink>
+            </div>
+
+            <button type="submit" class="auth-submit-button" :disabled="isSubmitting">
+              <span>{{ isSubmitting ? 'Đang đăng nhập…' : 'Đăng nhập' }}</span><CartIcon name="arrow-right" size="19" />
+            </button>
+          </form>
+
+          <p class="auth-switch">Chưa có tài khoản? <NuxtLink :to="{ path: '/dang-ky', query: route.query }">Đăng ký ngay</NuxtLink></p>
         </div>
+      </section>
 
-        <form @submit.prevent="login" class="space-y-4">
-          <!-- General Error -->
-          <div 
-            v-if="errors.general" 
-            class="p-3 bg-red-50 text-red-600 rounded-lg text-sm"
-          >
-            {{ errors.general }}
-          </div>
-
-          <!-- Email -->
-          <div>
-            <label class="block text-sm font-medium mb-1">Email</label>
-            <input 
-              v-model="form.email"
-              type="email"
-              class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              :class="{ 'border-red-500': errors.email }"
-              placeholder="email@example.com"
-              required
-            >
-            <p v-if="errors.email" class="text-red-500 text-sm mt-1">{{ errors.email }}</p>
-          </div>
-
-          <!-- Password -->
-          <div>
-            <label class="block text-sm font-medium mb-1">Mật khẩu</label>
-            <input 
-              v-model="form.password"
-              type="password"
-              class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              :class="{ 'border-red-500': errors.password }"
-              placeholder="••••••••"
-              required
-            >
-            <p v-if="errors.password" class="text-red-500 text-sm mt-1">{{ errors.password }}</p>
-          </div>
-
-          <!-- Remember & Forgot -->
-          <div class="flex items-center justify-between">
-            <label class="flex items-center gap-2">
-              <input 
-                v-model="form.remember" 
-                type="checkbox"
-                class="w-4 h-4 text-primary-600 rounded"
-              >
-              <span class="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
-            </label>
-            <NuxtLink to="/quen-mat-khau" class="text-sm text-primary-600 hover:underline">
-              Quên mật khẩu?
-            </NuxtLink>
-          </div>
-
-          <!-- Submit -->
-          <UButton 
-            type="submit" 
-            size="lg" 
-            block
-            :loading="isSubmitting"
-            :disabled="isSubmitting"
-          >
-            Đăng nhập
-          </UButton>
-        </form>
-
-        <!-- Register Link -->
-        <p class="text-center text-gray-600 mt-6">
-          Chưa có tài khoản?
-          <NuxtLink to="/dang-ky" class="text-primary-600 font-medium hover:underline">
-            Đăng ký ngay
-          </NuxtLink>
-        </p>
-      </div>
+      <AuthTrustStrip />
+      <p class="auth-quote">PC Center - Đồng hành cùng bạn trên hành trình chinh phục công nghệ</p>
     </div>
-  </div>
+  </main>
 </template>

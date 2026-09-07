@@ -199,6 +199,14 @@ export const useCart = () => {
 
   const clearCart = async () => Boolean(await request('/cart', { method: 'DELETE' }))
 
+  if (import.meta.client) {
+    watch(token, (nextToken, previousToken) => {
+      if (nextToken === previousToken) return
+      if (!nextToken) apply(emptyCart())
+      void fetchCart()
+    })
+  }
+
   return {
     state,
     items,

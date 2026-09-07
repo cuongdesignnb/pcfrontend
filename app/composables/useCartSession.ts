@@ -19,8 +19,14 @@ export const useCartSession = () => {
     'X-Cart-Session': sessionId.value!,
   })
 
+  const rotate = () => {
+    sessionId.value = createUuid()
+    return sessionId.value
+  }
+
   return {
     sessionId,
     getHeaders,
+    rotate,
   }
 }

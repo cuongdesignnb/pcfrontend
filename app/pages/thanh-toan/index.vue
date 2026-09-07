@@ -66,6 +66,7 @@ const form = reactive<CheckoutForm>({
 
 const selectedProvince = computed(() => locations.provinces.value.find(item => item.code === form.shipping_province_code) ?? null)
 const selectedWard = computed(() => locations.wards.value.find(item => item.code === form.shipping_ward_code) ?? null)
+const authRedirect = computed(() => checkoutMode.value === 'buy_now' ? '/thanh-toan?mode=buy-now' : '/thanh-toan')
 
 const cartLines = computed<CheckoutLine[]>(() => cartResponse.value.items
   .filter(item => item.selected)
@@ -538,6 +539,12 @@ useSeoMeta({
                 <p v-if="quoteIssues.length">{{ quoteIssues[0]?.message }}</p>
               </div>
             </div>
+
+            <section v-if="!auth.isAuthenticated.value && !orderResult" class="checkout-auth-prompt">
+              <span class="checkout-auth-prompt-icon"><CartIcon name="user" size="19" /></span>
+              <div><strong>Đã có tài khoản tại PC Center?</strong><p>Đăng nhập để đồng bộ giỏ hàng và tự động điền thông tin cho lần thanh toán này.</p></div>
+              <NuxtLink :to="{ path: '/dang-nhap', query: { redirect: authRedirect } }">Đăng nhập <CartIcon name="arrow-right" size="14" /></NuxtLink>
+            </section>
 
             <CheckoutSection :number="1" title="Thông tin khách hàng" icon="user">
               <div class="checkout-fields checkout-fields-three">

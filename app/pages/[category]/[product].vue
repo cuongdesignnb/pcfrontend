@@ -205,6 +205,8 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
 .pdp-area-reviews { grid-area: reviews; }
 .pdp-area-bottom { grid-area: bottom; }
 
+.pdp-layout > * { min-width: 0; }
+
 .pdp-hero-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -216,6 +218,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
   box-shadow: 0 1px 4px rgb(15 23 42 / 3%);
 }
 
+.pdp-gallery-column { min-width: 0; }
 .pdp-info-column { min-width: 0; }
 .pdp-info-column > * + * { margin-top: 10px; }
 .pdp-content-main > * + *, .pdp-review-zone > * + * { margin-top: 16px; }
@@ -305,7 +308,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
   .pdp-reference :deep(.pdp-benefit-icon) { height: 26px; width: 26px; font-size: 12px; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .pdp-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -334,7 +337,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
   .pdp-container { width: min(100% - 20px, 1480px); }
   .pdp-layout { gap: 12px; padding-top: 8px; }
   .pdp-hero-card { gap: 12px; padding: 10px; }
-  .pdp-gallery :deep(.pdp-gallery) { min-width: 0; }
+  .pdp-gallery-column :deep(.pdp-gallery) { min-width: 0; }
   .pdp-reference :deep(.pdp-feature-overview) { grid-template-columns: minmax(0, 1fr); }
   .pdp-reference :deep(.pdp-option-row) { grid-template-columns: 104px minmax(0, 1fr); }
   .pdp-reference :deep(.pdp-relations-rail) { display: block; }

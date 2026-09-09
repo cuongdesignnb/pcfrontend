@@ -34,6 +34,7 @@ const query = ref('')
 const results = ref<SearchResponse>({ products: [], posts: [] })
 const isOpen = ref(false)
 const loading = ref(false)
+const brokenProductImages = ref<Set<number>>(new Set())
 let timer: ReturnType<typeof setTimeout> | null = null
 
 const hasResults = computed(() => results.value.products.length > 0 || results.value.posts.length > 0)
@@ -74,6 +75,12 @@ function clearTimer() {
   timer = null
 }
 
+function markProductImageBroken(productId: number) {
+  const next = new Set(brokenProductImages.value)
+  next.add(productId)
+  brokenProductImages.value = next
+}
+
 watch(query, value => {
   const version = ++requestVersion
   clearTimer()
@@ -92,10 +99,12 @@ watch(query, value => {
       })
       if (version !== requestVersion) return
       results.value = response
+      brokenProductImages.value = new Set()
       isOpen.value = true
     } catch {
       if (version !== requestVersion) return
       results.value = { products: [], posts: [] }
+      brokenProductImages.value = new Set()
       isOpen.value = true
     } finally {
       if (version === requestVersion) loading.value = false
@@ -158,7 +167,14 @@ onBeforeUnmount(clearTimer)
           <div class="search-box-section-title">Sản phẩm</div>
           <button v-for="product in results.products" :key="`product-${product.id}`" type="button" class="search-result" @click="goToResult(product.url)">
             <span class="search-result-image">
-              <img v-if="product.image" :src="product.image" :alt="product.name">
+              <img
+                v-if="product.image && !brokenProductImages.has(product.id)"
+                :src="product.image"
+                :alt="product.name"
+                loading="lazy"
+                decoding="async"
+                @error="markProductImageBroken(product.id)"
+              >
               <svg v-else aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m3 7 9-4 9 4-9 4-9-4Zm0 0v10l9 4 9-4V7m-9 4v10" /></svg>
             </span>
             <span class="search-result-copy">

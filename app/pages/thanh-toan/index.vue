@@ -64,8 +64,8 @@ const form = reactive<CheckoutForm>({
   notes: '',
 })
 
-const selectedProvince = computed(() => locations.provinces.value.find(item => item.code === form.shipping_province_code) ?? null)
-const selectedWard = computed(() => locations.wards.value.find(item => item.code === form.shipping_ward_code) ?? null)
+const selectedProvince = computed(() => locations.provinces.find(item => item.code === form.shipping_province_code) ?? null)
+const selectedWard = computed(() => locations.wards.find(item => item.code === form.shipping_ward_code) ?? null)
 const authRedirect = computed(() => checkoutMode.value === 'buy_now' ? '/thanh-toan?mode=buy-now' : '/thanh-toan')
 
 const cartLines = computed<CheckoutLine[]>(() => cartResponse.value.items
@@ -101,8 +101,8 @@ const sourceHasItems = computed(() => fallbackLines.value.length > 0)
 const quoteIssues = computed(() => quotes.quote.value?.issues ?? [])
 
 const paymentMethods = computed<CheckoutPaymentMethod[]>(() => {
-  if (quotes.quote.value) return quotes.quote.value.payment_methods
-  return cartResponse.value.payment_methods.map(method => ({
+  if (quotes.quote.value) return quotes.quote.value.payment_methods ?? []
+  return (cartResponse.value.payment_methods ?? []).map(method => ({
     code: method.key,
     label: method.label,
     description: method.provider,
@@ -273,7 +273,7 @@ watch(() => form.shipping_province_code, (code) => {
 })
 
 watch(() => form.shipping_ward_code, (code) => {
-  form.shipping_ward = locations.wards.value.find(item => item.code === code)?.fullname ?? ''
+  form.shipping_ward = locations.wards.find(item => item.code === code)?.fullname ?? ''
 })
 
 watch(
@@ -608,7 +608,7 @@ useSeoMeta({
                   <span class="checkout-radio-copy"><strong>{{ shipping.label }}</strong><small>{{ shipping.description }}<template v-if="shipping.eta"> · {{ shipping.eta }}</template></small></span>
                   <strong class="checkout-radio-price">{{ shipping.fee === null ? '—' : (shipping.fee === 0 ? 'Miễn phí' : formatMoney(shipping.fee)) }}</strong>
                 </label>
-                <p v-if="!quotes.quote?.shipping_methods.length" class="checkout-muted">Đang cập nhật phương thức giao hàng từ hệ thống.</p>
+                <p v-if="!(quotes.quote?.shipping_methods?.length)" class="checkout-muted">Đang cập nhật phương thức giao hàng từ hệ thống.</p>
               </fieldset>
             </CheckoutSection>
 

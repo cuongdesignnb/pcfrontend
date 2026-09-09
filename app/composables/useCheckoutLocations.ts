@@ -62,7 +62,10 @@ export const useCheckoutLocations = () => {
     const requestId = ++wardRequestId
     wards.value = []
     wardError.value = null
-    if (!provinceCode) return
+    if (!provinceCode) {
+      wardsLoading.value = false
+      return
+    }
     wardsLoading.value = true
 
     const dataset = await loadLocalDataset()
@@ -88,7 +91,11 @@ export const useCheckoutLocations = () => {
   const retryProvinces = () => loadProvinces()
   const retryWards = (provinceCode: string) => loadWards(provinceCode)
 
-  return {
+  // Expose a reactive object so nested refs are unwrapped for both templates and
+  // consumers. Returning a plain object of refs makes `locations.provinces`
+  // resolve to the Ref object in templates, which renders blank options and
+  // leaves the controls permanently disabled.
+  return reactive({
     provinces,
     wards,
     provincesLoading,
@@ -99,7 +106,7 @@ export const useCheckoutLocations = () => {
     loadWards,
     retryProvinces,
     retryWards,
-  }
+  })
 }
 
 const extractLocations = (payload: LocationCollectionResponse, key: 'provinces' | 'wards'): CheckoutLocation[] => {

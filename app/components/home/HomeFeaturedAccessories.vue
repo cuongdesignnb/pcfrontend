@@ -17,7 +17,7 @@ const { formatMoney } = useSettings()
           <NuxtImg v-if="product.images?.[0]?.url" :src="product.images[0].url" :alt="product.images[0].alt || product.name" width="92" height="92" loading="lazy" />
           <span v-else aria-hidden="true">PC</span>
         </span>
-        <span><strong>{{ product.name }}</strong><b>{{ formatMoney(product.pricing.display_price) }}</b></span>
+        <span><strong>{{ product.name }}</strong><b>{{ product.pricing.display_price > 0 ? formatMoney(product.pricing.display_price) : 'Liên hệ' }}</b></span>
       </NuxtLink>
     </div>
   </article>

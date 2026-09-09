@@ -5,7 +5,7 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const cart = useCart()
 const toast = useToast()
-const { siteName } = useSettings()
+const { siteName, socialZalo, socialMessenger } = useSettings()
 const { start: startBuyNow } = useBuyNow()
 const { track } = useEcommerceTracking()
 const slug = computed(() => String(route.params.product || ''))
@@ -34,11 +34,28 @@ const selectedPricing = computed<ProductDetail['pricing']>(() => {
     saving: salePrice !== null ? Math.max(0, price - salePrice) : 0,
   }
 })
+const contactOnly = computed(() => selectedPricing.value.display_price <= 0)
+const onlinePurchasable = computed(() => selection.purchasable.value && !contactOnly.value)
+
+const zaloHref = computed(() => {
+  const value = socialZalo.value.trim()
+  if (!value) return ''
+  if (/^https?:\/\//i.test(value)) return value
+  if (/^zalo\.me\//i.test(value)) return `https://${value}`
+  return `https://zalo.me/${value.replace(/[^\d]/g, '') || value.replace(/^@/, '')}`
+})
+const messengerHref = computed(() => {
+  const value = socialMessenger.value.trim()
+  if (!value) return ''
+  if (/^https?:\/\//i.test(value)) return value
+  if (/^m\.me\//i.test(value)) return `https://${value}`
+  return `https://m.me/${encodeURIComponent(value.replace(/^@/, ''))}`
+})
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
 const addToCart = async () => {
-  if (!product.value || !selection.purchasable.value || addingToCart.value) return
+  if (!product.value || !onlinePurchasable.value || addingToCart.value) return
   addingToCart.value = true
   try {
     const success = await cart.addItem(product.value.id, selection.quantity.value, selection.selectedVariant.value?.id)
@@ -53,7 +70,7 @@ const addToCart = async () => {
 }
 
 const buyNow = async () => {
-  if (!product.value || !selection.purchasable.value) return
+  if (!product.value || !onlinePurchasable.value) return
   track('begin_checkout', product.value, selection.quantity.value)
   await startBuyNow({ product_id: product.value.id, product_slug: product.value.slug, variant_id: selection.selectedVariant.value?.id ?? null, quantity: selection.quantity.value })
 }
@@ -78,8 +95,8 @@ useHead(() => {
     image: product.value.images.map(image => image.url).filter(Boolean),
     description: product.value.seo.description || product.value.short_description || undefined,
     brand: product.value.brand ? { '@type': 'Brand', name: product.value.brand.name } : undefined,
-    offers: { '@type': 'Offer', priceCurrency: 'VND', price: product.value.pricing.display_price, availability: product.value.inventory.purchasable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', url: canonical },
   }
+  if (!contactOnly.value) productSchema.offers = { '@type': 'Offer', priceCurrency: 'VND', price: product.value.pricing.display_price, availability: product.value.inventory.purchasable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', url: canonical }
   if (product.value.rating.count > 0 && product.value.rating.average !== null) productSchema.aggregateRating = { '@type': 'AggregateRating', ratingValue: product.value.rating.average, reviewCount: product.value.rating.count }
   const breadcrumbSchema = {
     '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
@@ -108,21 +125,21 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
             <div class="pdp-info-column">
               <ProductTitleMeta :product="product" :sku="selection.sku.value" @reviews="scrollTo('danh-gia')" />
               <ProductHighlights :highlights="product.highlights" :short-description="product.short_description" />
-              <ProductPrice :pricing="selectedPricing" />
+              <ProductPrice :pricing="selectedPricing" :contact-only="contactOnly" />
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                <span :class="selection.purchasable.value ? 'font-semibold text-emerald-600' : 'text-slate-500'"><span aria-hidden="true">●</span> {{ selection.purchasable.value ? 'Còn hàng' : product.inventory.availability_label }}</span>
-                <span v-if="selection.purchasable.value && selectedQuantity" class="text-slate-400">{{ selectedQuantity }} sản phẩm</span>
+                <span :class="onlinePurchasable ? 'font-semibold text-emerald-600' : 'text-slate-500'"><span aria-hidden="true">●</span> {{ contactOnly ? 'Liên hệ để báo giá' : (onlinePurchasable ? 'Còn hàng' : product.inventory.availability_label) }}</span>
+                <span v-if="onlinePurchasable && selectedQuantity" class="text-slate-400">{{ selectedQuantity }} sản phẩm</span>
                 <span v-if="selection.sku.value" class="text-slate-400">SKU: {{ selection.sku.value }}</span>
                 <span v-if="product.warranty_months" class="text-slate-500">Bảo hành: {{ product.warranty_months }} tháng</span>
               </div>
               <ProductVariantSelector :product="product" :variants="product.variants" :option-groups="selection.optionGroups.value" :selected-variant="selection.selectedVariant.value" :selected-attributes="selection.selectedAttributes.value" :alternative-products="alternativeProducts" :is-option-available="selection.isOptionAvailable" @select-variant="selection.chooseVariant" @select-attribute="selection.chooseAttribute" />
-              <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="selection.purchasable.value" :adding="addingToCart" :can-build="Boolean(product.component_type)" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" @build="openBuilder" />
+              <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="onlinePurchasable" :adding="addingToCart" :can-build="Boolean(product.component_type)" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" @build="openBuilder" />
             </div>
           </section>
 
-          <div class="pdp-area-summary"><ProductPurchaseSummary :product="product" :variant="selection.selectedVariant.value" :quantity="selection.quantity.value" :purchasable="selection.purchasable.value" @add="addToCart" @buy="buyNow" /></div>
+          <div class="pdp-area-summary"><ProductPurchaseSummary :product="product" :variant="selection.selectedVariant.value" :quantity="selection.quantity.value" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @add="addToCart" @buy="buyNow" /></div>
           <div class="pdp-area-benefits"><ProductServiceBenefits :warranty-months="product.warranty_months" /></div>
-          <div class="pdp-area-delivery"><ProductDeliveryPreview :subtotal="selectedPrice * selection.quantity.value" /></div>
+          <div v-if="!contactOnly" class="pdp-area-delivery"><ProductDeliveryPreview :subtotal="selectedPrice * selection.quantity.value" /></div>
           <div class="pdp-area-tabs"><ProductAnchorTabs :has-compatibility="Boolean(product.component_type)" :rating-count="product.rating.count" :questions-count="product.questions_count" /></div>
 
           <div class="pdp-area-content pdp-content-main">
@@ -143,7 +160,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
           <div class="pdp-area-bottom pdp-bottom-row"><ProductQuestions :slug="product.slug" /><ProductRecentlyViewed :slug="product.slug" /></div>
         </div>
 
-        <ProductMobilePurchaseBar :price="selectedPrice" :purchasable="selection.purchasable.value" @add="addToCart" @buy="buyNow" />
+        <ProductMobilePurchaseBar :price="selectedPrice" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @add="addToCart" @buy="buyNow" />
       </template>
     </div>
   </main>

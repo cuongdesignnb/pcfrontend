@@ -100,7 +100,7 @@ async function handleCategoryAction(event: MouseEvent) {
       <h3 class="product-card-name">{{ product.name }}</h3>
 
       <div class="product-card-pricing">
-        <strong>{{ formatMoney(product.pricing.display_price) }}</strong>
+        <strong>{{ product.pricing.display_price > 0 ? formatMoney(product.pricing.display_price) : 'Liên hệ' }}</strong>
         <span v-if="discountPercent > 0" class="product-card-old-price">{{ formatMoney(product.pricing.price) }}</span>
       </div>
 

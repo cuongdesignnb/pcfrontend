@@ -6,6 +6,9 @@ const props = defineProps<{
   variant: ProductVariant | null
   quantity: number
   purchasable: boolean
+  contactOnly: boolean
+  zaloHref: string
+  messengerHref: string
 }>()
 const emit = defineEmits<{ add: []; buy: [] }>()
 const { formatMoney, getString } = useSettings()
@@ -37,18 +40,25 @@ const benefits = computed(() => [
       <div class="min-w-0">
         <p class="line-clamp-2 text-xs font-semibold leading-4 text-slate-800">{{ product.name }}</p>
         <p v-if="variant" class="mt-1 text-[10px] text-slate-500">{{ variant.name }}</p>
-        <p class="mt-1 text-xs font-bold text-red-600">{{ formatMoney(unitPrice) }}</p>
+        <p class="mt-1 text-xs font-bold text-red-600">{{ contactOnly ? 'Liên hệ' : formatMoney(unitPrice) }}</p>
       </div>
     </div>
 
-    <dl class="mt-3 space-y-2 border-y border-slate-100 py-3 text-xs">
+    <dl v-if="!contactOnly" class="mt-3 space-y-2 border-y border-slate-100 py-3 text-xs">
       <div class="flex justify-between gap-3"><dt class="text-slate-500">Số lượng</dt><dd class="font-medium text-slate-800">{{ quantity }}</dd></div>
       <div class="flex justify-between gap-3"><dt class="text-slate-500">Tạm tính</dt><dd class="font-medium text-slate-800">{{ formatMoney(subtotal) }}</dd></div>
       <div class="flex justify-between gap-3"><dt class="text-slate-500">Giảm giá</dt><dd class="font-medium text-red-600">{{ discount > 0 ? `-${formatMoney(discount)}` : '—' }}</dd></div>
       <div class="flex justify-between gap-3 pt-1 text-sm"><dt class="font-bold text-slate-900">Tổng cộng</dt><dd class="font-bold text-red-600">{{ formatMoney(subtotal) }}</dd></div>
     </dl>
 
-    <div class="mt-3 grid gap-2">
+    <div v-if="contactOnly" class="mt-3 rounded-[6px] border border-orange-200 bg-orange-50 p-3">
+      <p class="text-xs leading-5 text-orange-900">Sản phẩm chưa có giá bán trực tuyến. Liên hệ để nhận báo giá và được tư vấn cấu hình phù hợp.</p>
+      <div v-if="zaloHref || messengerHref" class="mt-3 grid gap-2">
+        <a v-if="zaloHref" :href="zaloHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[#0068ff] px-3 text-xs font-bold uppercase text-white hover:bg-[#0058d9]">Chat Zalo</a>
+        <a v-if="messengerHref" :href="messengerHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[#1684fb] px-3 text-xs font-bold uppercase text-white hover:bg-[#0d6ed2]">Chat Messenger</a>
+      </div>
+    </div>
+    <div v-else class="mt-3 grid gap-2">
       <button type="button" :disabled="!purchasable" class="h-9 rounded-[6px] bg-orange-600 px-3 text-xs font-bold uppercase text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-45" @click="emit('buy')">Mua ngay</button>
       <button type="button" :disabled="!purchasable" class="h-9 rounded-[6px] bg-blue-700 px-3 text-xs font-bold uppercase text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-45" @click="emit('add')">Thêm vào giỏ</button>
     </div>

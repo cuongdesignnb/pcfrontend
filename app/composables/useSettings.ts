@@ -63,6 +63,7 @@ export const useSettings = () => {
   const socialYoutube = computed(() => getString('social_youtube'))
   const socialTiktok = computed(() => getString('social_tiktok'))
   const socialZalo = computed(() => getString('social_zalo'))
+  const socialMessenger = computed(() => getString('social_messenger'))
   const socialInstagram = computed(() => getString('social_instagram'))
 
   const seoTitle = computed(() => getString('seo_title', siteName.value))
@@ -110,6 +111,7 @@ export const useSettings = () => {
     socialYoutube,
     socialTiktok,
     socialZalo,
+    socialMessenger,
     socialInstagram,
     seoTitle,
     seoDescription,

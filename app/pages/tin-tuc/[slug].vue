@@ -1,168 +1,154 @@
 <script setup lang="ts">
-import type { Post } from '~/types'
+import type { NewsDetailPost } from '~/types/news-detail'
 
-interface PostDetailResponse {
-  post: Post
-  related: Post[]
+const route = useRoute()
+const config = useRuntimeConfig()
+const { siteName, siteLogo } = useSettings()
+const rawSlug = route.params.slug
+const slug = Array.isArray(rawSlug) ? String(rawSlug[0] || '') : String(rawSlug || '')
+
+if (!slug) {
+  throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy bài viết.' })
 }
 
-const config = useRuntimeConfig()
-const route = useRoute()
+const { data, status, error, trackView } = await useNewsArticle(slug)
+const post = computed<NewsDetailPost | null>(() => data.value?.post || null)
+const detail = computed(() => data.value)
 
-const slug = route.params.slug as string
-
-// Fetch post
-const { data } = await useFetch<PostDetailResponse>(`${config.public.apiBase}/blog/${slug}`)
-
-const post = computed(() => data.value?.post)
-const relatedPosts = computed(() => data.value?.related || [])
-
-// Format date
-const formatDate = (date: string | null) => {
-  if (!date) return ''
-  return new Date(date).toLocaleDateString('vi-VN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+if (error.value) {
+  const errorStatus = Number((error.value as { statusCode?: number; status?: number }).statusCode || (error.value as { status?: number }).status || 500)
+  throw createError({
+    statusCode: errorStatus === 404 ? 404 : 500,
+    statusMessage: errorStatus === 404 ? 'Không tìm thấy bài viết.' : 'Không thể tải bài viết lúc này.',
   })
 }
 
-// SEO
+if (!post.value && status.value !== 'pending') {
+  throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy bài viết.' })
+}
+
+const siteOrigin = computed(() => String(config.public.siteUrl || 'https://laptopplus.vn').replace(/\/$/, ''))
+const canonicalUrl = computed(() => `${siteOrigin.value}/tin-tuc/${encodeURIComponent(post.value?.slug || slug)}`)
+
+const absoluteUrl = (value: string | null | undefined): string | undefined => {
+  if (!value) return undefined
+
+  try {
+    return new URL(value, siteOrigin.value).toString()
+  } catch {
+    return undefined
+  }
+}
+
+const articleJsonLd = computed(() => {
+  if (!post.value) return ''
+
+  const article = post.value
+  const articleSchema: Record<string, unknown> = {
+    '@type': 'Article',
+    '@id': `${canonicalUrl.value}#article`,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl.value },
+    headline: article.title,
+    description: article.seo.description || article.excerpt || undefined,
+    datePublished: article.published_at || undefined,
+    dateModified: article.updated_at || article.published_at || undefined,
+    author: {
+      '@type': 'Person',
+      name: article.author?.name || 'Tác giả',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: siteName.value,
+      logo: absoluteUrl(siteLogo.value) ? { '@type': 'ImageObject', url: absoluteUrl(siteLogo.value) } : undefined,
+    },
+    image: absoluteUrl(article.seo.image || article.featured_image),
+    articleSection: article.category?.name || undefined,
+  }
+
+  const breadcrumbItems: Array<Record<string, unknown>> = [
+    { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: `${siteOrigin.value}/` },
+    { '@type': 'ListItem', position: 2, name: 'Tin tức', item: `${siteOrigin.value}/tin-tuc` },
+  ]
+  if (article.category) {
+    breadcrumbItems.push({
+      '@type': 'ListItem',
+      position: breadcrumbItems.length + 1,
+      name: article.category.name,
+      item: `${siteOrigin.value}/tin-tuc?category=${encodeURIComponent(article.category.slug)}`,
+    })
+  }
+  breadcrumbItems.push({
+    '@type': 'ListItem',
+    position: breadcrumbItems.length + 1,
+    name: article.title,
+    item: canonicalUrl.value,
+  })
+
+  const graph = [
+    { '@context': 'https://schema.org', ...articleSchema },
+    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: breadcrumbItems },
+  ]
+
+  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c')
+})
+
 useSeoMeta({
-  title: () => post.value?.title ? `${post.value.title} - PC Shop` : 'Bài viết - PC Shop',
-  description: () => post.value?.excerpt || post.value?.meta_description,
+  title: () => post.value?.seo.title || post.value?.title || `Tin tức - ${siteName.value}`,
+  description: () => post.value?.seo.description || post.value?.excerpt || undefined,
+  ogTitle: () => post.value?.seo.title || post.value?.title || siteName.value,
+  ogDescription: () => post.value?.seo.description || post.value?.excerpt || undefined,
+  ogUrl: () => canonicalUrl.value,
+  ogType: 'article',
+  ogImage: () => absoluteUrl(post.value?.seo.image || post.value?.featured_image),
+  twitterCard: 'summary_large_image',
+  articlePublishedTime: () => post.value?.published_at || undefined,
+  articleModifiedTime: () => post.value?.updated_at || post.value?.published_at || undefined,
+})
+
+useHead(() => {
+  if (!post.value) return {}
+
+  return {
+    link: [{ rel: 'canonical', href: canonicalUrl.value }],
+    script: [{ key: 'news-article-jsonld', type: 'application/ld+json', innerHTML: articleJsonLd.value }],
+  }
+})
+
+onMounted(() => {
+  void trackView()
 })
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <template v-if="post">
-      <!-- Breadcrumb -->
-      <nav class="mb-6 text-sm">
-        <NuxtLink to="/" class="text-gray-500 hover:text-primary-600">Trang chủ</NuxtLink>
-        <span class="mx-2 text-gray-400">/</span>
-        <NuxtLink to="/tin-tuc" class="text-gray-500 hover:text-primary-600">Tin tức</NuxtLink>
-        <span v-if="post.category" class="mx-2 text-gray-400">/</span>
-        <span v-if="post.category" class="text-gray-500">{{ post.category.name }}</span>
-      </nav>
+  <div class="news-detail-page">
+    <div class="news-detail-container">
+      <NewsArticleSkeleton v-if="status === 'pending'" />
+      <template v-else-if="post && detail">
+        <NewsArticleBreadcrumb :post="post" />
 
-      <div class="grid lg:grid-cols-4 gap-8">
-        <!-- Main Content -->
-        <article class="lg:col-span-3">
-          <!-- Header -->
-          <header class="mb-8">
-            <div class="flex items-center gap-3 text-sm text-gray-500 mb-4">
-              <span v-if="post.category" class="px-2 py-1 bg-primary-100 text-primary-700 rounded">
-                {{ post.category.name }}
-              </span>
-              <span>{{ formatDate(post.published_at) }}</span>
-              <span>•</span>
-              <span>{{ post.view_count }} lượt xem</span>
+        <div class="news-detail-layout">
+          <main class="news-detail-main">
+            <NewsArticleHeader :post="post" />
+            <NewsHeroImage :post="post" />
+
+            <div class="news-detail-content-intro" :class="{ 'has-toc': post.toc.length }">
+              <NewsTableOfContents :items="post.toc" />
+              <p v-if="post.excerpt" class="news-detail-lead">{{ post.excerpt }}</p>
             </div>
-            <h1 class="text-4xl font-bold mb-4">{{ post.title }}</h1>
-            <p v-if="post.excerpt" class="text-xl text-gray-600">{{ post.excerpt }}</p>
-          </header>
 
-          <!-- Featured Image -->
-          <div v-if="post.featured_image" class="mb-8 rounded-xl overflow-hidden">
-            <img 
-              :src="post.featured_image" 
-              :alt="post.title"
-              class="w-full"
-            >
-          </div>
+            <NewsArticleBody :html="post.body" />
+          </main>
 
-          <!-- Content -->
-          <div class="prose prose-lg max-w-none" v-html="post.body"></div>
+          <aside class="news-detail-sidebar" aria-label="Thông tin thêm về bài viết">
+            <NewsTrendingSidebar :articles="detail.sidebar.trending" />
+            <NewsRelatedReviewSidebar :articles="detail.sidebar.reviews" />
+            <NewsNewsletterSidebar />
+            <NewsPcBuilderSidebar :banner="detail.sidebar.pc_builder" />
+          </aside>
+        </div>
 
-          <!-- Tags -->
-          <div v-if="post.tags?.length" class="mt-8 pt-8 border-t">
-            <h3 class="font-semibold mb-3">Tags:</h3>
-            <div class="flex flex-wrap gap-2">
-              <span 
-                v-for="tag in post.tags" 
-                :key="tag.id"
-                class="px-3 py-1 bg-gray-100 rounded-full text-sm"
-              >
-                {{ tag.name }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Author -->
-          <div v-if="post.author" class="mt-8 p-6 bg-gray-50 rounded-xl flex items-center gap-4">
-            <div class="w-16 h-16 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-2xl font-bold">
-              {{ post.author.name?.[0] }}
-            </div>
-            <div>
-              <p class="font-semibold">{{ post.author.name }}</p>
-              <p class="text-gray-500 text-sm">Tác giả</p>
-            </div>
-          </div>
-
-          <!-- Share -->
-          <div class="mt-8 flex items-center gap-4">
-            <span class="text-gray-500">Chia sẻ:</span>
-            <a 
-              :href="`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent($route.fullPath)}`"
-              target="_blank"
-              class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700"
-            >
-              f
-            </a>
-            <a 
-              :href="`https://twitter.com/intent/tweet?url=${encodeURIComponent($route.fullPath)}&text=${encodeURIComponent(post.title)}`"
-              target="_blank"
-              class="w-10 h-10 bg-sky-500 text-white rounded-full flex items-center justify-center hover:bg-sky-600"
-            >
-              𝕏
-            </a>
-          </div>
-        </article>
-
-        <!-- Sidebar -->
-        <aside class="lg:col-span-1 space-y-6">
-          <!-- Related Posts -->
-          <div v-if="relatedPosts.length" class="bg-white rounded-xl shadow-sm p-4">
-            <h3 class="font-semibold mb-4">Bài viết liên quan</h3>
-            <div class="space-y-4">
-              <NuxtLink 
-                v-for="related in relatedPosts" 
-                :key="related.id"
-                :to="`/tin-tuc/${related.slug}`"
-                class="flex gap-3 hover:opacity-80"
-              >
-                <div class="w-20 h-16 bg-gray-100 rounded flex-shrink-0">
-                  <img 
-                    v-if="related.featured_image" 
-                    :src="related.featured_image"
-                    :alt="related.title"
-                    class="w-full h-full object-cover rounded"
-                  >
-                </div>
-                <div>
-                  <h4 class="text-sm font-medium line-clamp-2">{{ related.title }}</h4>
-                  <p class="text-xs text-gray-500 mt-1">{{ formatDate(related.published_at) }}</p>
-                </div>
-              </NuxtLink>
-            </div>
-          </div>
-
-          <!-- Back to Blog -->
-          <NuxtLink 
-            to="/tin-tuc" 
-            class="block text-center px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
-          >
-            ← Quay lại Tin tức
-          </NuxtLink>
-        </aside>
-      </div>
-    </template>
-
-    <template v-else>
-      <div class="text-center py-12">
-        <p class="text-gray-500">Đang tải...</p>
-      </div>
-    </template>
+        <NewsRelatedArticles :articles="detail.related" />
+      </template>
+    </div>
   </div>
 </template>

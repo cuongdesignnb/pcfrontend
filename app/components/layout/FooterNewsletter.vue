@@ -1,34 +1,6 @@
 <script setup lang="ts">
-const config = useRuntimeConfig()
 const { siteName } = useSettings()
-const email = ref('')
-const status = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
-const message = ref('')
-
-function errorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'data' in error) {
-    const data = (error as { data?: { message?: string } }).data
-    if (data?.message) return data.message
-  }
-  return 'Không thể đăng ký lúc này. Vui lòng thử lại.'
-}
-
-async function subscribe() {
-  status.value = 'loading'
-  message.value = ''
-  try {
-    const response = await $fetch<{ message: string }>(`${config.public.apiBase}/newsletter/subscribe`, {
-      method: 'POST',
-      body: { email: email.value.trim() },
-    })
-    status.value = 'success'
-    message.value = response.message
-    email.value = ''
-  } catch (error: unknown) {
-    status.value = 'error'
-    message.value = errorMessage(error)
-  }
-}
+const { email, status, message, subscribe } = useNewsletterSubscription()
 </script>
 
 <template>

@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   },
 
   // CSS
-  css: ['~/assets/css/main.css', '~/assets/css/checkout.css', '~/assets/css/account.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/checkout.css', '~/assets/css/account.css', '~/assets/css/news-detail.css'],
 
   // Runtime config
   runtimeConfig: {
@@ -55,7 +55,20 @@ export default defineNuxtConfig({
     '/products/**': { isr: 60 },
     '/**': { isr: 60 },
     '/categories/**': { isr: 300 },
-    '/blog/**': { swr: 3600 },
+    '/tin-tuc': {
+      ssr: true,
+      isr: false,
+      swr: false,
+      prerender: false,
+      headers: { 'cache-control': 'public, no-store, max-age=0' },
+    },
+    '/tin-tuc/**': {
+      ssr: true,
+      isr: false,
+      swr: false,
+      prerender: false,
+      headers: { 'cache-control': 'public, no-store, max-age=0' },
+    },
     '/configurator/**': { ssr: false },
     '/cart': { ssr: false },
     '/checkout/**': { ssr: false },

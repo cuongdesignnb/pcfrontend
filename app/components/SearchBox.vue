@@ -5,6 +5,8 @@ interface SearchProduct {
   slug: string
   price: number
   sale_price: number | null
+  display_price?: number
+  is_contact_price?: boolean
   image: string | null
   url: string
 }
@@ -35,6 +37,37 @@ const loading = ref(false)
 let timer: ReturnType<typeof setTimeout> | null = null
 
 const hasResults = computed(() => results.value.products.length > 0 || results.value.posts.length > 0)
+
+function searchProductPricing(product: SearchProduct): {
+  regularPrice: number
+  salePrice: number | null
+  displayPrice: number
+  isContactPrice: boolean
+} {
+  let regularPrice = Number(product.price)
+  if (!Number.isFinite(regularPrice) || regularPrice < 0) regularPrice = 0
+
+  const apiDisplayPrice = Number(product.display_price)
+  const hasApiDisplayPrice = Number.isFinite(apiDisplayPrice) && apiDisplayPrice > 0
+  if (regularPrice <= 0 && hasApiDisplayPrice) regularPrice = apiDisplayPrice
+
+  const rawSalePrice = product.sale_price === null ? null : Number(product.sale_price)
+  const salePrice = rawSalePrice !== null
+    && Number.isFinite(rawSalePrice)
+    && rawSalePrice > 0
+    && regularPrice > 0
+    && rawSalePrice < regularPrice
+    ? rawSalePrice
+    : null
+  const displayPrice = hasApiDisplayPrice ? apiDisplayPrice : (salePrice ?? regularPrice)
+
+  return {
+    regularPrice,
+    salePrice,
+    displayPrice,
+    isContactPrice: product.is_contact_price === true || displayPrice <= 0,
+  }
+}
 
 function clearTimer() {
   if (timer) clearTimeout(timer)
@@ -130,7 +163,11 @@ onBeforeUnmount(clearTimer)
             </span>
             <span class="search-result-copy">
               <strong>{{ product.name }}</strong>
-              <span><b v-if="product.sale_price !== null">{{ formatMoney(product.sale_price) }}</b><em :class="{ 'is-old': product.sale_price !== null }">{{ formatMoney(product.price) }}</em></span>
+              <span v-if="searchProductPricing(product).isContactPrice" class="search-result-contact-price">Liên hệ</span>
+              <span v-else>
+                <b v-if="searchProductPricing(product).salePrice !== null">{{ formatMoney(searchProductPricing(product).salePrice || 0) }}</b>
+                <em :class="{ 'is-old': searchProductPricing(product).salePrice !== null }">{{ formatMoney(searchProductPricing(product).regularPrice) }}</em>
+              </span>
             </span>
             <svg aria-hidden="true" class="search-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="m9 5 7 7-7 7" /></svg>
           </button>

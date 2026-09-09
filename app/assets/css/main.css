@@ -137,6 +137,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 .search-result-copy > span { display: flex; align-items: center; gap: 7px; font-size: 11px; }
 .search-result-copy b { color: var(--pc-red); }
 .search-result-copy em { color: var(--pc-blue); font-style: normal; }
+.search-result-copy .search-result-contact-price { color: var(--pc-blue); font-size: 11px; font-weight: 700; }
 .search-result-copy em.is-old { color: #9aa3b1; text-decoration: line-through; }
 .search-result-copy small { color: var(--pc-muted); font-size: 10px; }
 .search-result-arrow { width: 15px; height: 15px; flex: 0 0 15px; color: #a4acb8; }

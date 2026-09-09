@@ -4,8 +4,10 @@ import type { BuilderProductOption } from '~/types/pc-builder'
 const props = defineProps<{ option: BuilderProductOption; selected: boolean }>()
 const emit = defineEmits<{ select: [product: BuilderProductOption]; open: [product: BuilderProductOption] }>()
 const wishlist = useWishlist()
+const toast = useToast()
 const product = computed(() => props.option.product)
 const wished = wishlist.has(product.value.id)
+const togglingWishlist = ref(false)
 const actionLabel = computed(() => product.value.has_variants ? 'Chọn phiên bản' : props.option.is_compatible ? 'Chọn linh kiện' : 'Không tương thích')
 const selectProduct = () => {
   if (!props.option.is_compatible || product.value.has_variants) {
@@ -15,12 +17,26 @@ const selectProduct = () => {
   emit('select', props.option)
 }
 const productUrl = computed(() => product.value.category ? `/${product.value.category.slug}/${product.value.slug}` : `/products/${product.value.slug}`)
+const toggleWishlist = async () => {
+  if (togglingWishlist.value) return
+  togglingWishlist.value = true
+  try {
+    await wishlist.ready()
+    const wasWished = wished.value
+    const success = await wishlist.toggle(product.value.id)
+    toast.add(success
+      ? { title: wasWished ? 'Đã bỏ khỏi yêu thích' : 'Đã thêm vào yêu thích', description: product.value.name, color: 'success' }
+      : { title: 'Không thể cập nhật yêu thích', description: 'Vui lòng thử lại sau.', color: 'error' })
+  } finally {
+    togglingWishlist.value = false
+  }
+}
 </script>
 
 <template>
 <article class="builder-product-card" :class="{ 'is-selected': selected, 'is-incompatible': !option.is_compatible }">
   <span v-if="selected" class="builder-selected-badge">Đang chọn</span>
-  <button type="button" class="builder-wishlist" :aria-label="wished ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'" @click="wishlist.toggle(product.id)">
+  <button type="button" class="builder-wishlist" :disabled="togglingWishlist" :aria-busy="togglingWishlist" :aria-label="wished ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'" @click="toggleWishlist">
     <svg viewBox="0 0 24 24" :fill="wished ? 'currentColor' : 'none'" aria-hidden="true"><path d="M20.8 8.7c0 5.1-8.8 10.2-8.8 10.2S3.2 13.8 3.2 8.7A4.7 4.7 0 0 1 12 6a4.7 4.7 0 0 1 8.8 2.7Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" /></svg>
   </button>
   <NuxtLink :to="productUrl" class="builder-product-image" :aria-label="product.name">

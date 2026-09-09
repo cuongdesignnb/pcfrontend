@@ -3,6 +3,7 @@ import type { ProductQuestion } from '~/types/product-detail'
 
 const props = defineProps<{ slug: string }>()
 const { token, isAuthenticated, user } = useAuth()
+const { siteName } = useSettings()
 const config = useRuntimeConfig()
 const toast = useToast()
 const questions = ref<ProductQuestion[]>([])
@@ -57,7 +58,7 @@ const date = (value: string | null) => value ? new Intl.DateTimeFormat('vi-VN').
       <article v-for="question in questions" :key="question.id" class="py-2.5 first:pt-0">
         <div class="flex flex-wrap items-center gap-x-2 gap-y-1"><strong class="text-[11px] text-slate-800">{{ question.asker_name }}</strong><time class="text-[9px] text-slate-400">{{ date(question.created_at) }}</time></div>
         <p class="mt-1 text-[11px] leading-4 text-slate-700">{{ question.body }}</p>
-        <div v-if="question.answers[0]" class="mt-1.5 border-l-2 border-blue-200 pl-2 text-[10px] leading-4 text-slate-600"><strong class="text-blue-700">{{ question.answers[0].is_official ? 'PC Shop' : question.answers[0].author_name }}:</strong> {{ question.answers[0].body }}</div>
+        <div v-if="question.answers[0]" class="mt-1.5 border-l-2 border-blue-200 pl-2 text-[10px] leading-4 text-slate-600"><strong class="text-blue-700">{{ question.answers[0].is_official ? siteName : question.answers[0].author_name }}:</strong> {{ question.answers[0].body }}</div>
       </article>
     </div>
     <p v-else-if="!loading" class="mt-3 text-xs text-slate-500">Chưa có câu hỏi nào.</p>

@@ -14,6 +14,7 @@ const props = defineProps<{
   disabled?: boolean
   mode: 'cart' | 'buy_now'
 }>()
+const { siteName } = useSettings()
 
 const totalQuantity = computed(() => props.quote?.summary.total_quantity ?? props.lines.reduce((sum, item) => sum + item.quantity, 0))
 const summary = computed(() => props.quote?.summary ?? null)
@@ -72,7 +73,7 @@ const availableBenefits = computed(() => props.benefits.filter(item => item.titl
         <CartIcon v-if="!submitting" name="arrow-right" size="17" />
       </button>
 
-      <p class="checkout-terms">Bằng việc đặt hàng, bạn xác nhận thông tin giao nhận là chính xác và đồng ý với chính sách mua hàng của PC Center.</p>
+      <p class="checkout-terms">Bằng việc đặt hàng, bạn xác nhận thông tin giao nhận là chính xác và đồng ý với chính sách mua hàng của {{ siteName }}.</p>
 
       <div v-if="availablePaymentBadges.length" class="checkout-payment-badges">
         <strong>Phương thức đang khả dụng</strong>

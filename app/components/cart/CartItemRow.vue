@@ -20,6 +20,7 @@ const emit = defineEmits<{
 
 const { formatMoney } = useSettings()
 const wishlist = useWishlist()
+const savingForLater = ref(false)
 
 const quantity = computed(() => props.pendingQuantity ?? props.item.quantity)
 const productPath = computed(() => {
@@ -44,14 +45,21 @@ function changeQuantity(next: number) {
   emit('update:quantity', next)
 }
 
-function saveForLater() {
+async function saveForLater() {
   if (props.item.variant_id || !props.item.product) {
     emit('update:selected', !props.item.selected)
     return
   }
 
-  if (!wishlist.ids.value.includes(props.item.product.id)) {
-    wishlist.toggle(props.item.product.id)
+  savingForLater.value = true
+  try {
+    await wishlist.ready()
+    if (!wishlist.ids.value.includes(props.item.product.id)) {
+      const success = await wishlist.toggle(props.item.product.id)
+      if (!success) return
+    }
+  } finally {
+    savingForLater.value = false
   }
   emit('remove')
 }
@@ -112,9 +120,9 @@ function eventChecked(event: Event): boolean {
         <button type="button" aria-label="Tăng số lượng" :disabled="!canIncrease || busy" @click="changeQuantity(quantity + 1)"><CartIcon name="plus" size="15" /></button>
       </div>
       <div class="cart-item-actions">
-        <button type="button" class="cart-save-button" :class="{ 'is-saved': !item.selected }" :disabled="busy || removing" @click="saveForLater">
+        <button type="button" class="cart-save-button" :class="{ 'is-saved': !item.selected }" :disabled="busy || removing || savingForLater" @click="saveForLater">
           <CartIcon name="heart" size="15" />
-          {{ saveActionLabel }}
+          {{ savingForLater ? 'Đang lưu…' : saveActionLabel }}
         </button>
         <button type="button" class="cart-remove-button" :disabled="busy || removing" @click="emit('remove')">
           <CartIcon name="trash" size="15" /> Xóa

@@ -17,6 +17,7 @@ const wishlist = useWishlist()
 const cart = useCart()
 const toast = useToast()
 const addingToCart = ref(false)
+const togglingWishlist = ref(false)
 
 const cardVariant = computed(() => props.compact ? 'compact' : props.variant)
 const isCompact = computed(() => cardVariant.value === 'compact')
@@ -41,8 +42,19 @@ const categoryActionLabel = computed(() => {
 })
 const categoryActionDisabled = computed(() => addingToCart.value || (!props.product.has_variants && !props.product.inventory.purchasable))
 
-function toggleWishlist() {
-  wishlist.toggle(props.product.id)
+async function toggleWishlist() {
+  if (togglingWishlist.value) return
+  togglingWishlist.value = true
+  try {
+    await wishlist.ready()
+    const wasWishlisted = isWishlisted.value
+    const selected = await wishlist.toggle(props.product.id)
+    toast.add(selected
+      ? { title: wasWishlisted ? 'Đã bỏ khỏi yêu thích' : 'Đã thêm vào yêu thích', description: props.product.name, color: 'success' }
+      : { title: 'Không thể cập nhật yêu thích', description: 'Vui lòng thử lại sau.', color: 'error' })
+  } finally {
+    togglingWishlist.value = false
+  }
 }
 
 function formatSoldCount(value: number): string {
@@ -123,6 +135,8 @@ async function handleCategoryAction(event: MouseEvent) {
       type="button"
       class="product-card-wishlist"
       :class="{ 'is-active': isWishlisted }"
+      :disabled="togglingWishlist"
+      :aria-busy="togglingWishlist"
       :aria-label="isWishlisted ? `Bỏ ${product.name} khỏi yêu thích` : `Thêm ${product.name} vào yêu thích`"
       :aria-pressed="isWishlisted"
       @click="toggleWishlist"

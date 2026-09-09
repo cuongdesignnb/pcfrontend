@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { toTelHref } from '~/utils/contactLinks'
+
+const { siteName, siteHotline, siteEmail, siteAddress, businessHours } = useSettings()
+
 useSeoMeta({
-  title: 'Liên hệ - PC Shop',
-  description: 'Liên hệ PC Shop - Hỗ trợ mua hàng, tư vấn kỹ thuật, bảo hành.',
+  title: () => `Liên hệ - ${siteName.value}`,
+  description: () => `Liên hệ ${siteName.value} - Hỗ trợ mua hàng, tư vấn kỹ thuật, bảo hành.`,
 })
 </script>
 
@@ -21,7 +25,7 @@ useSeoMeta({
               </div>
               <div>
                 <p class="font-medium text-gray-900">Địa chỉ</p>
-                <p class="text-gray-600">123 Nguyễn Văn Linh, Quận 7, TP.HCM</p>
+                <p v-if="siteAddress" class="text-gray-600">{{ siteAddress }}</p>
               </div>
             </div>
             <div class="flex items-start gap-3">
@@ -30,7 +34,8 @@ useSeoMeta({
               </div>
               <div>
                 <p class="font-medium text-gray-900">Hotline</p>
-                <p class="text-gray-600">1900 xxxx (8:00 – 21:00)</p>
+                <a v-if="siteHotline && toTelHref(siteHotline)" :href="toTelHref(siteHotline)" class="text-gray-600 hover:text-blue-600">{{ siteHotline }}</a>
+                <p v-if="businessHours" class="text-xs text-gray-500">{{ businessHours }}</p>
               </div>
             </div>
             <div class="flex items-start gap-3">
@@ -39,7 +44,7 @@ useSeoMeta({
               </div>
               <div>
                 <p class="font-medium text-gray-900">Email</p>
-                <p class="text-gray-600">info@pcshop.vn</p>
+                <a v-if="siteEmail" :href="`mailto:${siteEmail}`" class="text-gray-600 hover:text-blue-600">{{ siteEmail }}</a>
               </div>
             </div>
           </div>

@@ -11,6 +11,7 @@ export const useSettings = () => {
     try {
       settings.value = await $fetch<Record<string, SettingValue>>(
         `${config.public.apiBase}/settings`,
+        { cache: 'no-store' },
       )
       loaded.value = true
     } catch (error) {
@@ -51,9 +52,11 @@ export const useSettings = () => {
   const siteFavicon = computed(() => getString('site_favicon'))
   const currency = computed(() => getString('currency', 'VND'))
 
-  const sitePhone = computed(() => getString('contact_phone', '1900 1234'))
+  // Contact details must come from the public settings endpoint. Do not show
+  // a placeholder number when an administrator has not configured one yet.
+  const sitePhone = computed(() => getString('contact_phone'))
   const siteHotline = computed(() => getString('contact_hotline', sitePhone.value))
-  const siteEmail = computed(() => getString('contact_email', 'support@pcshop.vn'))
+  const siteEmail = computed(() => getString('contact_email'))
   const siteAddress = computed(() => getString('contact_address'))
   const warehouseAddresses = computed(() => getString('warehouse_addresses', siteAddress.value))
   const businessHours = computed(() => getString('business_hours'))

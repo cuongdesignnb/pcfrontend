@@ -14,6 +14,7 @@ interface NavigationTarget {
 interface ResolvedNavigationItem extends NavigationTarget {
   item: MenuItemData | null
   path: string
+  label: string
 }
 
 const targets: NavigationTarget[] = [
@@ -58,7 +59,12 @@ const navigationItems = computed<ResolvedNavigationItem[]>(() => {
       const title = candidate.title.trim().toLocaleLowerCase()
       return target.matches.some(match => title === match || title.includes(match))
     }) || null
-    return { ...target, item, path: resolveUrl(item, target.fallback) }
+    return {
+      ...target,
+      item,
+      path: resolveUrl(item, target.fallback),
+      label: item?.title?.trim() || target.title,
+    }
   })
 })
 </script>
@@ -74,7 +80,7 @@ const navigationItems = computed<ResolvedNavigationItem[]>(() => {
           class="header-navigation-link"
         >
           <span class="header-nav-icon" aria-hidden="true">{{ item.icon }}</span>
-          <span>{{ item.title }}</span>
+          <span>{{ item.label }}</span>
           <span v-if="item.item?.badge_text" class="header-nav-badge">{{ item.item.badge_text }}</span>
         </NuxtLink>
       </li>

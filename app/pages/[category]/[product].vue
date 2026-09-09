@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductCard, ProductDetail } from '~/types/product-detail'
+import { toSocialHref } from '~/utils/contactLinks'
 
 const route = useRoute()
 const config = useRuntimeConfig()
@@ -38,18 +39,10 @@ const contactOnly = computed(() => selectedPricing.value.display_price <= 0)
 const onlinePurchasable = computed(() => selection.purchasable.value && !contactOnly.value)
 
 const zaloHref = computed(() => {
-  const value = socialZalo.value.trim()
-  if (!value) return ''
-  if (/^https?:\/\//i.test(value)) return value
-  if (/^zalo\.me\//i.test(value)) return `https://${value}`
-  return `https://zalo.me/${value.replace(/[^\d]/g, '') || value.replace(/^@/, '')}`
+  return toSocialHref(socialZalo.value, 'zalo')
 })
 const messengerHref = computed(() => {
-  const value = socialMessenger.value.trim()
-  if (!value) return ''
-  if (/^https?:\/\//i.test(value)) return value
-  if (/^m\.me\//i.test(value)) return `https://${value}`
-  return `https://m.me/${encodeURIComponent(value.replace(/^@/, ''))}`
+  return toSocialHref(socialMessenger.value, 'messenger')
 })
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })

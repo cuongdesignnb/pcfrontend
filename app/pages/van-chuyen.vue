@@ -1,7 +1,9 @@
 <script setup lang="ts">
+const { siteName, siteHotline } = useSettings()
+
 useSeoMeta({
-  title: 'Chính sách vận chuyển - PC Shop',
-  description: 'Chính sách vận chuyển và giao hàng tại PC Shop - Miễn phí nội thành, giao nhanh toàn quốc.',
+  title: () => `Chính sách vận chuyển - ${siteName.value}`,
+  description: () => `Chính sách vận chuyển và giao hàng tại ${siteName.value} - Miễn phí nội thành, giao nhanh toàn quốc.`,
 })
 </script>
 
@@ -12,7 +14,7 @@ useSeoMeta({
     <div class="prose prose-lg max-w-none text-gray-700 space-y-6">
       <div class="bg-green-50 border border-green-200 rounded-xl p-6 mb-8">
         <p class="text-green-800 font-medium">
-          PC Shop cung cấp dịch vụ giao hàng toàn quốc với nhiều phương thức linh hoạt.
+          {{ siteName }} cung cấp dịch vụ giao hàng toàn quốc với nhiều phương thức linh hoạt.
           Miễn phí giao hàng nội thành TP.HCM và Hà Nội cho đơn hàng từ 500.000₫.
         </p>
       </div>
@@ -46,7 +48,8 @@ useSeoMeta({
       <ul class="list-disc pl-6 space-y-2">
         <li>Kiểm tra tình trạng bên ngoài kiện hàng trước khi nhận</li>
         <li>Quay video khi mở hộp để đảm bảo quyền lợi</li>
-        <li>Liên hệ ngay Hotline 1900 xxxx nếu phát hiện sai / thiếu sản phẩm</li>
+        <li v-if="siteHotline">Liên hệ ngay Hotline {{ siteHotline }} nếu phát hiện sai / thiếu sản phẩm</li>
+        <li v-else>Liên hệ cửa hàng nếu phát hiện sai / thiếu sản phẩm</li>
         <li>Thời gian khiếu nại: trong vòng 24 giờ kể từ khi nhận hàng</li>
       </ul>
 

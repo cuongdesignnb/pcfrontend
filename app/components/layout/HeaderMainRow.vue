@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { toTelHref } from '~/utils/contactLinks'
+
 const emit = defineEmits<{ openMobileMenu: [] }>()
 
 const auth = useAuth()
@@ -11,7 +13,7 @@ const accountName = computed(() => {
   return auth.user.value?.name?.split(' ')[0] || 'Tài khoản'
 })
 
-const phoneHref = computed(() => `tel:${siteHotline.value.replace(/\s/g, '')}`)
+const phoneHref = computed(() => toTelHref(siteHotline.value))
 </script>
 
 <template>
@@ -30,7 +32,7 @@ const phoneHref = computed(() => `tel:${siteHotline.value.replace(/\s/g, '')}`)
 
       <NuxtLink to="/" class="site-brand" :aria-label="`Trang chủ ${siteName}`">
         <img v-if="siteLogo" :src="siteLogo" :alt="siteName" class="site-brand-image">
-        <span v-else class="site-brand-mark" aria-hidden="true">PC</span>
+        <span v-else class="site-brand-fallback">{{ siteName }}</span>
       </NuxtLink>
 
       <div class="header-search desktop-only">

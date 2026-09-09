@@ -136,6 +136,7 @@ export const useAuth = () => {
       ...options,
       cache: requestCache ?? 'no-store',
       headers: {
+        Accept: 'application/json',
         ...cartSession.getHeaders(),
         ...optionHeaders,
         ...(token.value ? { Authorization: `Bearer ${token.value}` } : {}),

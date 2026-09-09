@@ -130,6 +130,7 @@ const quotePayload = computed<CheckoutQuoteRequest>(() => {
 })
 
 const quoteLoading = computed(() => quotes.loading.value)
+const shippingMethods = computed(() => quotes.quote.value?.shipping_methods ?? [])
 const hasCartError = computed(() => checkoutMode.value === 'cart' && Boolean(cart.error.value))
 const quoteHasUsablePayment = computed(() => paymentMethods.value.some(method => method.code === form.payment_method && method.available))
 
@@ -601,14 +602,14 @@ useSeoMeta({
             <CheckoutSection :number="3" title="Phương thức giao hàng" icon="truck">
               <fieldset class="checkout-radio-group">
                 <legend class="sr-only">Phương thức giao hàng</legend>
-                <label v-for="shipping in (quotes.quote?.shipping_methods ?? [])" :key="shipping.code" class="checkout-radio-card" :class="{ 'is-selected': form.shipping_method === shipping.code, 'is-disabled': !shipping.available }">
+                <label v-for="shipping in shippingMethods" :key="shipping.code" class="checkout-radio-card" :class="{ 'is-selected': form.shipping_method === shipping.code, 'is-disabled': !shipping.available }">
                   <input v-model="form.shipping_method" type="radio" name="shipping_method" :value="shipping.code" :disabled="!shipping.available || Boolean(orderResult)">
                   <span class="checkout-radio-mark" aria-hidden="true" />
                   <CartIcon name="truck" size="22" />
                   <span class="checkout-radio-copy"><strong>{{ shipping.label }}</strong><small>{{ shipping.description }}<template v-if="shipping.eta"> · {{ shipping.eta }}</template></small></span>
                   <strong class="checkout-radio-price">{{ shipping.fee === null ? '—' : (shipping.fee === 0 ? 'Miễn phí' : formatMoney(shipping.fee)) }}</strong>
                 </label>
-                <p v-if="!(quotes.quote?.shipping_methods?.length)" class="checkout-muted">Đang cập nhật phương thức giao hàng từ hệ thống.</p>
+                <p v-if="!shippingMethods.length" class="checkout-muted">Đang cập nhật phương thức giao hàng từ hệ thống.</p>
               </fieldset>
             </CheckoutSection>
 

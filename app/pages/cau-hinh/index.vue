@@ -4,6 +4,7 @@ import type { BuilderComponentType, BuilderFiltersState, BuilderPreset, BuilderP
 const route = useRoute()
 const config = useRuntimeConfig()
 const toast = useToast()
+const auth = useAuth()
 const { siteName, siteTagline, siteHotline, siteLogo } = useSettings()
 const builderState = usePcBuilder()
 const browserState = useBuilderProducts()
@@ -31,10 +32,30 @@ const parseSharedBuild = (): BuilderSelection | null => {
   if (!value) return null
   const next: BuilderSelection = {}
   for (const pair of value.split(',')) {
-    const [typeId, productId] = pair.split('-').map(Number)
+    const [rawTypeId, rawProductId] = pair.split('-')
+    const typeId = Number(rawTypeId)
+    const productId = Number(rawProductId)
     if (Number.isInteger(typeId) && typeId > 0 && Number.isInteger(productId) && productId > 0) next[String(typeId)] = productId
   }
   return Object.keys(next).length ? next : null
+}
+
+const restoreSavedBuild = async (): Promise<boolean> => {
+  const savedBuildId = typeof route.query.saved_build === 'string' ? route.query.saved_build : ''
+  if (!savedBuildId) return false
+  if (!auth.isAuthenticated.value) {
+    await navigateTo({ path: '/dang-nhap', query: { redirect: route.fullPath } })
+    return true
+  }
+
+  try {
+    const response = await auth.authFetch<{ build: { build: BuilderSelection } }>(`${config.public.apiBase}/builder/saved/${encodeURIComponent(savedBuildId)}`)
+    await builderState.replaceBuild(response.build.build)
+    return true
+  } catch {
+    toast.add({ title: 'Không thể mở cấu hình đã lưu', description: 'Cấu hình không tồn tại hoặc không thuộc tài khoản này.', color: 'error' })
+    return false
+  }
 }
 
 const loadActiveProducts = async (page = 1) => {
@@ -161,7 +182,7 @@ const usePreset = async (preset: BuilderPreset) => {
   const next: BuilderSelection = {}
   for (const type of builderState.componentTypes.value) {
     const productId = preset.products[type.slug]
-    if (Number.isInteger(productId) && productId > 0) next[String(type.id)] = productId
+    if (typeof productId === 'number' && Number.isInteger(productId) && productId > 0) next[String(type.id)] = productId
   }
   await builderState.replaceBuild(next)
   if (!builderState.activeTypeSlug.value) builderState.setActiveType(builderState.componentTypes.value[0]?.slug || '')
@@ -170,7 +191,8 @@ const usePreset = async (preset: BuilderPreset) => {
 
 onMounted(async () => {
   suggestedName.value = `PC Gaming ${new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })}`
-  const sharedBuild = parseSharedBuild()
+  const restoredSavedBuild = await restoreSavedBuild()
+  const sharedBuild = restoredSavedBuild ? null : parseSharedBuild()
   if (sharedBuild) await builderState.replaceBuild(sharedBuild)
   else if (typeof route.query.product === 'string' && route.query.product) await builderState.preselectRequestedProduct()
   else await builderState.restoreDraft()

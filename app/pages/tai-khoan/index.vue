@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { AccountOrderSummary, AccountSavedBuild, AccountUser } from '~/types/account'
+
 definePageMeta({
   middleware: 'auth',
   ssr: false,
@@ -6,116 +8,154 @@ definePageMeta({
 
 const router = useRouter()
 const auth = useAuth()
-const wishlist = useWishlist()
-const user = computed(() => auth.user.value)
-const recentOrders = ref<Array<Record<string, any>>>([])
-const totalOrders = ref(0)
-const savedBuildCount = ref(0)
-const pageLoading = ref(true)
-const pageError = ref('')
+const { siteName } = useSettings()
+const account = useAccountDashboard()
+const dashboard = computed(() => account.data.value)
 
-const initials = computed(() => {
-  const name = user.value?.name?.trim() || ''
-  return name ? name.charAt(0).toUpperCase() : '?'
-})
-
-const loadDashboard = async () => {
-  pageLoading.value = true
-  pageError.value = ''
-  const currentUser = await auth.fetchUser()
-  if (!currentUser) {
-    await router.replace({ path: '/dang-nhap', query: { redirect: '/tai-khoan' } })
-    return
+const formatMoney = (value: number) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))}₫`
+const formatDate = (value: string | null) => value ? new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value)) : '—'
+const formatGender = (value: AccountUser['gender']) => {
+  const labels: Record<Exclude<AccountUser['gender'], null>, string> = {
+    male: 'Nam',
+    female: 'Nữ',
+    other: 'Khác',
+    prefer_not_to_say: 'Không muốn khai báo',
   }
 
-  try {
-    const [ordersResponse, buildsResponse] = await Promise.all([
-      auth.authFetch<{ orders?: Array<Record<string, any>>, meta?: { total?: number } }>(`${useRuntimeConfig().public.apiBase}/orders`),
-      auth.authFetch<{ builds?: Array<Record<string, any>> }>(`${useRuntimeConfig().public.apiBase}/builder/saved`),
-      wishlist.ready(),
-    ])
-    recentOrders.value = ordersResponse.orders ?? []
-    totalOrders.value = Number(ordersResponse.meta?.total ?? recentOrders.value.length)
-    savedBuildCount.value = buildsResponse.builds?.length ?? 0
-  } catch {
-    pageError.value = 'Không thể tải đầy đủ dữ liệu tài khoản. Vui lòng thử lại.'
-  } finally {
-    pageLoading.value = false
+  return value ? labels[value] : 'Chưa cập nhật'
+}
+const buildPartsLabel = (build: AccountSavedBuild) => build.parts.map(part => part.product.name).join(' · ')
+const orderStatusClass = (order: AccountOrderSummary) => `is-${order.display_status.code}`
+
+const loadDashboard = async () => {
+  const response = await account.load()
+  if (!response && !auth.isAuthenticated.value) {
+    await router.replace({ path: '/dang-nhap', query: { redirect: '/tai-khoan' } })
   }
 }
 
 onMounted(() => { void loadDashboard() })
 
-const getOrderStatusBadge = (status: string): { bg: string; text: string; label: string } => {
-  const badges: Record<string, { bg: string; text: string; label: string }> = {
-    pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Chờ xử lý' },
-    confirmed: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Đã xác nhận' },
-    processing: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Đang xử lý' },
-    shipping: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Đang giao' },
-    delivered: { bg: 'bg-green-100', text: 'text-green-700', label: 'Đã giao' },
-    cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Đã hủy' },
-  }
-  return badges[status] ?? { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Không rõ' }
-}
-
-const formatMoney = (value: unknown) => new Intl.NumberFormat('vi-VN').format(Number(value ?? 0)) + '₫'
-
-useSeoMeta({ title: 'Tài khoản - PC Shop', robots: 'noindex, nofollow' })
+useSeoMeta({
+  title: () => `Tài khoản của tôi - ${siteName.value}`,
+  robots: 'noindex, nofollow',
+})
 </script>
 
 <template>
-  <main class="account-page">
-    <div class="pc-container account-container">
-      <div class="account-layout">
-        <aside class="account-sidebar">
-          <div class="account-profile-card">
-            <div class="account-avatar">{{ initials }}</div>
-            <h1>{{ user?.name || 'Tài khoản' }}</h1>
-            <p>{{ user?.email }}</p>
+  <AccountShell>
+    <div class="account-dashboard-heading">
+      <div>
+        <span class="account-eyebrow">{{ siteName }}</span>
+        <h1>Tài khoản của tôi</h1>
+        <p>Quản lý thông tin cá nhân, đơn hàng và các tiện ích của bạn tại {{ siteName }}.</p>
+      </div>
+      <NuxtLink to="/categories" class="account-dashboard-shop-link">Tiếp tục mua sắm <CartIcon name="arrow-right" size="16" /></NuxtLink>
+    </div>
+
+    <div v-if="account.loading" class="account-loading-card" role="status">Đang tải dữ liệu tài khoản…</div>
+    <div v-else-if="account.error" class="account-error-card" role="alert">
+      <CartIcon name="help" size="22" /><span>{{ account.error }}</span><button type="button" @click="loadDashboard">Thử lại</button>
+    </div>
+
+    <template v-else-if="dashboard">
+      <section class="account-profile-overview">
+        <div class="account-greeting">
+          <div class="account-greeting-avatar">
+            <NuxtImg v-if="dashboard.user.avatar" :src="dashboard.user.avatar" :alt="dashboard.user.name" width="96" height="96" />
+            <span v-else>{{ dashboard.user.name.charAt(0).toUpperCase() }}</span>
           </div>
-
-          <nav class="account-nav" aria-label="Điều hướng tài khoản">
-            <NuxtLink to="/tai-khoan" class="is-active"><CartIcon name="user" size="18" /><span>Tổng quan</span></NuxtLink>
-            <a href="#orders"><CartIcon name="receipt" size="18" /><span>Đơn hàng</span></a>
-            <NuxtLink to="/cau-hinh"><CartIcon name="settings" size="18" /><span>Cấu hình đã lưu</span></NuxtLink>
-            <a href="#profile"><CartIcon name="user" size="18" /><span>Thông tin cá nhân</span></a>
-            <a href="#security"><CartIcon name="lock" size="18" /><span>Bảo mật tài khoản</span></a>
-            <button type="button" class="account-nav-logout" @click="auth.logout"><CartIcon name="logout" size="18" /><span>Đăng xuất</span></button>
-          </nav>
-        </aside>
-
-        <section class="account-main">
-          <div class="account-welcome">
-            <div><span class="account-eyebrow">PC CENTER MEMBER</span><h2>Xin chào, {{ user?.name || 'bạn' }}!</h2><p>Quản lý tài khoản, theo dõi đơn hàng và lưu lại những lựa chọn công nghệ của bạn.</p></div>
-            <NuxtLink to="/categories" class="account-primary-link">Tiếp tục mua sắm <CartIcon name="arrow-right" size="16" /></NuxtLink>
+          <div>
+            <span class="account-greeting-label">Thành viên {{ siteName }}</span>
+            <h2>Xin chào, {{ dashboard.user.name }}!</h2>
+            <p>Cảm ơn bạn đã đồng hành cùng {{ siteName }}.</p>
+            <small v-if="dashboard.user.default_address">Địa chỉ mặc định: {{ dashboard.user.default_address.full_address }}</small>
+            <small v-else>Thêm địa chỉ để lần mua hàng sau được thuận tiện hơn.</small>
           </div>
+        </div>
+        <div class="account-stat-grid">
+          <NuxtLink to="/tai-khoan/don-hang" class="account-stat-card">
+            <span class="account-stat-icon is-blue"><CartIcon name="receipt" size="20" /></span>
+            <strong>{{ dashboard.stats.orders }}</strong><small>Đơn hàng</small><em>Xem chi tiết <CartIcon name="arrow-right" size="13" /></em>
+          </NuxtLink>
+          <NuxtLink to="/tai-khoan/yeu-thich" class="account-stat-card">
+            <span class="account-stat-icon is-pink"><CartIcon name="heart" size="20" /></span>
+            <strong>{{ dashboard.stats.wishlist }}</strong><small>Sản phẩm yêu thích</small><em>Xem ngay <CartIcon name="arrow-right" size="13" /></em>
+          </NuxtLink>
+          <NuxtLink to="/tai-khoan/cau-hinh" class="account-stat-card">
+            <span class="account-stat-icon is-orange"><CartIcon name="settings" size="20" /></span>
+            <strong>{{ dashboard.stats.saved_builds }}</strong><small>Cấu hình đã lưu</small><em>Xem ngay <CartIcon name="arrow-right" size="13" /></em>
+          </NuxtLink>
+        </div>
+      </section>
 
-          <div v-if="pageError" class="account-alert" role="alert">{{ pageError }} <button type="button" @click="loadDashboard">Thử lại</button></div>
+      <NuxtLink v-if="dashboard.banner" :to="dashboard.banner.link || '/categories'" class="account-dashboard-banner">
+        <NuxtImg v-if="dashboard.banner.image" :src="dashboard.banner.image" :alt="dashboard.banner.title || siteName" width="1200" height="130" />
+        <span v-if="dashboard.banner.badge" class="account-dashboard-banner-badge">{{ dashboard.banner.badge }}</span>
+        <div v-if="!dashboard.banner.image" class="account-dashboard-banner-copy"><strong>{{ dashboard.banner.title }}</strong><small>{{ dashboard.banner.description }}</small></div>
+      </NuxtLink>
 
-          <div class="account-stats">
-            <article><span class="account-stat-icon"><CartIcon name="receipt" size="21" /></span><div><strong>{{ pageLoading ? '—' : totalOrders }}</strong><small>Tổng đơn hàng</small></div></article>
-            <article><span class="account-stat-icon"><CartIcon name="settings" size="21" /></span><div><strong>{{ pageLoading ? '—' : savedBuildCount }}</strong><small>Cấu hình đã lưu</small></div></article>
-            <article><span class="account-stat-icon"><CartIcon name="heart" size="21" /></span><div><strong>{{ pageLoading ? '—' : wishlist.count }}</strong><small>Sản phẩm yêu thích</small></div></article>
-          </div>
+      <section class="account-dashboard-card account-orders-card">
+        <div class="account-dashboard-card-heading"><h2><CartIcon name="receipt" size="19" /> Đơn hàng gần đây</h2><NuxtLink to="/tai-khoan/don-hang">Xem tất cả <CartIcon name="arrow-right" size="14" /></NuxtLink></div>
+        <div v-if="!dashboard.recent_orders.length" class="account-empty-state"><CartIcon name="receipt" size="30" /><h3>Bạn chưa có đơn hàng nào</h3><p>Đơn hàng sau khi đặt sẽ được cập nhật tại đây.</p><NuxtLink to="/categories" class="account-outline-button">Khám phá sản phẩm</NuxtLink></div>
+        <div v-else class="account-order-table-wrap">
+          <table class="account-order-table">
+            <thead><tr><th>Mã đơn hàng</th><th>Ngày đặt</th><th>Sản phẩm</th><th>Tổng tiền</th><th>Trạng thái</th><th /></tr></thead>
+            <tbody>
+              <tr v-for="order in dashboard.recent_orders" :key="order.id">
+                <td><NuxtLink :to="`/tai-khoan/don-hang/${order.id}`">#{{ order.order_number }}</NuxtLink></td>
+                <td>{{ formatDate(order.created_at) }}</td>
+                <td class="account-order-product"><span class="account-product-thumb"><NuxtImg v-if="order.representative_item?.image?.url" :src="order.representative_item.image.url" :alt="order.representative_item.image.alt || order.representative_item.product_name" width="42" height="42" /><CartIcon v-else name="package" size="20" /></span><span>{{ order.representative_item?.product_name || 'Sản phẩm trong đơn' }}<small v-if="order.additional_item_count > 0"> + {{ order.additional_item_count }} sản phẩm khác</small></span></td>
+                <td class="account-order-price">{{ formatMoney(order.total) }}</td>
+                <td><span class="account-order-status" :class="orderStatusClass(order)"><i />{{ order.display_status.label }}</span></td>
+                <td><NuxtLink :to="`/tai-khoan/don-hang/${order.id}`" class="account-small-outline">Xem chi tiết</NuxtLink></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="dashboard.recent_orders.length" class="account-order-cards">
+          <article v-for="order in dashboard.recent_orders" :key="order.id" class="account-order-card">
+            <div class="account-order-card-heading"><NuxtLink :to="`/tai-khoan/don-hang/${order.id}`">#{{ order.order_number }}</NuxtLink><span class="account-order-status" :class="orderStatusClass(order)"><i />{{ order.display_status.label }}</span></div>
+            <div class="account-order-card-product"><span class="account-product-thumb"><NuxtImg v-if="order.representative_item?.image?.url" :src="order.representative_item.image.url" :alt="order.representative_item.image.alt || order.representative_item.product_name" width="48" height="48" /><CartIcon v-else name="package" size="21" /></span><span><strong>{{ order.representative_item?.product_name || 'Sản phẩm trong đơn' }}</strong><small>{{ order.items_count }} sản phẩm</small></span></div>
+            <div class="account-order-card-meta"><span>Ngày đặt {{ formatDate(order.created_at) }}</span><strong class="account-order-price">{{ formatMoney(order.total) }}</strong></div>
+            <NuxtLink :to="`/tai-khoan/don-hang/${order.id}`" class="account-small-outline">Xem chi tiết</NuxtLink>
+          </article>
+        </div>
+      </section>
 
-          <section id="orders" class="account-panel">
-            <div class="account-panel-heading"><h2>Đơn hàng gần đây</h2><NuxtLink to="/tai-khoan#orders">Xem tất cả <CartIcon name="arrow-right" size="14" /></NuxtLink></div>
-            <div v-if="pageLoading" class="account-loading">Đang tải dữ liệu tài khoản…</div>
-            <div v-else-if="!recentOrders.length" class="account-empty"><CartIcon name="receipt" size="29" /><h3>Bạn chưa có đơn hàng nào</h3><p>Đơn hàng sau khi đặt sẽ được cập nhật tại đây.</p><NuxtLink to="/categories" class="account-outline-link">Khám phá sản phẩm</NuxtLink></div>
-            <div v-else class="account-orders">
-              <div v-for="order in recentOrders.slice(0, 5)" :key="order.id" class="account-order-row">
-                <div><strong>{{ order.order_number }}</strong><small>{{ new Date(order.created_at).toLocaleDateString('vi-VN') }}</small></div>
-                <div class="account-order-total"><strong>{{ formatMoney(order.total) }}</strong><span :class="[getOrderStatusBadge(order.order_status || order.status).bg, getOrderStatusBadge(order.order_status || order.status).text]">{{ getOrderStatusBadge(order.order_status || order.status).label }}</span></div>
-              </div>
-            </div>
-          </section>
-
-          <div class="account-detail-grid">
-            <section id="profile" class="account-panel account-detail-panel"><div class="account-panel-heading"><h2>Thông tin cá nhân</h2><CartIcon name="user" size="18" /></div><p><strong>{{ user?.name }}</strong></p><p>{{ user?.email }}</p><p v-if="user?.phone">{{ user.phone }}</p><p v-else class="account-muted">Bạn chưa cập nhật số điện thoại.</p></section>
-            <section id="security" class="account-panel account-detail-panel"><div class="account-panel-heading"><h2>Bảo mật tài khoản</h2><CartIcon name="lock" size="18" /></div><p>Phiên đăng nhập được bảo vệ bằng token có thời hạn và chỉ có thể truy cập dữ liệu của tài khoản này.</p><NuxtLink to="/lien-he" class="account-text-link">Cần hỗ trợ tài khoản?</NuxtLink></section>
+      <div class="account-dashboard-two-col">
+        <section class="account-dashboard-card">
+          <div class="account-dashboard-card-heading"><h2><CartIcon name="settings" size="19" /> Cấu hình PC đã lưu</h2><NuxtLink to="/tai-khoan/cau-hinh">Xem tất cả <CartIcon name="arrow-right" size="14" /></NuxtLink></div>
+          <div v-if="!dashboard.saved_builds.length" class="account-empty-state account-empty-state--small"><CartIcon name="settings" size="27" /><p>Bạn chưa lưu cấu hình nào.</p><NuxtLink to="/cau-hinh" class="account-outline-button">Tạo cấu hình</NuxtLink></div>
+          <div v-else class="account-build-list">
+            <article v-for="build in dashboard.saved_builds" :key="build.id" class="account-build-row">
+              <div class="account-build-preview"><NuxtImg v-for="image in build.preview_images.slice(0, 2)" :key="image" :src="image" :alt="build.name" width="58" height="58" /><CartIcon v-if="!build.preview_images.length" name="settings" size="25" /></div>
+              <div class="account-build-copy"><strong>{{ build.name }}</strong><small>{{ buildPartsLabel(build) || 'Chưa có linh kiện hiện tại' }}</small><span>{{ formatMoney(build.total_price) }} · {{ build.total_tdp }}W</span></div>
+              <NuxtLink :to="`/cau-hinh?saved_build=${build.id}`" class="account-small-outline">Tiếp tục</NuxtLink>
+            </article>
           </div>
         </section>
+
+        <section class="account-dashboard-card">
+          <div class="account-dashboard-card-heading"><h2><CartIcon name="heart" size="19" /> Sản phẩm yêu thích</h2><NuxtLink to="/tai-khoan/yeu-thich">Xem tất cả <CartIcon name="arrow-right" size="14" /></NuxtLink></div>
+          <div v-if="!dashboard.wishlist.length" class="account-empty-state account-empty-state--small"><CartIcon name="heart" size="27" /><p>Danh sách yêu thích đang trống.</p><NuxtLink to="/categories" class="account-outline-button">Khám phá sản phẩm</NuxtLink></div>
+          <div v-else class="account-wishlist-grid"><ProductCard v-for="product in dashboard.wishlist" :key="product.id" :product="product" variant="compact" /></div>
+        </section>
       </div>
-    </div>
-  </main>
+
+      <section class="account-dashboard-card account-account-info">
+        <div class="account-dashboard-card-heading"><h2><CartIcon name="user" size="19" /> Thông tin tài khoản</h2><NuxtLink to="/tai-khoan/ho-so" class="account-small-outline">Chỉnh sửa</NuxtLink></div>
+        <div class="account-info-grid">
+          <div><small>Họ và tên</small><strong>{{ dashboard.user.name }}</strong></div>
+          <div><small>Số điện thoại</small><strong>{{ dashboard.user.phone || 'Chưa cập nhật' }}</strong></div>
+          <div><small>Email</small><strong>{{ dashboard.user.email }}</strong></div>
+          <div><small>Ngày sinh</small><strong>{{ formatDate(dashboard.user.date_of_birth) }}</strong></div>
+          <div><small>Giới tính</small><strong>{{ formatGender(dashboard.user.gender) }}</strong></div>
+          <div><small>Thành viên từ</small><strong>{{ formatDate(dashboard.user.created_at) }}</strong></div>
+          <div><small>Tổng chi tiêu đã giao</small><strong class="is-red">{{ formatMoney(dashboard.stats.total_spent) }}</strong></div>
+          <div><small>Chương trình thành viên</small><strong>Chưa áp dụng</strong></div>
+        </div>
+      </section>
+    </template>
+  </AccountShell>
 </template>

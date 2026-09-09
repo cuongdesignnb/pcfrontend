@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   },
 
   // CSS
-  css: ['~/assets/css/main.css', '~/assets/css/checkout.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/checkout.css', '~/assets/css/account.css'],
 
   // Runtime config
   runtimeConfig: {
@@ -129,7 +129,6 @@ export default defineNuxtConfig({
       prerender: false,
       headers: { 'cache-control': 'private, no-store, max-age=0' },
     },
-    '/account/**': { ssr: false },
   },
 
   // Disable automatic prefetch on NuxtLinks (too many links → payload storm)

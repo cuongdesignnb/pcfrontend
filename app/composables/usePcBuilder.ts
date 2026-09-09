@@ -187,9 +187,10 @@ export const usePcBuilder = () => {
 
   const restoreDraft = async () => {
     const pending = persistence.readPendingBuild()
-    const draft = pending || persistence.readDraft()
-    if (!draft || Object.keys(draft).length === 0) return false
-    await replaceBuild(draft)
+    const draft = persistence.readDraft()
+    const nextBuild = pending ?? draft?.build
+    if (!nextBuild || Object.keys(nextBuild).length === 0) return false
+    await replaceBuild(nextBuild)
     persistence.clearPendingBuild()
     return true
   }

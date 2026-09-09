@@ -6,6 +6,8 @@ export interface AuthUser {
   email: string
   phone?: string | null
   avatar?: string | null
+  date_of_birth?: string | null
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null
   default_address?: Record<string, unknown> | null
   [key: string]: unknown
 }
@@ -129,9 +131,10 @@ export const useAuth = () => {
 
   const authFetch = <T>(url: string, options: Record<string, unknown> = {}) => {
     const optionHeaders = (options.headers as Record<string, string> | undefined) ?? {}
+    const requestCache = options.cache as RequestCache | undefined
     return $fetch<T>(url, {
       ...options,
-      cache: options.cache ?? 'no-store',
+      cache: requestCache ?? 'no-store',
       headers: {
         ...cartSession.getHeaders(),
         ...optionHeaders,

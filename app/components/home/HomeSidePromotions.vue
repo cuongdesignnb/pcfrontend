@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { HomepageBanner } from '~/types/homepage'
+import { storefrontPath } from '~/utils/urls'
 
 defineProps<{ banners: HomepageBanner[] }>()
 
 function linkFor(banner: HomepageBanner): string {
-  return banner.link || '/categories/phu-kien'
+  return storefrontPath(banner.link || '/phu-kien')
 }
 </script>
 

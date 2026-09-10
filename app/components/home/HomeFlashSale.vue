@@ -50,7 +50,7 @@ onUnmounted(() => {
           <span>{{ countdown[0] }}</span><b>:</b><span>{{ countdown[1] }}</span><b>:</b><span>{{ countdown[2] }}</span>
         </div>
         <span v-else-if="remainingSeconds === 0" class="home-countdown-ended">Đã kết thúc</span>
-        <NuxtLink to="/categories/linh-kien-pc">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
+        <NuxtLink to="/san-pham">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
       </div>
       <HomeProductCarousel :products="products.slice(0, 6)" variant="homepage" />
     </div>

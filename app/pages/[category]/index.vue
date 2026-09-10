@@ -5,12 +5,14 @@ import type {
   CategoryListingFilters,
   CategoryTrustItem,
 } from '~/types/category-listing'
+import { canonicalAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
+import { getErrorStatusCode } from '~/utils/errors'
+import { productUrl } from '~/utils/urls'
 
-const config = useRuntimeConfig()
 const route = useRoute()
 const { siteName, getString } = useSettings()
 const slug = computed(() => String(route.params.category || ''))
-const listing = useCategoryListing(slug)
+const listing = await useCategoryListing(slug)
 const {
   data,
   status,
@@ -27,7 +29,21 @@ const {
   viewMode,
 } = listing
 
+if (error.value) {
+  const statusCode = getErrorStatusCode(error.value, 503)
+  throw createError({
+    statusCode: statusCode === 404 ? 404 : 503,
+    statusMessage: statusCode === 404 ? 'Không tìm thấy danh mục.' : 'Không thể tải danh mục.',
+  })
+}
+if (status.value === 'success' && !data.value?.category) {
+  throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy danh mục.' })
+}
+
 const category = computed(() => data.value?.category || null)
+if (category.value?.canonical_path && route.path !== category.value.canonical_path) {
+  await navigateTo({ path: category.value.canonical_path, query: route.query }, { redirectCode: 301 })
+}
 const filters = computed<CategoryListingFilters>(() => {
   const responseFilters = data.value?.filters
   return {
@@ -153,28 +169,80 @@ watch(() => route.query, () => {
   if (listingMounted) scrollToToolbar()
 }, { deep: true })
 
-const canonical = computed(() => {
-  try {
-    return new URL(`/${slug.value}`, config.public.siteUrl).toString()
-  } catch {
-    return `/${slug.value}`
-  }
+const queryKeys = computed(() => Object.keys(route.query).filter(key => key !== 'page'))
+const hasFilterQuery = computed(() => queryKeys.value.length > 0)
+const pageNumber = computed(() => Math.max(1, Number(route.query.page || 1) || 1))
+const canonicalPath = computed(() => {
+  const path = category.value?.canonical_path || `/${slug.value}`
+  return pageNumber.value > 1 && !hasFilterQuery.value ? `${path}?page=${pageNumber.value}` : path
 })
 
-useSeoMeta({
-  title: () => {
+const { origin, canonicalUrl } = useSeoDocument(() => ({
+  title: (() => {
     const title = category.value?.meta_title || category.value?.name
     return title ? `${title} - ${siteName.value}` : `Danh mục - ${siteName.value}`
-  },
-  description: () => category.value?.meta_description || category.value?.description || undefined,
-  ogTitle: () => category.value?.meta_title || category.value?.name || siteName.value,
-  ogDescription: () => category.value?.meta_description || category.value?.description || undefined,
-  ogImage: () => category.value?.image || undefined,
+  })(),
+  description: category.value?.meta_description || category.value?.description,
+  path: canonicalPath.value,
+  image: category.value?.image,
+  robots: hasFilterQuery.value ? 'noindex,follow' : 'index,follow',
+}))
+
+const categoryJsonLd = computed(() => {
+  if (!category.value || !canonicalUrl.value || hasFilterQuery.value) return null
+
+  const itemListElement = products.value
+    .map((item, index) => {
+      const path = productUrl(item)
+      const url = canonicalAbsoluteUrl(origin.value, path)
+      return url ? { '@type': 'ListItem', position: index + 1, url } : null
+    })
+    .filter((item): item is { '@type': string; position: number; url: string } => item !== null)
+
+  const breadcrumbItems = [
+    { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: canonicalAbsoluteUrl(origin.value, '/') },
+    ...(category.value.parent
+      ? [{
+          '@type': 'ListItem',
+          position: 2,
+          name: category.value.parent.name,
+          item: canonicalAbsoluteUrl(origin.value, category.value.parent.canonical_path || `/${category.value.parent.slug}`),
+        }]
+      : []),
+    {
+      '@type': 'ListItem',
+      position: category.value.parent ? 3 : 2,
+      name: category.value.name,
+      item: canonicalUrl.value,
+    },
+  ].filter(item => item.item)
+
+  return serializeJsonLd({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': canonicalUrl.value,
+        name: category.value.meta_title || category.value.name,
+        description: category.value.meta_description || category.value.description || undefined,
+        url: canonicalUrl.value,
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: itemListElement.length,
+          itemListElement,
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: breadcrumbItems,
+      },
+    ],
+  })
 })
 
-useHead(() => ({
-  link: [{ rel: 'canonical', href: canonical.value }],
-}))
+useHead(() => categoryJsonLd.value
+  ? { script: [{ key: 'category-jsonld', type: 'application/ld+json', innerHTML: categoryJsonLd.value }] }
+  : {})
 </script>
 
 <template>

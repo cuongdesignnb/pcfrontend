@@ -1,17 +1,26 @@
 <script setup lang="ts">
 import type { ProductCard, ProductDetail } from '~/types/product-detail'
 import { toSocialHref } from '~/utils/contactLinks'
+import { getErrorStatusCode } from '~/utils/errors'
+import { productUrl } from '~/utils/urls'
+import { publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
 
 const route = useRoute()
 const config = useRuntimeConfig()
 const cart = useCart()
 const toast = useToast()
-const { siteName, socialZalo, socialMessenger } = useSettings()
+const { siteName, socialZalo, socialMessenger, currency } = useSettings()
 const { start: startBuyNow } = useBuyNow()
 const { track } = useEcommerceTracking()
+const categorySlug = computed(() => String(route.params.category || ''))
 const slug = computed(() => String(route.params.product || ''))
-const { data, pending, error } = await useProductDetail(slug)
+const { data, pending, error } = await useProductDetail(slug, categorySlug)
 const product = computed<ProductDetail | undefined>(() => data.value?.product)
+if (error.value) {
+  const statusCode = getErrorStatusCode(error.value, 503)
+  throw createError({ statusCode: statusCode === 404 ? 404 : 503, statusMessage: statusCode === 404 ? 'Không tìm thấy sản phẩm.' : 'Không thể tải sản phẩm.' })
+}
+if (!product.value && !pending.value) throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy sản phẩm.' })
 const { data: alternativeData } = await useFetch<{ products: ProductCard[] }>(() => `${config.public.apiBase}/products/${encodeURIComponent(slug.value)}/relations`, {
   params: { type: 'alternative', limit: 4 },
 })
@@ -72,33 +81,40 @@ const openBuilder = () => {
   if (product.value?.component_type) navigateTo(`/cau-hinh?product=${encodeURIComponent(product.value.slug)}`)
 }
 
-useSeoMeta({
-  title: () => product.value?.seo.title || (product.value ? `${product.value.name} - ${siteName.value}` : `Sản phẩm - ${siteName.value}`),
-  description: () => product.value?.seo.description || product.value?.short_description || undefined,
-  ogTitle: () => product.value?.seo.title || product.value?.name || siteName.value,
-  ogDescription: () => product.value?.seo.description || product.value?.short_description || undefined,
-  ogImage: () => product.value?.images[0]?.url || undefined,
-})
+const canonicalPath = computed(() => product.value?.seo.canonical_path || (product.value ? productUrl(product.value) : null))
+if (product.value && !canonicalPath.value) throw createError({ statusCode: 404, statusMessage: 'Sản phẩm chưa được gắn danh mục công khai.' })
+if (product.value && canonicalPath.value && route.path !== canonicalPath.value) {
+  await navigateTo({ path: canonicalPath.value, query: route.query }, { redirectCode: 301 })
+}
+const { origin, canonicalUrl } = useSeoDocument(() => ({
+  title: product.value?.seo.title || (product.value ? `${product.value.name} - ${siteName.value}` : `Sản phẩm - ${siteName.value}`),
+  description: product.value?.seo.description || product.value?.short_description,
+  path: canonicalPath.value,
+  image: product.value?.images[0]?.url,
+  robots: product.value ? 'index,follow' : 'noindex,follow',
+  type: 'product',
+}))
 
 useHead(() => {
-  if (!product.value) return {}
-  const canonical = new URL(route.fullPath, config.public.siteUrl || 'https://hpcomvietnam.vn').toString()
+  if (!product.value || !canonicalUrl.value) return {}
+  const canonical = canonicalUrl.value
   const productSchema: Record<string, unknown> = {
-    '@context': 'https://schema.org', '@type': 'Product', name: product.value.name, sku: product.value.sku,
-    image: product.value.images.map(image => image.url).filter(Boolean),
+    '@context': 'https://schema.org', '@type': 'Product', name: product.value.name,
+    image: product.value.images.map(image => publicAbsoluteUrl(origin.value, image.url)).filter(Boolean),
     description: product.value.seo.description || product.value.short_description || undefined,
     brand: product.value.brand ? { '@type': 'Brand', name: product.value.brand.name } : undefined,
   }
-  if (!contactOnly.value) productSchema.offers = { '@type': 'Offer', priceCurrency: 'VND', price: product.value.pricing.display_price, availability: product.value.inventory.purchasable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', url: canonical }
+  if (product.value.sku) productSchema.sku = product.value.sku
+  if (selectedPricing.value.display_price > 0) productSchema.offers = { '@type': 'Offer', priceCurrency: currency.value.toUpperCase(), price: selectedPricing.value.display_price, availability: onlinePurchasable.value ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', url: canonical }
   if (product.value.rating.count > 0 && product.value.rating.average !== null) productSchema.aggregateRating = { '@type': 'AggregateRating', ratingValue: product.value.rating.average, reviewCount: product.value.rating.count }
   const breadcrumbSchema = {
     '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: new URL('/', canonical).toString() },
-      ...(product.value.category ? [{ '@type': 'ListItem', position: 2, name: product.value.category.name, item: new URL(`/${product.value.category.slug}`, canonical).toString() }] : []),
+      { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: publicAbsoluteUrl(origin.value, '/') },
+      ...(product.value.category ? [{ '@type': 'ListItem', position: 2, name: product.value.category.name, item: publicAbsoluteUrl(origin.value, product.value.category.canonical_path || `/${product.value.category.slug}`) }] : []),
       { '@type': 'ListItem', position: product.value.category ? 3 : 2, name: product.value.name, item: canonical },
     ],
   }
-  return { link: [{ rel: 'canonical', href: canonical }], script: [{ type: 'application/ld+json', innerHTML: JSON.stringify(productSchema) }, { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumbSchema) }] }
+  return { script: [{ key: 'product-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd(productSchema) }, { key: 'product-breadcrumb-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumbSchema) }] }
 })
 
 onMounted(() => { if (product.value) track('view_item', product.value) })

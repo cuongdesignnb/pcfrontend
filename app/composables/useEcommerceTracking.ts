@@ -8,6 +8,8 @@ declare global {
 }
 
 export const useEcommerceTracking = () => {
+  const { currency } = useSettings()
+
   const item = (product: ProductDetail, quantity = 1) => ({
     item_id: String(product.id),
     item_name: product.name,
@@ -19,7 +21,7 @@ export const useEcommerceTracking = () => {
 
   const track = (event: 'view_item' | 'add_to_cart' | 'begin_checkout', product: ProductDetail, quantity = 1) => {
     if (!import.meta.client) return
-    const payload = { currency: 'VND', value: product.pricing.display_price * quantity, items: [item(product, quantity)] }
+    const payload = { currency: currency.value, value: product.pricing.display_price * quantity, items: [item(product, quantity)] }
     window.gtag?.('event', event, payload)
     const facebookEvent = {
       view_item: 'ViewContent',

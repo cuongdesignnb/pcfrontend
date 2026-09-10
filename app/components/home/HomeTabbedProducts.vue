@@ -31,7 +31,7 @@ const products = computed(() => props.bestSellers[activeTab.value])
             </button>
           </div>
         </div>
-        <NuxtLink to="/categories">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
+        <NuxtLink to="/danh-muc">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
       </div>
       <HomeProductCarousel :key="activeTab" :products="products" variant="homepage" />
     </div>

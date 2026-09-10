@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CategoryListingCategory } from '~/types/category-listing'
+import { categoryUrl } from '~/utils/urls'
 
 defineProps<{ category: CategoryListingCategory | null }>()
 </script>
@@ -9,7 +10,7 @@ defineProps<{ category: CategoryListingCategory | null }>()
     <NuxtLink to="/">Trang chủ</NuxtLink>
     <span aria-hidden="true">/</span>
     <template v-if="category?.parent">
-      <NuxtLink :to="`/${category.parent.slug}`">{{ category.parent.name }}</NuxtLink>
+      <NuxtLink :to="categoryUrl(category.parent)">{{ category.parent.name }}</NuxtLink>
       <span aria-hidden="true">/</span>
     </template>
     <span class="is-current" aria-current="page">{{ category?.name || 'Danh mục sản phẩm' }}</span>

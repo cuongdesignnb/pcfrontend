@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductCard, RelationType } from '~/types/product-detail'
+import { productUrl } from '~/utils/urls'
 
 type RelationListMode = 'grid' | 'compact-selectable' | 'horizontal-carousel'
 
@@ -28,7 +29,7 @@ const carousel = ref<HTMLElement | null>(null)
 const selectedProducts = computed(() => products.value.filter(product => selectedIds.value.includes(product.id)))
 const displayTotal = computed(() => selectedProducts.value.reduce((total, product) => total + product.pricing.display_price, 0))
 const originalTotal = computed(() => selectedProducts.value.reduce((total, product) => total + product.pricing.price, 0))
-const productPath = (product: ProductCard) => `/${product.category?.slug || 'san-pham'}/${product.slug}`
+const productPath = (product: ProductCard) => productUrl(product)
 
 const load = async () => {
   loading.value = true

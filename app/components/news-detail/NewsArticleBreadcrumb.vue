@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import type { NewsDetailPost } from '~/types/news-detail'
+import { newsCategoryUrl } from '~/utils/news'
 
 const props = defineProps<{
   post: NewsDetailPost
 }>()
 
-const categoryLink = computed(() => props.post.category
-  ? { path: '/tin-tuc', query: { category: props.post.category.slug } }
-  : '/tin-tuc')
+const categoryLink = computed(() => props.post.category ? newsCategoryUrl(props.post.category) : '/tin-tuc')
 </script>
 
 <template>

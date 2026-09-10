@@ -1,10 +1,11 @@
 <script setup lang="ts">
 const { siteName, siteAddress, siteHotline, siteEmail, businessHours } = useSettings()
 
-useSeoMeta({
-  title: () => `Giới thiệu - ${siteName.value}`,
-  description: () => `Tìm hiểu về ${siteName.value} - chuyên cung cấp PC, Laptop và linh kiện máy tính chính hãng.`,
-})
+useSeoDocument(() => ({
+  title: `Giới thiệu - ${siteName.value}`,
+  description: `Tìm hiểu về ${siteName.value} - chuyên cung cấp PC, Laptop và linh kiện máy tính chính hãng.`,
+  path: '/gioi-thieu',
+}))
 </script>
 
 <template>

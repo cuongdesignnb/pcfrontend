@@ -1,4 +1,4 @@
-import type { NewsArticle } from '~/types/news'
+import type { NewsArticle, NewsCategory } from '~/types/news'
 
 export type NewsBadgeTone = 'blue' | 'red' | 'orange' | 'coral' | 'purple' | 'violet' | 'cyan'
 
@@ -50,8 +50,12 @@ export function formatViewCount(value: number): string {
   return `${formatted} lượt xem`
 }
 
-export function newsArticleUrl(article: Pick<NewsArticle, 'slug'>): string {
-  return article.slug ? `/tin-tuc/${encodeURIComponent(article.slug)}` : '/tin-tuc'
+export function newsArticleUrl(article: Pick<NewsArticle, 'slug'> & { public_url?: string | null }): string {
+  return article.public_url || (article.slug ? `/tin-tuc/${encodeURIComponent(article.slug)}` : '/tin-tuc')
+}
+
+export function newsCategoryUrl(category: Pick<NewsCategory, 'slug' | 'canonical_path'>): string {
+  return category.canonical_path || (category.slug ? `/tin-tuc/chuyen-muc/${encodeURIComponent(category.slug)}` : '/tin-tuc')
 }
 
 function trimDecimal(value: number): string {

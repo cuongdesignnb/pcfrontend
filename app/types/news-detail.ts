@@ -4,6 +4,7 @@ export interface NewsDetailCategory {
   id: number
   name: string
   slug: string
+  canonical_path?: string | null
 }
 
 export interface NewsDetailAuthor {
@@ -34,6 +35,9 @@ export interface NewsDetailPost {
     title: string
     description: string | null
     image: string | null
+    canonical_path?: string | null
+    canonical_url?: string | null
+    robots?: string
   }
   toc: NewsTocItem[]
 }

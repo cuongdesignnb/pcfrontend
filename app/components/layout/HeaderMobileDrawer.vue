@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MenuItemData } from '~/types/menu'
+import { categoryUrl, storefrontPath } from '~/utils/urls'
 
 const props = defineProps<{ open: boolean; items: MenuItemData[] }>()
 const emit = defineEmits<{ close: [] }>()
@@ -46,19 +47,11 @@ function toggle(id: number) {
 }
 
 function cleanPath(path: string | null | undefined): string {
-  const replacements: Record<string, string> = {
-    '/configurator': '/cau-hinh',
-    '/blog': '/tin-tuc',
-    '/about': '/gioi-thieu',
-    '/contact': '/lien-he',
-    '/warranty': '/bao-hanh',
-    '/shipping': '/van-chuyen',
-  }
-  return path && path !== '#' ? (replacements[path] || path) : '/'
+  return storefrontPath(path)
 }
 
 function resolveUrl(item: MenuItemData): string {
-  if (item.type === 'category' && item.category?.slug) return `/categories/${item.category.slug}`
+  if (item.type === 'category' && item.category?.slug) return categoryUrl(item.category)
   return cleanPath(item.url)
 }
 </script>

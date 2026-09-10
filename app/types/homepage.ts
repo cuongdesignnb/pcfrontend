@@ -24,6 +24,7 @@ export interface HomepageCategoryCard {
   id: number
   name: string
   slug: string
+  canonical_path?: string | null
   image: string | null
   icon: string | null
 }
@@ -38,6 +39,7 @@ export interface HomepagePost {
   id: number
   title: string
   slug: string
+  public_url?: string | null
   excerpt: string | null
   featured_image: string | null
   published_at: string | null

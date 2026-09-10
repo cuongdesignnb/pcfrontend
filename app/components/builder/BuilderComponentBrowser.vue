@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { BuilderComponentType, BuilderFilterOptions, BuilderFiltersState, BuilderProductOption, BuilderSort } from '~/types/pc-builder'
+import { categoryUrl } from '~/utils/urls'
 
 const props = defineProps<{
   componentTypes: BuilderComponentType[]
@@ -34,7 +35,7 @@ const activeType = computed(() => props.componentTypes.find(type => type.slug ==
       <h2 id="builder-browser-title">Chọn linh kiện</h2>
       <p v-if="activeType">{{ activeType.name }} · {{ total }} sản phẩm</p>
     </div>
-    <NuxtLink v-if="activeType" :to="`/categories/${activeType.slug}`">Xem tất cả {{ activeType.name }} <span aria-hidden="true">→</span></NuxtLink>
+    <NuxtLink v-if="activeType" :to="categoryUrl(activeType)">Xem tất cả {{ activeType.name }} <span aria-hidden="true">→</span></NuxtLink>
   </div>
   <BuilderComponentTabs :component-types="componentTypes" :active-type-slug="activeTypeSlug" @select="emit('selectType', $event)" />
   <BuilderFilters :filters="filters" :filter-options="filterOptions" :sort="sort" @update:filters="emit('update:filters', $event)" @update:sort="emit('update:sort', $event)" />

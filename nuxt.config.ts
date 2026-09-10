@@ -22,26 +22,29 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api/v1',
-      appName: 'PC Shop',
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://laptopplus.vn',
+      appName: process.env.NUXT_PUBLIC_APP_NAME || '',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || '',
     }
   },
 
   // Nitro server config
   nitro: {
     routeRules: {
-      '/api/**': { isr: false, proxy: (process.env.NUXT_API_PROXY_TARGET || 'http://nginx') + '/api/**' },
+      '/api/**': {
+        isr: false,
+        proxy: (process.env.NUXT_API_PROXY_TARGET || 'http://nginx') + '/api/**',
+        headers: { 'cache-control': 'private, no-store, max-age=0' },
+      },
     },
   },
 
   // App config
   app: {
     head: {
-      title: 'PC Shop - Bán PC & Laptop',
+      title: process.env.NUXT_PUBLIC_APP_NAME || '',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Website bán PC, Laptop và linh kiện máy tính với tính năng xây dựng cấu hình thông minh' },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
@@ -51,27 +54,46 @@ export default defineNuxtConfig({
 
   // Route rules for rendering strategy
   routeRules: {
-    '/': { isr: 300 },
-    '/products/**': { isr: 60 },
-    '/**': { isr: 60 },
-    '/categories/**': { isr: 300 },
+    '/': { ssr: true, isr: 300, swr: false },
+    '/sitemap.xml': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
+    '/sitemaps/**': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
+    '/robots.txt': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=3600' } },
+    '/san-pham': { ssr: true, isr: 60, swr: false },
+    '/san-pham/**': { ssr: true, isr: 60, swr: false },
+    '/danh-muc': { ssr: true, isr: 300, swr: false },
+    '/danh-muc/**': { ssr: true, isr: 300, swr: false },
+    '/products': { ssr: true, isr: false, swr: false, prerender: false },
+    '/products/**': { ssr: true, isr: false, swr: false, prerender: false },
+    '/categories': { ssr: true, isr: false, swr: false, prerender: false },
+    '/categories/**': { ssr: true, isr: false, swr: false, prerender: false },
+    '/tim-kiem': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/search': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
     '/tin-tuc': {
       ssr: true,
-      isr: false,
+      isr: 60,
       swr: false,
       prerender: false,
-      headers: { 'cache-control': 'public, no-store, max-age=0' },
+      headers: { 'cache-control': 'public, max-age=60' },
     },
     '/tin-tuc/**': {
       ssr: true,
-      isr: false,
+      isr: 60,
       swr: false,
       prerender: false,
-      headers: { 'cache-control': 'public, no-store, max-age=0' },
+      headers: { 'cache-control': 'public, max-age=60' },
     },
-    '/configurator/**': { ssr: false },
-    '/cart': { ssr: false },
-    '/checkout/**': { ssr: false },
+    '/configurator': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/configurator/**': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/auth/**': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/admin/**': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/payment/**': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/payments/**': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/cau-hinh': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/cau-hinh/**': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/cart': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/checkout/**': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/account/**': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
+    '/wishlist': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
     '/gio-hang': {
       ssr: false,
       isr: false,
@@ -121,6 +143,7 @@ export default defineNuxtConfig({
       prerender: false,
       headers: { 'cache-control': 'private, no-store, max-age=0' },
     },
+    '/quen-mat-khau': { ssr: false, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'private, no-store, max-age=0' } },
     '/tai-khoan': {
       ssr: false,
       isr: false,

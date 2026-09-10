@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import type { NewsCategory } from '~/types/news'
+import { newsCategoryUrl } from '~/utils/news'
 
 defineProps<{
   categories: NewsCategory[]
 }>()
 
-function categoryLink(slug: string) {
-  return { path: '/tin-tuc', query: { category: slug } }
-}
 </script>
 
 <template>
@@ -24,7 +22,7 @@ function categoryLink(slug: string) {
       </h2>
     </div>
     <div v-if="categories.length" class="news-category-list-grid">
-      <NuxtLink v-for="category in categories" :key="category.id" :to="categoryLink(category.slug)">
+      <NuxtLink v-for="category in categories" :key="category.id" :to="newsCategoryUrl(category)">
         <span class="news-category-folder" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-10Z" stroke-width="1.5" stroke-linejoin="round" />

@@ -124,7 +124,7 @@ function goToResult(url: string) {
 
 function submitSearch() {
   const value = query.value.trim()
-  if (value.length >= 2) goToResult(`/products?search=${encodeURIComponent(value)}`)
+  if (value.length >= 2) goToResult(`/san-pham?search=${encodeURIComponent(value)}`)
 }
 
 watch(() => route.fullPath, () => {

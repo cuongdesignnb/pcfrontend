@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductCard as ProductCardData } from '~/types/product-detail'
+import { productUrl } from '~/utils/urls'
 
 const props = withDefaults(defineProps<{
   product: ProductCardData
@@ -32,9 +33,7 @@ const discountPercent = computed(() => {
 })
 const isWishlisted = computed(() => wishlist.ids.value.includes(props.product.id))
 const ratingScore = computed(() => Math.round(Number(props.product.rating?.average || 0)))
-const productUrl = computed(() => props.product.category?.slug
-  ? `/${props.product.category.slug}/${props.product.slug}`
-  : `/products/${props.product.slug}`)
+const resolvedProductUrl = computed(() => productUrl(props.product))
 const categoryActionLabel = computed(() => {
   if (props.product.has_variants) return 'Chọn phiên bản'
   if (!props.product.inventory.purchasable) return props.product.inventory.availability_label
@@ -68,7 +67,7 @@ async function handleCategoryAction(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
   if (props.product.has_variants) {
-    await navigateTo(productUrl.value)
+    if (resolvedProductUrl.value) await navigateTo(resolvedProductUrl.value)
     return
   }
   if (categoryActionDisabled.value) return
@@ -87,7 +86,7 @@ async function handleCategoryAction(event: MouseEvent) {
 
 <template>
   <article class="product-card" :class="[`product-card--${cardVariant}`, { 'product-card--wishlisted': isWishlisted }]">
-    <NuxtLink :to="productUrl" class="product-card-link">
+    <NuxtLink v-if="resolvedProductUrl" :to="resolvedProductUrl" class="product-card-link">
       <div class="product-card-image">
         <span v-if="discountPercent > 0" class="product-card-discount">-{{ discountPercent }}%</span>
         <NuxtImg
@@ -130,6 +129,16 @@ async function handleCategoryAction(event: MouseEvent) {
         {{ product.inventory.availability_label }}
       </p>
     </NuxtLink>
+    <div v-else class="product-card-link">
+      <div class="product-card-image">
+        <span v-if="discountPercent > 0" class="product-card-discount">-{{ discountPercent }}%</span>
+        <NuxtImg v-if="product.images?.[0]?.url" :src="product.images[0].url" :alt="product.images[0].alt || product.name" width="240" height="240" sizes="(max-width: 640px) 45vw, 220px" loading="lazy" class="product-card-image-asset" />
+        <span v-else class="product-card-image-fallback" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor"><rect x="7" y="10" width="34" height="24" rx="3" stroke-width="2" /><path stroke-linecap="round" stroke-width="2" d="M17 40h14M24 34v6" /></svg></span>
+      </div>
+      <span v-if="product.brand?.name && !isCompact" class="product-card-brand">{{ product.brand.name }}</span>
+      <h3 class="product-card-name">{{ product.name }}</h3>
+      <div class="product-card-pricing"><strong>{{ product.pricing.display_price > 0 ? formatMoney(product.pricing.display_price) : 'Liên hệ' }}</strong><span v-if="discountPercent > 0" class="product-card-old-price">{{ formatMoney(product.pricing.price) }}</span></div>
+    </div>
 
     <button
       type="button"

@@ -49,7 +49,7 @@ useSeoMeta({ title: 'Sản phẩm yêu thích' })
   <div class="pc-container wishlist-page">
     <div class="wishlist-page-heading">
       <div><span class="eyebrow">{{ siteName }}</span><h1>Sản phẩm yêu thích</h1></div>
-      <NuxtLink to="/categories" class="button button-blue">Tiếp tục mua sắm</NuxtLink>
+      <NuxtLink to="/danh-muc" class="button button-blue">Tiếp tục mua sắm</NuxtLink>
     </div>
     <p v-if="loading" class="wishlist-page-status">Đang tải danh sách...</p>
     <div v-else-if="loadError" role="alert"><p>Không tải được danh sách yêu thích.</p><button type="button" class="button button-blue" @click="loadProducts">Thử lại</button></div>
@@ -60,7 +60,7 @@ useSeoMeta({ title: 'Sản phẩm yêu thích' })
       <span aria-hidden="true">♡</span>
       <h2>Chưa có sản phẩm yêu thích</h2>
       <p>Nhấn biểu tượng trái tim trên sản phẩm để lưu lại những lựa chọn của bạn.</p>
-      <NuxtLink to="/categories" class="button button-orange">Khám phá sản phẩm</NuxtLink>
+      <NuxtLink to="/danh-muc" class="button button-orange">Khám phá sản phẩm</NuxtLink>
     </div>
   </div>
 </template>

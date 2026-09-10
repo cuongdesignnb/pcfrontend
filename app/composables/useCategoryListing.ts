@@ -32,7 +32,7 @@ const emptyResponse = (): CategoryListingResponse => ({
 
 type QueryValue = string | string[] | null | undefined
 
-export const useCategoryListing = (slug: ComputedRef<string>) => {
+export const useCategoryListing = async (slug: ComputedRef<string>) => {
   const config = useRuntimeConfig()
   const route = useRoute()
   const router = useRouter()
@@ -85,7 +85,7 @@ export const useCategoryListing = (slug: ComputedRef<string>) => {
   })
 
   const endpoint = computed(() => `${config.public.apiBase}/categories/${encodeURIComponent(slug.value)}`)
-  const { data, status, error } = useFetch<CategoryListingResponse>(endpoint, {
+  const { data, status, error } = await useFetch<CategoryListingResponse>(endpoint, {
     params: queryParams,
     watch: [endpoint, queryParams],
     default: emptyResponse,

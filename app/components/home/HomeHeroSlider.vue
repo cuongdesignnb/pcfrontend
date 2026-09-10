@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HomepageBanner } from '~/types/homepage'
+import { storefrontPath } from '~/utils/urls'
 
 const props = withDefaults(defineProps<{
   banners: HomepageBanner[]
@@ -52,7 +53,8 @@ function resume() {
 }
 
 function linkFor(banner: HomepageBanner): string | null {
-  return banner.metadata?.cta_link || banner.link || null
+  const link = banner.metadata?.cta_link || banner.link
+  return link ? storefrontPath(link) : null
 }
 
 onMounted(() => {

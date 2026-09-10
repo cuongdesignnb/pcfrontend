@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HomepageCategorySection } from '~/types/homepage'
+import { categoryUrl } from '~/utils/urls'
 
 defineProps<{ sections: HomepageCategorySection[] }>()
 </script>
@@ -22,7 +23,7 @@ defineProps<{ sections: HomepageCategorySection[] }>()
               <small>{{ section.product_count }} sản phẩm nổi bật</small>
             </span>
           </div>
-          <NuxtLink :to="`/categories/${section.category.slug}`">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
+          <NuxtLink :to="categoryUrl(section.category)">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
         </div>
         <HomeProductCarousel :products="section.products" variant="homepage" />
       </article>

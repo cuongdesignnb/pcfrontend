@@ -1,10 +1,11 @@
 <script setup lang="ts">
 const { siteName, siteHotline } = useSettings()
 
-useSeoMeta({
-  title: () => `Chính sách vận chuyển - ${siteName.value}`,
-  description: () => `Chính sách vận chuyển và giao hàng tại ${siteName.value} - Miễn phí nội thành, giao nhanh toàn quốc.`,
-})
+useSeoDocument(() => ({
+  title: `Chính sách vận chuyển - ${siteName.value}`,
+  description: `Chính sách vận chuyển và giao hàng tại ${siteName.value} - Miễn phí nội thành, giao nhanh toàn quốc.`,
+  path: '/van-chuyen',
+}))
 </script>
 
 <template>

@@ -1,26 +1,15 @@
 <script setup lang="ts">
-const config = useRuntimeConfig()
 const route = useRoute()
 const { siteName } = useSettings()
 const { data: news, status, error } = await useNewsLanding()
 
 const payload = computed(() => news.value)
-const canonicalUrl = computed(() => {
-  const category = typeof route.query.category === 'string' ? route.query.category : ''
-  const base = `${String(config.public.siteUrl).replace(/\/$/, '')}/tin-tuc`
-  return category ? `${base}?category=${encodeURIComponent(category)}` : base
-})
-
-useSeoMeta({
-  title: () => `Tin tức công nghệ - ${siteName.value}`,
-  description: () => `Tin tức công nghệ, đánh giá PC/Laptop, hướng dẫn build PC, gaming gear và thủ thuật mới nhất từ ${siteName.value}.`,
-  ogTitle: () => `Tin tức công nghệ - ${siteName.value}`,
-  ogDescription: () => `Tin tức công nghệ, đánh giá PC/Laptop, hướng dẫn build PC, gaming gear và thủ thuật mới nhất từ ${siteName.value}.`,
-})
-
-useHead({
-  link: [{ rel: 'canonical', href: canonicalUrl }],
-})
+useSeoDocument(() => ({
+  title: `Tin tức công nghệ - ${siteName.value}`,
+  description: `Tin tức công nghệ, đánh giá PC/Laptop, hướng dẫn build PC, gaming gear và thủ thuật mới nhất từ ${siteName.value}.`,
+  path: '/tin-tuc',
+  robots: route.query.category ? 'noindex,follow' : 'index,follow',
+}))
 </script>
 
 <template>

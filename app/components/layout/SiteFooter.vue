@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { MenuItemData } from '~/types/menu'
 import { toSocialHref, toTelHref, type SocialNetwork } from '~/utils/contactLinks'
+import { categoryUrl, storefrontPath } from '~/utils/urls'
 
 interface MenuResponse {
   menu?: { id: number; name: string; slug: string }
@@ -52,18 +53,9 @@ const footerColumns = computed(() => {
 })
 
 function resolveFooterUrl(item: MenuItemData): string {
-  if (item.type === 'category' && item.category?.slug) return `/categories/${item.category.slug}`
+  if (item.type === 'category' && item.category?.slug) return categoryUrl(item.category)
 
-  const replacements: Record<string, string> = {
-    '/configurator': '/cau-hinh',
-    '/blog': '/tin-tuc',
-    '/about': '/gioi-thieu',
-    '/contact': '/lien-he',
-    '/warranty': '/bao-hanh',
-    '/shipping': '/van-chuyen',
-  }
-  const path = item.url?.trim() || '/'
-  return replacements[path] || path
+  return storefrontPath(item.url)
 }
 
 const socialLinks = computed(() => [

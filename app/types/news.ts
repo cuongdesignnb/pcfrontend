@@ -2,6 +2,8 @@ export interface NewsArticleCategory {
   id: number
   name: string
   slug: string
+  canonical_path?: string | null
+  canonical_url?: string | null
 }
 
 export interface NewsArticleAuthor {
@@ -12,6 +14,7 @@ export interface NewsArticle {
   id: number
   title: string
   slug: string
+  public_url?: string | null
   excerpt: string | null
   featured_image: string | null
   published_at: string | null
@@ -26,6 +29,9 @@ export interface NewsCategory {
   name: string
   slug: string
   posts_count: number
+  description?: string | null
+  canonical_path?: string | null
+  canonical_url?: string | null
 }
 
 export interface NewsTopic {
@@ -34,6 +40,8 @@ export interface NewsTopic {
   slug: string
   posts_count: number
   image: string | null
+  canonical_path?: string | null
+  canonical_url?: string | null
 }
 
 export interface NewsBuilderBanner {

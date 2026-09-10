@@ -1,15 +1,19 @@
-<script setup>
-// Redirect old /products/:slug to new URL format
-// We need to fetch the product to know its category
+<script setup lang="ts">
+import { getErrorStatusCode, hasErrorStatusCode } from '~/utils/errors'
+
 const config = useRuntimeConfig()
 const route = useRoute()
-const slug = route.params.slug
+const rawSlug = route.params.slug
+const slug = Array.isArray(rawSlug) ? String(rawSlug[0] || '') : String(rawSlug || '')
 
 try {
-  const data = await $fetch(`${config.public.apiBase}/products/${slug}`)
-  const catSlug = data.product?.category?.slug || 'san-pham'
-  navigateTo(`/${catSlug}/${slug}`, { redirectCode: 301 })
-} catch {
-  throw createError({ statusCode: 404, message: 'Sản phẩm không tồn tại' })
+  const data = await $fetch<{ product?: { seo?: { canonical_path?: string | null } } }>(`${config.public.apiBase}/products/${encodeURIComponent(slug)}`)
+  const target = data.product?.seo?.canonical_path
+  if (!target) throw createError({ statusCode: 404, message: 'Sản phẩm chưa có URL công khai' })
+  await navigateTo({ path: target, query: route.query }, { redirectCode: 301 })
+} catch (error: unknown) {
+  if (hasErrorStatusCode(error)) throw error
+  const statusCode = getErrorStatusCode(error)
+  throw createError({ statusCode: statusCode === 404 ? 404 : 503, message: statusCode === 404 ? 'Sản phẩm không tồn tại' : 'Không thể xác thực URL sản phẩm' })
 }
 </script>

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { NewsTopic } from '~/types/news'
+import { newsCategoryUrl } from '~/utils/news'
 
 defineProps<{
   topics: NewsTopic[]
 }>()
 
-function topicLink(slug: string) {
-  return { path: '/tin-tuc', query: { category: slug } }
+function topicLink(topic: NewsTopic) {
+  return newsCategoryUrl(topic)
 }
 </script>
 
@@ -14,7 +15,7 @@ function topicLink(slug: string) {
   <section class="news-topic-strip" aria-labelledby="news-topic-title">
     <NewsSectionHeader title="Tin theo chủ đề" icon="tag" to="/tin-tuc" />
     <div id="news-topic-title" class="news-topic-grid">
-      <NuxtLink v-for="topic in topics.slice(0, 5)" :key="topic.id" :to="topicLink(topic.slug)" class="news-topic-card">
+      <NuxtLink v-for="topic in topics.slice(0, 5)" :key="topic.id" :to="topicLink(topic)" class="news-topic-card">
         <span class="news-topic-copy">
           <strong>{{ topic.name }}</strong>
           <small>{{ topic.posts_count }} bài viết</small>

@@ -114,7 +114,7 @@ useSeoMeta({ title: `Đăng nhập - ${siteName.value}` })
       </section>
 
       <AuthTrustStrip />
-      <p class="auth-quote">PC Center - Đồng hành cùng bạn trên hành trình chinh phục công nghệ</p>
+      <p class="auth-quote">{{ siteName }} - Đồng hành cùng bạn trên hành trình chinh phục công nghệ</p>
     </div>
   </main>
 </template>

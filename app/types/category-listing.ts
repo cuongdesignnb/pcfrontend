@@ -10,6 +10,8 @@ export interface CategoryListingCategory {
   icon: string | null
   meta_title: string | null
   meta_description: string | null
+  canonical_path?: string | null
+  canonical_url?: string | null
   product_count?: number
   parent?: CategoryListingCategory | null
   children?: CategoryListingCategory[]

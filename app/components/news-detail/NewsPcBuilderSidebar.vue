@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NewsBuilderBanner } from '~/types/news'
+import { storefrontPath } from '~/utils/urls'
 
 defineProps<{
   banner: NewsBuilderBanner | null
@@ -14,7 +15,7 @@ defineProps<{
       <span v-if="banner.badge" class="news-detail-pc-builder-badge">{{ banner.badge }}</span>
       <h2>{{ banner.title || 'PC Builder' }}</h2>
       <p v-if="banner.description">{{ banner.description }}</p>
-      <NuxtLink :to="banner.link || '/cau-hinh'">Khám phá PC Builder <span aria-hidden="true">→</span></NuxtLink>
+      <NuxtLink :to="storefrontPath(banner.link || '/cau-hinh')">Khám phá PC Builder <span aria-hidden="true">→</span></NuxtLink>
     </div>
   </section>
 </template>

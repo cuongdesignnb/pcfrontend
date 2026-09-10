@@ -1,7 +1,17 @@
 <script setup lang="ts">
+import { publicAbsoluteUrl, serializeJsonLd } from '~/composables/useSeoDocument'
+
 const { data: homepage } = await useHomepage()
 const {
   siteName,
+  siteLogo,
+  siteHotline,
+  socialFacebook,
+  socialYoutube,
+  socialTiktok,
+  socialZalo,
+  socialMessenger,
+  socialInstagram,
   seoTitle,
   seoDescription,
   seoKeywords,
@@ -12,13 +22,54 @@ const {
 
 const payload = computed(() => homepage.value)
 
-useSeoMeta({
-  title: () => seoTitle.value || siteName.value,
-  description: () => seoDescription.value,
-  keywords: () => seoKeywords.value,
-  ogTitle: () => seoTitle.value || siteName.value,
-  ogDescription: () => seoDescription.value,
-  ogImage: () => seoOgImage.value,
+const { origin, canonicalUrl } = useSeoDocument(() => ({
+  title: seoTitle.value || siteName.value,
+  description: seoDescription.value,
+  path: '/',
+  image: seoOgImage.value || siteLogo.value,
+  robots: 'index,follow',
+}))
+
+useSeoMeta({ keywords: () => seoKeywords.value })
+
+useHead(() => {
+  if (!canonicalUrl.value) return {}
+  const logo = publicAbsoluteUrl(origin.value, siteLogo.value || seoOgImage.value)
+  const organization: Record<string, unknown> = {
+    '@type': 'Organization',
+    name: siteName.value,
+    url: canonicalUrl.value,
+    logo: logo ? { '@type': 'ImageObject', url: logo } : undefined,
+  }
+  const sameAs = [
+    socialFacebook.value,
+    socialYoutube.value,
+    socialTiktok.value,
+    socialZalo.value,
+    socialMessenger.value,
+    socialInstagram.value,
+  ].filter(Boolean)
+  if (sameAs.length) organization.sameAs = sameAs
+  if (siteHotline.value) {
+    organization.contactPoint = {
+      '@type': 'ContactPoint',
+      telephone: siteHotline.value,
+      contactType: 'customer service',
+      areaServed: 'VN',
+      availableLanguage: 'vi',
+    }
+  }
+  const website = {
+    '@type': 'WebSite',
+    name: siteName.value,
+    url: canonicalUrl.value,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${origin.value}/san-pham?search={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  }
+  return { script: [{ key: 'homepage-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd({ '@context': 'https://schema.org', '@graph': [organization, website] }) }] }
 })
 </script>
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NewsCategory } from '~/types/news'
+import { newsCategoryUrl } from '~/utils/news'
 
 const props = defineProps<{
   categories: NewsCategory[]
@@ -17,8 +18,15 @@ const preferredSlugs = [
 ]
 const activeSlug = computed(() => {
   const value = route.query.category
-  return typeof value === 'string' ? value : ''
+  if (typeof value === 'string') return value
+  const routeSlug = route.params.slug
+  return typeof routeSlug === 'string' ? routeSlug : ''
 })
+
+function categoryLink(): string {
+  return '/tin-tuc'
+}
+
 const visibleCategories = computed(() => {
   const preferred = preferredSlugs
     .map(slug => props.categories.find(category => category.slug === slug))
@@ -28,12 +36,6 @@ const visibleCategories = computed(() => {
   return [...preferred, ...remaining].slice(0, 7)
 })
 
-function categoryLink(slug?: string) {
-  return {
-    path: '/tin-tuc',
-    query: slug ? { category: slug } : {},
-  }
-}
 </script>
 
 <template>
@@ -42,7 +44,7 @@ function categoryLink(slug?: string) {
     <NuxtLink
       v-for="category in visibleCategories"
       :key="category.id"
-      :to="categoryLink(category.slug)"
+      :to="newsCategoryUrl(category)"
       :class="{ 'is-active': activeSlug === category.slug }"
     >
       {{ category.name }}

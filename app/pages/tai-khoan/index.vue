@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AccountOrderSummary, AccountSavedBuild, AccountUser } from '~/types/account'
+import { storefrontPath } from '~/utils/urls'
 
 definePageMeta({
   middleware: 'auth',
@@ -50,7 +51,7 @@ useSeoMeta({
         <h1>Tài khoản của tôi</h1>
         <p>Quản lý thông tin cá nhân, đơn hàng và các tiện ích của bạn tại {{ siteName }}.</p>
       </div>
-      <NuxtLink to="/categories" class="account-dashboard-shop-link">Tiếp tục mua sắm <CartIcon name="arrow-right" size="16" /></NuxtLink>
+      <NuxtLink to="/danh-muc" class="account-dashboard-shop-link">Tiếp tục mua sắm <CartIcon name="arrow-right" size="16" /></NuxtLink>
     </div>
 
     <div v-if="account.loading" class="account-loading-card" role="status">Đang tải dữ liệu tài khoản…</div>
@@ -89,7 +90,7 @@ useSeoMeta({
         </div>
       </section>
 
-      <NuxtLink v-if="dashboard.banner" :to="dashboard.banner.link || '/categories'" class="account-dashboard-banner">
+      <NuxtLink v-if="dashboard.banner" :to="storefrontPath(dashboard.banner.link || '/danh-muc')" class="account-dashboard-banner">
         <NuxtImg v-if="dashboard.banner.image" :src="dashboard.banner.image" :alt="dashboard.banner.title || siteName" width="1200" height="130" />
         <span v-if="dashboard.banner.badge" class="account-dashboard-banner-badge">{{ dashboard.banner.badge }}</span>
         <div v-if="!dashboard.banner.image" class="account-dashboard-banner-copy"><strong>{{ dashboard.banner.title }}</strong><small>{{ dashboard.banner.description }}</small></div>
@@ -97,7 +98,7 @@ useSeoMeta({
 
       <section class="account-dashboard-card account-orders-card">
         <div class="account-dashboard-card-heading"><h2><CartIcon name="receipt" size="19" /> Đơn hàng gần đây</h2><NuxtLink to="/tai-khoan/don-hang">Xem tất cả <CartIcon name="arrow-right" size="14" /></NuxtLink></div>
-        <div v-if="!dashboard.recent_orders.length" class="account-empty-state"><CartIcon name="receipt" size="30" /><h3>Bạn chưa có đơn hàng nào</h3><p>Đơn hàng sau khi đặt sẽ được cập nhật tại đây.</p><NuxtLink to="/categories" class="account-outline-button">Khám phá sản phẩm</NuxtLink></div>
+      <div v-if="!dashboard.recent_orders.length" class="account-empty-state"><CartIcon name="receipt" size="30" /><h3>Bạn chưa có đơn hàng nào</h3><p>Đơn hàng sau khi đặt sẽ được cập nhật tại đây.</p><NuxtLink to="/danh-muc" class="account-outline-button">Khám phá sản phẩm</NuxtLink></div>
         <div v-else class="account-order-table-wrap">
           <table class="account-order-table">
             <thead><tr><th>Mã đơn hàng</th><th>Ngày đặt</th><th>Sản phẩm</th><th>Tổng tiền</th><th>Trạng thái</th><th /></tr></thead>
@@ -138,7 +139,7 @@ useSeoMeta({
 
         <section class="account-dashboard-card">
           <div class="account-dashboard-card-heading"><h2><CartIcon name="heart" size="19" /> Sản phẩm yêu thích</h2><NuxtLink to="/tai-khoan/yeu-thich">Xem tất cả <CartIcon name="arrow-right" size="14" /></NuxtLink></div>
-          <div v-if="!dashboard.wishlist.length" class="account-empty-state account-empty-state--small"><CartIcon name="heart" size="27" /><p>Danh sách yêu thích đang trống.</p><NuxtLink to="/categories" class="account-outline-button">Khám phá sản phẩm</NuxtLink></div>
+          <div v-if="!dashboard.wishlist.length" class="account-empty-state account-empty-state--small"><CartIcon name="heart" size="27" /><p>Danh sách yêu thích đang trống.</p><NuxtLink to="/danh-muc" class="account-outline-button">Khám phá sản phẩm</NuxtLink></div>
           <div v-else class="account-wishlist-grid"><ProductCard v-for="product in dashboard.wishlist" :key="product.id" :product="product" variant="compact" /></div>
         </section>
       </div>

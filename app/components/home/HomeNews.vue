@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HomepagePost } from '~/types/homepage'
+import { newsArticleUrl } from '~/utils/news'
 
 defineProps<{ posts: HomepagePost[] }>()
 const brokenImages = ref<Set<number>>(new Set())
@@ -20,7 +21,7 @@ function postDate(value: string | null): string {
     <div class="pc-container">
       <div class="home-section-heading"><h2>TIN TỨC - CÔNG NGHỆ</h2><NuxtLink to="/tin-tuc">Xem tất cả <span aria-hidden="true">›</span></NuxtLink></div>
       <div class="home-news-grid">
-        <NuxtLink v-for="post in posts.slice(0, 4)" :key="post.id" :to="`/tin-tuc/${post.slug}`" class="home-news-card">
+        <NuxtLink v-for="post in posts.slice(0, 4)" :key="post.id" :to="newsArticleUrl(post)" class="home-news-card">
           <span class="home-news-image">
             <img v-if="post.featured_image && !brokenImages.has(post.id)" :src="post.featured_image" :alt="post.title" loading="lazy" @error="markImageBroken(post.id)">
             <svg v-else aria-hidden="true" viewBox="0 0 80 52" fill="none" stroke="currentColor"><rect x="7" y="7" width="66" height="38" rx="3" stroke-width="2" /><path stroke-linecap="round" stroke-width="2" d="m16 36 13-12 9 8 8-7 18 11" /></svg>

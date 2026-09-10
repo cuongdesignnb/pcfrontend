@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MenuItemData } from '~/types/menu'
+import { categoryUrl, storefrontPath } from '~/utils/urls'
 
 const props = defineProps<{ items: MenuItemData[] }>()
 
@@ -18,14 +19,14 @@ interface ResolvedNavigationItem extends NavigationTarget {
 }
 
 const targets: NavigationTarget[] = [
-  { key: 'pc-gaming', title: 'PC Gaming', icon: '▦', fallback: '/categories/pc-gaming', matches: ['pc gaming'] },
-  { key: 'pc-graphics', title: 'PC Đồ Họa', icon: '◈', fallback: '/categories/pc-do-hoa-render', matches: ['pc đồ họa', 'pc đồ hoạ', 'render'] },
-  { key: 'laptop', title: 'Laptop', icon: '▱', fallback: '/categories/laptop', matches: ['laptop'] },
-  { key: 'components', title: 'Linh kiện', icon: '⌘', fallback: '/categories/linh-kien-pc', matches: ['linh kiện'] },
-  { key: 'monitor', title: 'Màn hình', icon: '▣', fallback: '/categories/man-hinh', matches: ['màn hình'] },
-  { key: 'network', title: 'Thiết bị mạng', icon: '◉', fallback: '/products?search=router', matches: ['thiết bị mạng', 'mạng'] },
-  { key: 'accessories', title: 'Phụ kiện', icon: '♧', fallback: '/categories/phu-kien', matches: ['phụ kiện'] },
-  { key: 'sale', title: 'Khuyến mãi', icon: '%', fallback: '/categories/linh-kien-pc', matches: ['khuyến mãi', 'flash sale', 'sale'] },
+  { key: 'pc-gaming', title: 'PC Gaming', icon: '▦', fallback: '/pc-gaming', matches: ['pc gaming'] },
+  { key: 'pc-graphics', title: 'PC Đồ Họa', icon: '◈', fallback: '/pc-do-hoa-render', matches: ['pc đồ họa', 'pc đồ hoạ', 'render'] },
+  { key: 'laptop', title: 'Laptop', icon: '▱', fallback: '/laptop', matches: ['laptop'] },
+  { key: 'components', title: 'Linh kiện', icon: '⌘', fallback: '/linh-kien-pc', matches: ['linh kiện'] },
+  { key: 'monitor', title: 'Màn hình', icon: '▣', fallback: '/man-hinh', matches: ['màn hình'] },
+  { key: 'network', title: 'Thiết bị mạng', icon: '◉', fallback: '/san-pham?search=router', matches: ['thiết bị mạng', 'mạng'] },
+  { key: 'accessories', title: 'Phụ kiện', icon: '♧', fallback: '/phu-kien', matches: ['phụ kiện'] },
+  { key: 'sale', title: 'Khuyến mãi', icon: '%', fallback: '/linh-kien-pc', matches: ['khuyến mãi', 'flash sale', 'sale'] },
   { key: 'news', title: 'Tin tức', icon: '▤', fallback: '/tin-tuc', matches: ['tin tức', 'blog'] },
   { key: 'builder', title: 'PC Builder', icon: '⚙', fallback: '/cau-hinh', matches: ['build pc', 'pc builder', 'cấu hình'] },
 ]
@@ -35,19 +36,13 @@ function flatten(items: MenuItemData[]): MenuItemData[] {
 }
 
 function cleanPath(path: string | null | undefined, fallback: string): string {
-  if (!path || path === '#') return fallback
-  if (path === '/configurator') return '/cau-hinh'
-  if (path === '/blog') return '/tin-tuc'
-  if (path === '/about') return '/gioi-thieu'
-  if (path === '/contact') return '/lien-he'
-  if (path === '/warranty') return '/bao-hanh'
-  if (path === '/shipping') return '/van-chuyen'
-  return path
+  const normalized = storefrontPath(path)
+  return normalized === '/' && (!path || path === '#') ? fallback : normalized
 }
 
 function resolveUrl(item: MenuItemData | null, fallback: string): string {
   if (!item) return fallback
-  if (item.type === 'category' && item.category?.slug) return `/categories/${item.category.slug}`
+  if (item.type === 'category' && item.category?.slug) return categoryUrl(item.category)
   return cleanPath(item.url, fallback)
 }
 

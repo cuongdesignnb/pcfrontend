@@ -1,14 +1,18 @@
 <script setup lang="ts">
+import { canonicalAbsoluteUrl, trustedSiteOrigin } from '~/composables/useSeoDocument'
+
 const props = defineProps<{
   title: string
   slug: string
+  canonicalUrl?: string | null
 }>()
 
 const config = useRuntimeConfig()
 const { status, message, copy, share } = useNewsShare()
 const canNativeShare = ref(false)
-const canonicalUrl = computed(() => `${String(config.public.siteUrl).replace(/\/$/, '')}/tin-tuc/${encodeURIComponent(props.slug)}`)
-const facebookUrl = computed(() => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl.value)}`)
+const siteOrigin = trustedSiteOrigin(config.public.siteUrl)
+const canonicalUrl = computed(() => props.canonicalUrl || canonicalAbsoluteUrl(siteOrigin, '/tin-tuc/' + encodeURIComponent(props.slug)) || '')
+const facebookUrl = computed(() => 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(canonicalUrl.value))
 
 onMounted(() => {
   canNativeShare.value = typeof navigator !== 'undefined' && typeof navigator.share === 'function'

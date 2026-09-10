@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HomepageCategoryCard } from '~/types/homepage'
+import { categoryUrl } from '~/utils/urls'
 
 defineProps<{ categories: HomepageCategoryCard[] }>()
 const brokenImages = ref<Set<number>>(new Set())
@@ -14,10 +15,10 @@ function markImageBroken(id: number) {
     <div class="pc-container">
       <div class="home-section-heading">
         <h2>Danh mục nổi bật</h2>
-        <NuxtLink to="/categories">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
+        <NuxtLink to="/danh-muc">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
       </div>
       <div class="home-featured-category-row">
-        <NuxtLink v-for="category in categories.slice(0, 12)" :key="category.id" :to="`/categories/${category.slug}`" class="home-featured-category-card">
+        <NuxtLink v-for="category in categories.slice(0, 12)" :key="category.id" :to="categoryUrl(category)" class="home-featured-category-card">
           <div class="home-featured-category-image">
             <img v-if="category.image && !brokenImages.has(category.id)" :src="category.image" :alt="category.name" loading="lazy" @error="markImageBroken(category.id)">
             <img v-else-if="category.icon && !brokenImages.has(category.id)" :src="category.icon" :alt="category.name" loading="lazy" @error="markImageBroken(category.id)">

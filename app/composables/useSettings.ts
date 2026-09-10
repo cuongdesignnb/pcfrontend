@@ -44,7 +44,7 @@ export const useSettings = () => {
     return fallback
   }
 
-  const siteName = computed(() => getString('site_name', 'PC Shop'))
+  const siteName = computed(() => getString('site_name'))
   const siteTagline = computed(() => getString('site_tagline'))
   const siteDescription = computed(() => getString('site_description'))
   const siteLogo = computed(() => getString('site_logo'))

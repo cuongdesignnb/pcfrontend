@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { storefrontPath } from '~/utils/urls'
+
 interface MenuItemData {
   id: number
   title: string
@@ -53,7 +55,7 @@ function resolveUrl(item: MenuItemData): string {
   if (item.type === 'category' && item.category) {
     return '/' + item.category.slug
   }
-  return item.url ?? '#'
+  return storefrontPath(item.url)
 }
 
 const badgeStyles: Record<string, string> = {

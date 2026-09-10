@@ -14,10 +14,12 @@ export interface ProductCard {
   id: number
   name: string
   slug: string
+  public_url?: string | null
+  seo?: { canonical_path?: string | null; canonical_url?: string | null; robots?: string }
   sku: string
   short_description: string | null
   brand: { id: number; name: string; slug: string; logo: string | null } | null
-  category: { id: number; name: string; slug: string } | null
+  category: { id: number; name: string; slug: string; canonical_path?: string | null } | null
   images: ProductImage[]
   pricing: { price: number; sale_price: number | null; display_price: number }
   inventory: { purchasable: boolean; availability_label: string }
@@ -102,7 +104,7 @@ export interface ProductDetail {
   slug: string
   sku: string
   brand: { id: number; name: string; slug: string; logo: string | null } | null
-  category: { id: number; name: string; slug: string } | null
+  category: { id: number; name: string; slug: string; canonical_path?: string | null } | null
   component_type: { id: number; name: string; slug: string } | null
   is_featured: boolean
   pricing: {
@@ -124,7 +126,13 @@ export interface ProductDetail {
   specifications: ProductSpecification[]
   short_description: string | null
   description: string | null
-  seo: { title: string | null; description: string | null }
+  seo: {
+    title: string | null
+    description: string | null
+    canonical_path?: string | null
+    canonical_url?: string | null
+    robots?: string
+  }
 }
 
 export interface ProductDetailResponse {

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { NewsDetailPost } from '~/types/news-detail'
+import { publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
+import { newsCategoryUrl } from '~/utils/news'
 
 const route = useRoute()
-const config = useRuntimeConfig()
 const { siteName, siteLogo } = useSettings()
 const rawSlug = route.params.slug
 const slug = Array.isArray(rawSlug) ? String(rawSlug[0] || '') : String(rawSlug || '')
@@ -27,21 +28,26 @@ if (!post.value && status.value !== 'pending') {
   throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy bài viết.' })
 }
 
-const siteOrigin = computed(() => String(config.public.siteUrl || 'https://laptopplus.vn').replace(/\/$/, ''))
-const canonicalUrl = computed(() => `${siteOrigin.value}/tin-tuc/${encodeURIComponent(post.value?.slug || slug)}`)
-
-const absoluteUrl = (value: string | null | undefined): string | undefined => {
-  if (!value) return undefined
-
-  try {
-    return new URL(value, siteOrigin.value).toString()
-  } catch {
-    return undefined
-  }
+const canonicalPath = computed(() => post.value?.seo.canonical_path || null)
+if (post.value && !canonicalPath.value) {
+  throw createError({ statusCode: 503, statusMessage: 'Bài viết chưa có URL chuẩn.' })
 }
+if (post.value && route.path !== canonicalPath.value) {
+  await navigateTo({ path: canonicalPath.value, query: route.query }, { redirectCode: 301 })
+}
+const { origin, canonicalUrl } = useSeoDocument(() => ({
+  title: post.value?.seo.title || post.value?.title || `Tin tức - ${siteName.value}`,
+  description: post.value?.seo.description || post.value?.excerpt,
+  path: canonicalPath.value,
+  image: post.value?.seo.image || post.value?.featured_image,
+  robots: post.value ? 'index,follow' : 'noindex,follow',
+  type: 'article',
+}))
+
+const absoluteUrl = (value: string | null | undefined): string | undefined => publicAbsoluteUrl(origin.value, value) || undefined
 
 const articleJsonLd = computed(() => {
-  if (!post.value) return ''
+  if (!post.value || !canonicalUrl.value) return ''
 
   const article = post.value
   const articleSchema: Record<string, unknown> = {
@@ -52,10 +58,6 @@ const articleJsonLd = computed(() => {
     description: article.seo.description || article.excerpt || undefined,
     datePublished: article.published_at || undefined,
     dateModified: article.updated_at || article.published_at || undefined,
-    author: {
-      '@type': 'Person',
-      name: article.author?.name || 'Tác giả',
-    },
     publisher: {
       '@type': 'Organization',
       name: siteName.value,
@@ -64,17 +66,18 @@ const articleJsonLd = computed(() => {
     image: absoluteUrl(article.seo.image || article.featured_image),
     articleSection: article.category?.name || undefined,
   }
+  if (article.author?.name) articleSchema.author = { '@type': 'Person', name: article.author.name }
 
   const breadcrumbItems: Array<Record<string, unknown>> = [
-    { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: `${siteOrigin.value}/` },
-    { '@type': 'ListItem', position: 2, name: 'Tin tức', item: `${siteOrigin.value}/tin-tuc` },
+    { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: publicAbsoluteUrl(origin.value, '/') },
+    { '@type': 'ListItem', position: 2, name: 'Tin tức', item: publicAbsoluteUrl(origin.value, '/tin-tuc') },
   ]
   if (article.category) {
     breadcrumbItems.push({
       '@type': 'ListItem',
       position: breadcrumbItems.length + 1,
       name: article.category.name,
-      item: `${siteOrigin.value}/tin-tuc?category=${encodeURIComponent(article.category.slug)}`,
+      item: publicAbsoluteUrl(origin.value, newsCategoryUrl(article.category)),
     })
   }
   breadcrumbItems.push({
@@ -89,27 +92,18 @@ const articleJsonLd = computed(() => {
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: breadcrumbItems },
   ]
 
-  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c')
+  return serializeJsonLd({ '@context': 'https://schema.org', '@graph': graph })
 })
 
 useSeoMeta({
-  title: () => post.value?.seo.title || post.value?.title || `Tin tức - ${siteName.value}`,
-  description: () => post.value?.seo.description || post.value?.excerpt || undefined,
-  ogTitle: () => post.value?.seo.title || post.value?.title || siteName.value,
-  ogDescription: () => post.value?.seo.description || post.value?.excerpt || undefined,
-  ogUrl: () => canonicalUrl.value,
-  ogType: 'article',
-  ogImage: () => absoluteUrl(post.value?.seo.image || post.value?.featured_image),
-  twitterCard: 'summary_large_image',
   articlePublishedTime: () => post.value?.published_at || undefined,
   articleModifiedTime: () => post.value?.updated_at || post.value?.published_at || undefined,
 })
 
 useHead(() => {
-  if (!post.value) return {}
+  if (!post.value || !canonicalUrl.value) return {}
 
   return {
-    link: [{ rel: 'canonical', href: canonicalUrl.value }],
     script: [{ key: 'news-article-jsonld', type: 'application/ld+json', innerHTML: articleJsonLd.value }],
   }
 })

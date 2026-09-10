@@ -70,6 +70,8 @@ export interface Category {
   image: string | null
   icon: string | null
   parent_id: number | null
+  canonical_path?: string | null
+  canonical_url?: string | null
   show_on_pc_website?: boolean
   children?: Category[]
 }

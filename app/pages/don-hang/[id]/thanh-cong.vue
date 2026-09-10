@@ -2,6 +2,7 @@
 const config = useRuntimeConfig()
 const route = useRoute()
 const toast = useToast()
+const { siteName } = useSettings()
 
 const orderId = route.params.id as string
 const order = ref<any>(null)
@@ -123,7 +124,7 @@ const cancelOrder = async () => {
   }
 }
 
-useSeoMeta({ title: 'Trạng thái đơn hàng - PC Shop' })
+useSeoMeta({ title: () => 'Trạng thái đơn hàng - ' + siteName.value })
 </script>
 
 <template>
@@ -150,14 +151,14 @@ useSeoMeta({ title: 'Trạng thái đơn hàng - PC Shop' })
 
       <template v-else-if="order">
       <!-- Success Icon -->
-      <div class="text-8xl mb-6">🎉</div>
+      <div class="text-8xl mb-6" aria-hidden="true">✓</div>
       
       <h1 class="text-4xl font-bold text-green-600 mb-4">
         Trạng thái đơn hàng
       </h1>
       
       <p class="text-xl text-gray-600 mb-8">
-        Cảm ơn bạn đã tin tưởng PC Shop
+        Cảm ơn bạn đã tin tưởng {{ siteName }}
       </p>
 
       <div

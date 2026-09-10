@@ -3,10 +3,11 @@ import { toTelHref } from '~/utils/contactLinks'
 
 const { siteName, siteHotline, siteEmail, siteAddress, businessHours } = useSettings()
 
-useSeoMeta({
-  title: () => `Liên hệ - ${siteName.value}`,
-  description: () => `Liên hệ ${siteName.value} - Hỗ trợ mua hàng, tư vấn kỹ thuật, bảo hành.`,
-})
+useSeoDocument(() => ({
+  title: `Liên hệ - ${siteName.value}`,
+  description: `Liên hệ ${siteName.value} - Hỗ trợ mua hàng, tư vấn kỹ thuật, bảo hành.`,
+  path: '/lien-he',
+}))
 </script>
 
 <template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductCard, ProductDetail, ProductVariant } from '~/types/product-detail'
+import { productUrl } from '~/utils/urls'
 
 defineProps<{
   product: ProductDetail
@@ -17,7 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const groupLabel = (name: string) => name === 'Tản nhiệt' ? 'Phiên bản tản nhiệt' : name
-const productPath = (product: ProductCard) => `/${product.category?.slug || 'san-pham'}/${product.slug}`
+const productPath = (product: ProductCard) => productUrl(product)
 </script>
 
 <template>

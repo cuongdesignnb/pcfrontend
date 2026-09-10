@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { HomepageBanner } from '~/types/homepage'
+import { storefrontPath } from '~/utils/urls'
 
 defineProps<{ banner: HomepageBanner | null }>()
 
 function linkFor(banner: HomepageBanner, secondary = false): string {
-  if (secondary) return banner.metadata?.cta2_link || '/tin-tuc'
-  return banner.metadata?.cta_link || banner.link || '/cau-hinh'
+  if (secondary) return storefrontPath(banner.metadata?.cta2_link || '/tin-tuc')
+  return storefrontPath(banner.metadata?.cta_link || banner.link || '/cau-hinh')
 }
 </script>
 

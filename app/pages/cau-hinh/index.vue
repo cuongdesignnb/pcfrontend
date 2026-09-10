@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { BuilderComponentType, BuilderFiltersState, BuilderPreset, BuilderProductOption, BuilderSelection, BuilderSort } from '~/types/pc-builder'
+import { productUrl } from '~/utils/urls'
 
 const route = useRoute()
 const config = useRuntimeConfig()
@@ -92,8 +93,8 @@ const selectProduct = async (option: BuilderProductOption) => {
 
 const openProduct = async (option: BuilderProductOption) => {
   const product = option.product
-  const url = product.category ? `/${product.category.slug}/${product.slug}` : `/products/${product.slug}`
-  await navigateTo(url)
+  const url = productUrl(product)
+  if (url) await navigateTo(url)
 }
 
 const changeType = async (type: BuilderComponentType) => {

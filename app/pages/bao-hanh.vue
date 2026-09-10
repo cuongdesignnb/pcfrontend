@@ -1,10 +1,11 @@
 <script setup lang="ts">
 const { siteName, siteHotline } = useSettings()
 
-useSeoMeta({
-  title: () => `Chính sách bảo hành - ${siteName.value}`,
-  description: () => `Chính sách bảo hành sản phẩm tại ${siteName.value} - Cam kết bảo hành chính hãng, đổi trả minh bạch.`,
-})
+useSeoDocument(() => ({
+  title: `Chính sách bảo hành - ${siteName.value}`,
+  description: `Chính sách bảo hành sản phẩm tại ${siteName.value} - Cam kết bảo hành chính hãng, đổi trả minh bạch.`,
+  path: '/bao-hanh',
+}))
 </script>
 
 <template>

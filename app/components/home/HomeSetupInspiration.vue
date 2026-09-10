@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HomepageBanner } from '~/types/homepage'
+import { storefrontPath } from '~/utils/urls'
 
 defineProps<{ banners: HomepageBanner[] }>()
 </script>
@@ -11,7 +12,7 @@ defineProps<{ banners: HomepageBanner[] }>()
       <NuxtLink to="/tin-tuc">Xem tất cả <span aria-hidden="true">›</span></NuxtLink>
     </div>
     <div class="home-setup-grid">
-      <NuxtLink v-for="banner in banners.slice(0, 4)" :key="banner.id" :to="banner.link || '/tin-tuc'">
+      <NuxtLink v-for="banner in banners.slice(0, 4)" :key="banner.id" :to="storefrontPath(banner.link || '/tin-tuc')">
         <img v-if="banner.image" :src="banner.image" :alt="banner.title" loading="lazy">
         <span>{{ banner.title }}</span>
       </NuxtLink>

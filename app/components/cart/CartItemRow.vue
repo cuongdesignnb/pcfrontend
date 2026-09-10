@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CartItem } from '~/types/cart'
+import { productUrl } from '~/utils/urls'
 
 const props = withDefaults(defineProps<{
   item: CartItem
@@ -23,10 +24,7 @@ const wishlist = useWishlist()
 const savingForLater = ref(false)
 
 const quantity = computed(() => props.pendingQuantity ?? props.item.quantity)
-const productPath = computed(() => {
-  const product = props.item.product
-  return product?.category?.slug ? `/${product.category.slug}/${product.slug}` : `/products/${product?.slug || ''}`
-})
+const productPath = computed(() => props.item.product ? productUrl(props.item.product) : null)
 const variantText = computed(() => props.item.variant?.name || '')
 const variantAttributes = computed(() => Object.entries(props.item.variant?.attributes || {}).filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== ''))
 const canIncrease = computed(() => props.item.inventory.purchasable && props.item.inventory.max_quantity > quantity.value)
@@ -82,7 +80,7 @@ function eventChecked(event: Event): boolean {
       <span class="cart-checkbox" aria-hidden="true"><CartIcon v-if="item.selected" name="check" size="14" /></span>
     </label>
 
-    <NuxtLink :to="productPath" class="cart-item-image">
+    <NuxtLink v-if="productPath" :to="productPath" class="cart-item-image">
       <NuxtImg
         v-if="item.product?.images?.[0]?.url"
         :src="item.product.images[0].url"
@@ -95,9 +93,14 @@ function eventChecked(event: Event): boolean {
       />
       <CartIcon v-else name="tag" size="33" />
     </NuxtLink>
+    <span v-else class="cart-item-image">
+      <NuxtImg v-if="item.product?.images?.[0]?.url" :src="item.product.images[0].url" :alt="item.product.images[0].alt || item.product.name" width="140" height="140" sizes="100px" loading="lazy" class="cart-item-image-asset" />
+      <CartIcon v-else name="tag" size="33" />
+    </span>
 
     <div class="cart-item-copy">
-      <NuxtLink :to="productPath" class="cart-item-name">{{ item.product?.name || 'Sản phẩm không còn tồn tại' }}</NuxtLink>
+      <NuxtLink v-if="productPath" :to="productPath" class="cart-item-name">{{ item.product?.name || 'Sản phẩm không còn tồn tại' }}</NuxtLink>
+      <span v-else class="cart-item-name">{{ item.product?.name || 'Sản phẩm không còn tồn tại' }}</span>
       <p v-if="variantText" class="cart-item-variant">Phiên bản: {{ variantText }}</p>
       <p v-for="[key, value] in variantAttributes" :key="key" class="cart-item-variant">{{ key }}: {{ value }}</p>
       <p class="cart-item-availability" :class="availabilityClass">

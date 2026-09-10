@@ -1,5 +1,32 @@
 /// <reference types="node" />
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+function productionSiteUrl(): string {
+  const configured = process.env.NUXT_PUBLIC_SITE_URL?.trim()
+  if (configured) return configured
+
+  // Nuxt does not load the repository's deployment-only .env.server file by
+  // default. Read only this public value during a production build so the
+  // canonical/OG metadata remains configured without embedding a domain in
+  // application code or changing local development API defaults.
+  const isProductionBuild = process.env.NODE_ENV === 'production' || process.argv.some(argument => argument === 'build' || argument.endsWith('/build'))
+  if (!isProductionBuild) return ''
+
+  const envFile = resolve(process.cwd(), '.env.server')
+  if (!existsSync(envFile)) return ''
+
+  const prefix = 'NUXT_PUBLIC_SITE_URL='
+  const line = readFileSync(envFile, 'utf8')
+    .split(/\r?\n/)
+    .find(candidate => candidate.trimStart().startsWith(prefix))
+  if (!line) return ''
+
+  const value = line.trimStart().slice(prefix.length).trim()
+  return value.replace(/^("|')(.*)\1$/, '$2').trim()
+}
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -23,7 +50,7 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api/v1',
       appName: process.env.NUXT_PUBLIC_APP_NAME || '',
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || '',
+      siteUrl: productionSiteUrl(),
     }
   },
 

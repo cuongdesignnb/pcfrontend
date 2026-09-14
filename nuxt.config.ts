@@ -3,29 +3,45 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-function productionSiteUrl(): string {
-  const configured = process.env.NUXT_PUBLIC_SITE_URL?.trim()
-  if (configured) return configured
+function unquote(value: string): string {
+  return value.replace(/^("|')(.*)\1$/, '$2').trim()
+}
+
+function productionPublicEnv(key: string): string {
+  if (Object.prototype.hasOwnProperty.call(process.env, key)) {
+    return unquote(process.env[key] || '')
+  }
 
   // Nuxt does not load the repository's deployment-only .env.server file by
   // default. Read only this public value during a production build so the
-  // canonical/OG metadata remains configured without embedding a domain in
-  // application code or changing local development API defaults.
+  // Public deployment metadata remains configured without embedding identity
+  // or a domain in application code or changing local development defaults.
   const isProductionBuild = process.env.NODE_ENV === 'production' || process.argv.some(argument => argument === 'build' || argument.endsWith('/build'))
   if (!isProductionBuild) return ''
 
   const envFile = resolve(process.cwd(), '.env.server')
   if (!existsSync(envFile)) return ''
 
-  const prefix = 'NUXT_PUBLIC_SITE_URL='
+  const prefix = `${key}=`
   const line = readFileSync(envFile, 'utf8')
     .split(/\r?\n/)
     .find(candidate => candidate.trimStart().startsWith(prefix))
   if (!line) return ''
 
-  const value = line.trimStart().slice(prefix.length).trim()
-  return value.replace(/^("|')(.*)\1$/, '$2').trim()
+  return unquote(line.trimStart().slice(prefix.length).trim())
 }
+
+function productionSiteUrl(): string {
+  return productionPublicEnv('NUXT_PUBLIC_SITE_URL')
+}
+
+function productionAppName(): string {
+  return productionPublicEnv('NUXT_PUBLIC_APP_NAME')
+}
+
+const seoRegressionPlugins = process.env.SEO_TEST_MODE === '1'
+  ? [{ src: resolve(process.cwd(), 'tests/seo/fixtures/settings-revalidation.client.ts'), mode: 'client' as const }]
+  : []
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -45,11 +61,14 @@ export default defineNuxtConfig({
   // CSS
   css: ['~/assets/css/main.css', '~/assets/css/checkout.css', '~/assets/css/account.css', '~/assets/css/news-detail.css'],
 
+  // Test-only bridge used by the isolated SEO runner; production builds omit it.
+  plugins: seoRegressionPlugins,
+
   // Runtime config
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api/v1',
-      appName: process.env.NUXT_PUBLIC_APP_NAME || '',
+      appName: productionAppName(),
       siteUrl: productionSiteUrl(),
     }
   },
@@ -68,7 +87,7 @@ export default defineNuxtConfig({
   // App config
   app: {
     head: {
-      title: process.env.NUXT_PUBLIC_APP_NAME || '',
+      title: productionAppName(),
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },

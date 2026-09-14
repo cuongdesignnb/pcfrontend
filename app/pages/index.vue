@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { publicAbsoluteUrl, serializeJsonLd } from '~/composables/useSeoDocument'
+import { normalizeSeoTitle } from '~/utils/seoIdentity'
 
 const { data: homepage } = await useHomepage()
 const {
@@ -23,7 +24,7 @@ const {
 const payload = computed(() => homepage.value)
 
 const { origin, canonicalUrl } = useSeoDocument(() => ({
-  title: seoTitle.value || siteName.value,
+  title: normalizeSeoTitle(seoTitle.value || siteName.value),
   description: seoDescription.value,
   path: '/',
   image: seoOgImage.value || siteLogo.value,
@@ -33,7 +34,7 @@ const { origin, canonicalUrl } = useSeoDocument(() => ({
 useSeoMeta({ keywords: () => seoKeywords.value })
 
 useHead(() => {
-  if (!canonicalUrl.value) return {}
+  if (!canonicalUrl.value || !siteName.value) return {}
   const logo = publicAbsoluteUrl(origin.value, siteLogo.value || seoOgImage.value)
   const organization: Record<string, unknown> = {
     '@type': 'Organization',

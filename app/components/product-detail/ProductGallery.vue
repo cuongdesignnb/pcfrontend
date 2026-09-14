@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import type { ProductDetail } from '~/types/product-detail'
+import { isUsablePublicImageUrl } from '~/utils/media'
 
 const props = defineProps<{ product: ProductDetail }>()
 const selectedIndex = ref(0)
 const open = ref(false)
 const zoomed = ref(false)
 const brokenImages = ref<Set<number>>(new Set())
+const galleryRoot = ref<HTMLElement | null>(null)
 const closeButton = ref<HTMLButtonElement | null>(null)
 const toast = useToast()
 
-const images = computed(() => props.product.images.filter(image => Boolean(image.url) && !brokenImages.value.has(image.id)))
+const images = computed(() => props.product.images.filter(image => isUsablePublicImageUrl(image.url) && !brokenImages.value.has(image.id)))
 const selected = computed(() => images.value[selectedIndex.value])
 
 watch(() => props.product.id, () => {
@@ -35,9 +37,21 @@ const selectImage = (index: number) => {
 
 const markImageBroken = (imageId?: number) => {
   if (!imageId) return
+  if (brokenImages.value.has(imageId)) return
   const next = new Set(brokenImages.value)
   next.add(imageId)
   brokenImages.value = next
+}
+
+// An image can fail before Vue hydration attaches the @error listener. Scan
+// already-completed images after mount/render as a second, deterministic path
+// to the same fail-closed state.
+const scanImageHealth = () => {
+  const imageElements = galleryRoot.value?.querySelectorAll<HTMLImageElement>('[data-product-image-id]') || []
+  for (const element of imageElements) {
+    const imageId = Number(element.dataset.productImageId)
+    if (imageId && element.complete && element.naturalWidth === 0) markImageBroken(imageId)
+  }
 }
 
 const next = () => {
@@ -73,12 +87,20 @@ const onKeydown = (event: KeyboardEvent) => {
   if (event.key === 'ArrowRight') next()
   if (event.key === 'ArrowLeft') previous()
 }
-onMounted(() => window.addEventListener('keydown', onKeydown))
+watch(images, async () => {
+  await nextTick()
+  scanImageHealth()
+})
+onMounted(async () => {
+  window.addEventListener('keydown', onKeydown)
+  await nextTick()
+  scanImageHealth()
+})
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <section class="pdp-gallery" aria-label="Thư viện ảnh sản phẩm">
+  <section ref="galleryRoot" class="pdp-gallery" aria-label="Thư viện ảnh sản phẩm">
     <div v-if="images.length > 1" class="pdp-gallery-thumbs" aria-label="Ảnh thu nhỏ">
       <button
         v-for="(image, index) in images"
@@ -90,7 +112,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         :class="selectedIndex === index ? 'border-blue-600' : 'border-slate-200 hover:border-blue-300'"
         @click="selectImage(index)"
       >
-        <img :src="image.url!" :alt="image.alt || `${product.name} ${index + 1}`" loading="lazy" decoding="async" @error="markImageBroken(image.id)">
+        <img :src="image.url!" :alt="image.alt || `${product.name} ${index + 1}`" :data-product-image-id="image.id" loading="lazy" decoding="async" @error="markImageBroken(image.id)">
       </button>
     </div>
     <div class="pdp-gallery-main group">
@@ -104,6 +126,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           :alt="selected.alt || product.name"
           :width="selected.width || undefined"
           :height="selected.height || undefined"
+          :data-product-image-id="selected.id"
           fetchpriority="high"
           decoding="async"
           @error="markImageBroken(selected?.id)"
@@ -119,7 +142,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <button ref="closeButton" type="button" class="absolute right-4 top-4 rounded-full bg-white/15 px-4 py-2 text-sm text-white hover:bg-white/25" aria-label="Đóng thư viện ảnh" @click="open = false">Đóng</button>
       <button v-if="images.length > 1" type="button" class="absolute left-3 rounded-full bg-white/15 p-3 text-white hover:bg-white/25 md:left-8" aria-label="Ảnh trước" @click="previous">←</button>
       <button type="button" class="pdp-gallery-modal-image" :aria-label="zoomed ? 'Thu nhỏ ảnh' : 'Phóng to ảnh'" @click="zoomed = !zoomed">
-        <img v-if="selected?.url" :src="selected.url" :alt="selected.alt || product.name" decoding="async" @error="markImageBroken(selected?.id)" :class="zoomed ? 'is-zoomed' : ''">
+        <img v-if="selected?.url" :src="selected.url" :alt="selected.alt || product.name" :data-product-image-id="selected.id" decoding="async" @error="markImageBroken(selected?.id)" :class="zoomed ? 'is-zoomed' : ''">
       </button>
       <button v-if="images.length > 1" type="button" class="absolute right-3 rounded-full bg-white/15 p-3 text-white hover:bg-white/25 md:right-8" aria-label="Ảnh sau" @click="next">→</button>
     </div>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420">
+  <rect width="1200" height="420" fill="#123b2a"/>
+  <circle cx="980" cy="210" r="160" fill="#34d399" opacity=".28"/>
+  <rect x="810" y="110" width="220" height="170" rx="16" fill="#064e3b" stroke="#6ee7b7" stroke-width="5"/>
+  <path d="m850 245 48-80 44 54 42-70 38 96Z" fill="#a7f3d0"/>
+  <text x="52" y="176" font-family="Arial,sans-serif" font-size="42" font-weight="700" fill="#ecfdf5">Second Fixture Hero</text>
+  <text x="52" y="224" font-family="Arial,sans-serif" font-size="24" fill="#bbf7d0">Interactive hydration scenario</text>
+</svg>

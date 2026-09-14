@@ -1,20 +1,45 @@
-type SettingValue = string | number | boolean | null
+import { resolveSiteName } from '~/utils/seoIdentity'
+
+export type SettingValue = string | number | boolean | null | SettingValue[] | { [key: string]: SettingValue }
+
+function isSettingRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isSettingValue(value: unknown): value is SettingValue {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true
+  if (Array.isArray(value)) return value.every(isSettingValue)
+  return isSettingRecord(value) && Object.values(value).every(isSettingValue)
+}
+
+function parseSettingsPayload(value: unknown): Record<string, SettingValue> {
+  if (!isSettingRecord(value) || !Object.entries(value).every(([key, entry]) => key.trim() !== '' && isSettingValue(entry))) {
+    throw new Error('INVALID_SETTINGS_PAYLOAD')
+  }
+  return value as Record<string, SettingValue>
+}
 
 export const useSettings = () => {
   const config = useRuntimeConfig()
   const settings = useState<Record<string, SettingValue>>('site_settings', () => ({}))
   const loaded = useState<boolean>('site_settings_loaded', () => false)
+  const settingsError = useState<string | null>('site_settings_error', () => null)
 
   const fetchSettings = async (force = false) => {
     if (loaded.value && !force) return
 
     try {
-      settings.value = await $fetch<Record<string, SettingValue>>(
+      const payload = await $fetch<unknown>(
         `${config.public.apiBase}/settings`,
         { cache: 'no-store' },
       )
+      settings.value = parseSettingsPayload(payload)
+      settingsError.value = null
       loaded.value = true
     } catch (error) {
+      settingsError.value = error instanceof Error && error.message === 'INVALID_SETTINGS_PAYLOAD'
+        ? 'invalid_payload'
+        : 'unavailable'
       console.error('[useSettings] Failed to load settings:', error)
     }
   }
@@ -44,7 +69,8 @@ export const useSettings = () => {
     return fallback
   }
 
-  const siteName = computed(() => getString('site_name'))
+  const runtimeAppName = computed(() => resolveSiteName('', config.public.appName))
+  const siteName = computed(() => resolveSiteName(getString('site_name'), runtimeAppName.value))
   const siteTagline = computed(() => getString('site_tagline'))
   const siteDescription = computed(() => getString('site_description'))
   const siteLogo = computed(() => getString('site_logo'))
@@ -91,6 +117,7 @@ export const useSettings = () => {
   return {
     settings,
     loaded,
+    settingsError,
     fetchSettings,
     get,
     getString,

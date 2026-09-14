@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductDetail, ProductVariant } from '~/types/product-detail'
+import { isUsablePublicImageUrl } from '~/utils/media'
 
 const props = defineProps<{
   product: ProductDetail
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ add: []; buy: [] }>()
 const { formatMoney, getString } = useSettings()
+const primaryImage = computed(() => props.product.images.find(image => isUsablePublicImageUrl(image.url)) || null)
 
 const unitPrice = computed(() => props.variant?.pricing.display_price ?? props.product.pricing.display_price)
 const originalUnitPrice = computed(() => props.variant?.pricing.price ?? props.product.pricing.price)
@@ -30,9 +32,9 @@ const benefits = computed(() => [
     <h2 class="text-sm font-bold text-slate-900">Tóm tắt đơn hàng</h2>
     <div class="mt-3 flex gap-2.5">
       <NuxtImg
-        v-if="product.images[0]?.url"
-        :src="product.images[0].url"
-        :alt="product.images[0].alt || product.name"
+        v-if="primaryImage?.url"
+        :src="primaryImage.url"
+        :alt="primaryImage.alt || product.name"
         width="64"
         height="64"
         class="h-16 w-16 shrink-0 rounded-[6px] border border-slate-100 object-contain"

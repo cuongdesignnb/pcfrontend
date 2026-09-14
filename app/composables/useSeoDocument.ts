@@ -1,5 +1,6 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 import type { SeoDocumentInput } from '~/types/seo'
+import { normalizeSeoTitle } from '~/utils/seoIdentity'
 
 function cleanOrigin(value: unknown): string | null {
   if (typeof value !== 'string' || value.trim() === '') return null
@@ -55,10 +56,10 @@ export function useSeoDocument(input: MaybeRefOrGetter<SeoDocumentInput>) {
   const imageUrl = computed(() => publicAbsoluteUrl(origin.value, document.value.image))
 
   useSeoMeta({
-    title: () => document.value.title,
+    title: () => normalizeSeoTitle(document.value.title) || undefined,
     description: () => document.value.description || undefined,
     robots: () => document.value.robots || 'index,follow',
-    ogTitle: () => document.value.title,
+    ogTitle: () => normalizeSeoTitle(document.value.title) || undefined,
     ogDescription: () => document.value.description || undefined,
     ogUrl: () => canonicalUrl.value || undefined,
     ogType: () => document.value.type || 'website',

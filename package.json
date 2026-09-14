@@ -8,6 +8,9 @@
     "dev": "nuxt dev --host 0.0.0.0",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "test:seo:ssr": "node scripts/run-seo-regression.mjs --scope=ssr",
+    "test:seo:browser": "node scripts/run-seo-regression.mjs --scope=browser",
+    "test:seo:regression": "node scripts/run-seo-regression.mjs --scope=regression",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
@@ -19,7 +22,9 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@playwright/test": "1.55.0",
     "@types/node": "^22.15.0",
+    "parse5": "7.3.0",
     "typescript": "^5.8.0"
   }
 }

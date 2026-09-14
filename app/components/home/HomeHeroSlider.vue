@@ -14,6 +14,7 @@ const props = withDefaults(defineProps<{
 const currentIndex = ref(0)
 const paused = ref(false)
 const reducedMotion = ref(false)
+const fallbackHeading = 'Khám phá sản phẩm công nghệ'
 let timer: ReturnType<typeof setInterval> | null = null
 
 const currentBanner = computed(() => props.banners[currentIndex.value] || null)
@@ -74,7 +75,7 @@ onUnmounted(clearTimer)
           <img :src="currentBanner.image || ''" :alt="currentBanner.title" class="home-hero-image" fetchpriority="high">
           <div v-if="currentBanner.metadata?.text_in_image !== 'true' && (currentBanner.title || currentBanner.description)" class="home-hero-caption">
             <span v-if="currentBanner.badge" class="home-hero-badge">{{ currentBanner.badge }}</span>
-            <strong>{{ currentBanner.title }}</strong>
+            <h1>{{ currentBanner.title || fallbackHeading }}</h1>
             <small v-if="currentBanner.description">{{ currentBanner.description }}</small>
           </div>
         </NuxtLink>
@@ -82,7 +83,7 @@ onUnmounted(clearTimer)
           <img :src="currentBanner.image || ''" :alt="currentBanner.title" class="home-hero-image" fetchpriority="high">
           <div v-if="currentBanner.metadata?.text_in_image !== 'true' && (currentBanner.title || currentBanner.description)" class="home-hero-caption">
             <span v-if="currentBanner.badge" class="home-hero-badge">{{ currentBanner.badge }}</span>
-            <strong>{{ currentBanner.title }}</strong>
+            <h1>{{ currentBanner.title || fallbackHeading }}</h1>
             <small v-if="currentBanner.description">{{ currentBanner.description }}</small>
           </div>
         </div>
@@ -100,6 +101,9 @@ onUnmounted(clearTimer)
         <button v-for="(banner, index) in banners" :key="banner.id" type="button" :class="{ 'is-active': index === currentIndex }" :aria-label="`Banner ${index + 1}`" :aria-current="index === currentIndex ? 'true' : undefined" @click="goTo(index)" />
       </div>
     </template>
-    <div v-else class="home-hero-empty">Đang cập nhật chương trình nổi bật</div>
+    <div v-else class="home-hero-empty">
+      <h1>{{ fallbackHeading }}</h1>
+      <p>Đang cập nhật chương trình nổi bật</p>
+    </div>
   </section>
 </template>

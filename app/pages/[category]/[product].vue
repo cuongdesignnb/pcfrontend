@@ -4,6 +4,7 @@ import { toSocialHref } from '~/utils/contactLinks'
 import { getErrorStatusCode } from '~/utils/errors'
 import { productUrl } from '~/utils/urls'
 import { publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
+import { isUsablePublicImageUrl } from '~/utils/media'
 
 const route = useRoute()
 const config = useRuntimeConfig()
@@ -46,6 +47,8 @@ const selectedPricing = computed<ProductDetail['pricing']>(() => {
 })
 const contactOnly = computed(() => selectedPricing.value.display_price <= 0)
 const onlinePurchasable = computed(() => selection.purchasable.value && !contactOnly.value)
+const publicProductImages = computed(() => product.value?.images.filter(image => isUsablePublicImageUrl(image.url)) ?? [])
+const primaryProductImage = computed(() => publicProductImages.value[0]?.url ?? null)
 
 const zaloHref = computed(() => {
   return toSocialHref(socialZalo.value, 'zalo')
@@ -90,7 +93,7 @@ const { origin, canonicalUrl } = useSeoDocument(() => ({
   title: product.value?.seo.title || (product.value ? `${product.value.name} - ${siteName.value}` : `Sản phẩm - ${siteName.value}`),
   description: product.value?.seo.description || product.value?.short_description,
   path: canonicalPath.value,
-  image: product.value?.images[0]?.url,
+  image: primaryProductImage.value,
   robots: product.value ? 'index,follow' : 'noindex,follow',
   type: 'product',
 }))
@@ -100,10 +103,13 @@ useHead(() => {
   const canonical = canonicalUrl.value
   const productSchema: Record<string, unknown> = {
     '@context': 'https://schema.org', '@type': 'Product', name: product.value.name,
-    image: product.value.images.map(image => publicAbsoluteUrl(origin.value, image.url)).filter(Boolean),
     description: product.value.seo.description || product.value.short_description || undefined,
     brand: product.value.brand ? { '@type': 'Brand', name: product.value.brand.name } : undefined,
   }
+  const imageUrls = publicProductImages.value
+    .map(image => publicAbsoluteUrl(origin.value, image.url))
+    .filter((image): image is string => Boolean(image))
+  if (imageUrls.length) productSchema.image = imageUrls
   if (product.value.sku) productSchema.sku = product.value.sku
   if (selectedPricing.value.display_price > 0) productSchema.offers = { '@type': 'Offer', priceCurrency: currency.value.toUpperCase(), price: selectedPricing.value.display_price, availability: onlinePurchasable.value ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', url: canonical }
   if (product.value.rating.count > 0 && product.value.rating.average !== null) productSchema.aggregateRating = { '@type': 'AggregateRating', ratingValue: product.value.rating.average, reviewCount: product.value.rating.count }

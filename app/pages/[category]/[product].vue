@@ -158,9 +158,9 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
           <div class="pdp-area-tabs"><ProductAnchorTabs :has-compatibility="Boolean(product.component_type)" :rating-count="product.rating.count" :questions-count="product.questions_count" /></div>
 
           <div class="pdp-area-content pdp-content-main">
-            <ProductDescription :description="product.description" :blocks="product.detail_blocks" />
+            <ProductDescription :description="product.description" :blocks="product.detail_blocks" :title="product.description_heading" />
             <div class="pdp-spec-compat-grid">
-              <ProductSpecificationTable :specifications="product.specifications" />
+              <ProductSpecificationTable :specifications="product.specifications" :title="product.technical_section_title" />
               <ProductCompatibility v-if="product.component_type" :slug="product.slug" />
             </div>
           </div>

@@ -47,7 +47,7 @@ export interface ProductHighlight {
 
 export interface ProductDetailBlock {
   id: number
-  type: 'hero_banner' | 'feature_cards' | 'benchmark_cards' | 'use_case_cards' | 'notice' | 'image_text'
+  type: 'hero_banner' | 'feature_cards' | 'benchmark_cards' | 'use_case_cards' | 'notice' | 'image_text' | 'contact_footer'
   title: string | null
   payload: Record<string, unknown>
 }
@@ -124,6 +124,9 @@ export interface ProductDetail {
   highlights: ProductHighlight[]
   detail_blocks: ProductDetailBlock[]
   specifications: ProductSpecification[]
+  has_specifications: boolean
+  technical_section_title: string
+  description_heading: string
   short_description: string | null
   description: string | null
   seo: {

@@ -1,12 +1,28 @@
 <script setup lang="ts">
 import type { ProductDetailBlock } from '~/types/product-detail'
 
-const props = defineProps<{ description: string | null; blocks: ProductDetailBlock[] }>()
+const props = defineProps<{ description: string | null; blocks: ProductDetailBlock[]; title?: string }>()
+const { getBoolean, getString, siteAddress, sitePhone, siteHotline } = useSettings()
 
 const heroBlock = computed(() => props.blocks.find(block => block.type === 'hero_banner'))
 const benchmarkBlock = computed(() => props.blocks.find(block => block.type === 'benchmark_cards'))
 const useCaseBlock = computed(() => props.blocks.find(block => block.type === 'use_case_cards'))
-const otherBlocks = computed(() => props.blocks.filter(block => !['hero_banner', 'benchmark_cards', 'use_case_cards'].includes(block.type)))
+const contactFooterBlock = computed(() => props.blocks.find(block => block.type === 'contact_footer'))
+const otherBlocks = computed(() => props.blocks.filter(block => !['hero_banner', 'benchmark_cards', 'use_case_cards', 'contact_footer'].includes(block.type)))
+const contactFooterTitle = computed(() => getString('storefront_product_contact_footer_title'))
+const contactFooterLandmark = computed(() => getString('storefront_product_contact_footer_landmark'))
+const contactFooterWebsite = computed(() => getString('storefront_product_contact_footer_website_url'))
+const contactFooterMaps = computed(() => getString('storefront_product_contact_footer_maps_url'))
+const contactFooterVisible = computed(() => Boolean(
+  contactFooterBlock.value
+  && getBoolean('storefront_product_contact_footer_enabled')
+  && getString('storefront_product_contact_footer_title')
+  && siteAddress.value
+  && (sitePhone.value || siteHotline.value)
+  && contactFooterWebsite.value.startsWith('https://')
+  && contactFooterMaps.value.startsWith('https://'),
+))
+const telHref = (value: string) => `tel:${value.replace(/[^+\d]/g, '')}`
 
 const payloadText = (payload: Record<string, unknown> | undefined, key: string): string => {
   const value = payload?.[key]
@@ -28,6 +44,7 @@ const payloadFeatures = (payload: Record<string, unknown> | undefined): string[]
 
 <template>
   <section id="mo-ta" class="pdp-panel scroll-mt-28">
+    <h2 class="pdp-section-title">{{ title || 'Thông tin sản phẩm' }}</h2>
     <div v-if="heroBlock || benchmarkBlock || useCaseBlock" class="pdp-feature-overview">
       <article v-if="heroBlock" class="pdp-marketing-hero">
         <div class="pdp-marketing-copy">
@@ -103,5 +120,16 @@ const payloadFeatures = (payload: Record<string, unknown> | undefined): string[]
 
     <p v-if="description" class="mt-4 whitespace-pre-line border-t border-slate-100 pt-3 text-xs leading-5 text-slate-700">{{ description }}</p>
     <p v-if="!description && !blocks.length" class="text-xs text-slate-500">Sản phẩm chưa có mô tả chi tiết.</p>
+    <aside v-if="contactFooterVisible" class="mt-5 rounded-[8px] border border-blue-100 bg-blue-50/60 p-4 text-xs text-slate-700">
+      <h3 class="text-sm font-bold text-slate-900">{{ contactFooterTitle }}</h3>
+      <p class="mt-2 whitespace-pre-line">{{ siteAddress }}</p>
+      <p v-if="contactFooterLandmark" class="mt-1 whitespace-pre-line text-slate-600">{{ contactFooterLandmark }}</p>
+      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2 font-semibold text-blue-700">
+        <a v-if="sitePhone" :href="telHref(sitePhone)" class="hover:underline">Hotline: {{ sitePhone }}</a>
+        <a v-if="siteHotline && siteHotline !== sitePhone" :href="telHref(siteHotline)" class="hover:underline">{{ siteHotline }}</a>
+        <a v-if="contactFooterWebsite" :href="contactFooterWebsite" target="_blank" rel="noopener noreferrer" class="hover:underline">{{ contactFooterWebsite.replace(/^https?:\/\//, '') }}</a>
+        <a v-if="contactFooterMaps" :href="contactFooterMaps" target="_blank" rel="noopener noreferrer" class="hover:underline">Xem Maps</a>
+      </div>
+    </aside>
   </section>
 </template>

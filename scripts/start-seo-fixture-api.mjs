@@ -11,6 +11,8 @@ import {
   productCardB,
   productRelations,
   settingsFor,
+  publicPages,
+  categoryListing,
 } from '../tests/seo/fixtures/api-fixtures.mjs'
 
 const port = Number(process.env.SEO_FIXTURE_PORT || 4174)
@@ -77,6 +79,22 @@ const server = createServer(async (request, response) => {
   if (url.pathname === '/api/v1/menus/footer') return send(request, response, 200, footerMenu)
   if (url.pathname === '/api/v1/cart') return send(request, response, 200, emptyCart)
   if (url.pathname === '/api/v1/wishlist') return send(request, response, 200, { ids: [] })
+
+  const pageMatch = url.pathname.match(/^\/api\/v1\/pages\/([^/]+)$/)
+  if (pageMatch) {
+    const slug = decodeURIComponent(pageMatch[1])
+    if (slug === 'page-request-error') return send(request, response, 503, { message: 'Fixture unavailable' })
+    if (slug === 'page-invalid-data') return send(request, response, 200, { page: { title: 'Invalid payload' } })
+    const page = publicPages[slug === 'ancienne-politique' ? 'chinh-sach-fixture' : slug]
+    return page ? send(request, response, 200, { page }) : send(request, response, 404, { message: 'Not found' })
+  }
+
+  const categoryMatch = url.pathname.match(/^\/api\/v1\/categories\/([^/]+)$/)
+  if (categoryMatch) {
+    return categoryMatch[1] === 'linh-kien'
+      ? send(request, response, 200, categoryListing)
+      : send(request, response, 404, { message: 'Not found' })
+  }
 
   const productMatch = url.pathname.match(/^\/api\/v1\/products\/([^/]+)$/)
   if (productMatch) {

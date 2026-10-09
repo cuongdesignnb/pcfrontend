@@ -152,8 +152,38 @@ export const footerMenu = {
   menu: { id: 2, name: 'Footer fixture', slug: 'footer-fixture' },
   items: [
     { ...menuItem(11, 'Về Fixture Store', '/gioi-thieu'), children: [menuItem(12, 'Liên hệ', '/lien-he')] },
-    { ...menuItem(13, 'Chính sách', '/van-chuyen'), children: [menuItem(14, 'Vận chuyển', '/van-chuyen')] },
+    { ...menuItem(13, 'Chính sách', '/van-chuyen'), children: [
+      menuItem(14, 'Vận chuyển', '/van-chuyen'),
+      menuItem(15, 'Chính sách fixture', '/chinh-sach-fixture'),
+      menuItem(16, 'Điều khoản fixture', '/dieu-khoan-fixture'),
+      menuItem(17, 'Danh mục fixture', '/linh-kien'),
+    ] },
   ],
+}
+
+export const publicPages = {
+  'chinh-sach-fixture': {
+    id: 501, title: 'Chính sách fixture', slug: 'chinh-sach-fixture',
+    body: '<p>Nội dung chính sách từ CMS.</p><h2>Điều kiện áp dụng</h2>'
+      + '<table><tbody><tr><th>Điều kiện</th><td>' + 'Dữ liệu kiểm thử '.repeat(12) + '</td></tr></tbody></table>'
+      + '<p><a href="tel:0123456789">Hotline fixture</a></p>',
+    meta_title: 'Chính sách SEO fixture', meta_description: 'Mô tả chính sách fixture.',
+    canonical_path: '/chinh-sach-fixture', updated_at: '2026-10-09T05:19:04Z',
+  },
+  'dieu-khoan-fixture': {
+    id: 502, title: 'Điều khoản fixture', slug: 'dieu-khoan-fixture',
+    body: '<p>Điều khoản khác không được giữ nội dung trang trước.</p>',
+    meta_title: '   ', meta_description: null,
+    canonical_path: '/dieu-khoan-fixture', updated_at: null,
+  },
+}
+
+export const categoryListing = {
+  category: { ...category, parent_id: null, description: null, image: null, icon: null, meta_title: 'Linh kiện SEO fixture', meta_description: 'Danh mục fixture', children: [] },
+  promo_banner: null,
+  products: { data: [productCardA, productCardB], current_page: 1, last_page: 1, per_page: 24, total: 2 },
+  recommendations: [],
+  filters: { brands: [], price_range: { min: 0, max: 1500000 }, price_presets: [], groups: [], specs: [] },
 }
 
 const hero = (id, title, imageUrl) => ({

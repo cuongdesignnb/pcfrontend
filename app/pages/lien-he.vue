@@ -1,7 +1,20 @@
 <script setup lang="ts">
 import { toTelHref } from '~/utils/contactLinks'
 
-const { siteName, siteHotline, siteEmail, siteAddress, businessHours } = useSettings()
+const { siteName, siteHotline, siteEmail, siteAddress, businessHours, getString } = useSettings()
+
+// Admin settings keep only a Google Maps embed src; re-check the shape so a
+// stale or edited value can never turn into an arbitrary iframe.
+const mapEmbedUrl = computed(() => {
+  const value = getString('contact_map_embed_url').trim()
+  return /^https:\/\/(?:www\.)?google\.com\/maps\/embed\?/i.test(value)
+    || /^https:\/\/(?:maps|www)\.google\.com\/maps\?(?:[^#]*&)?output=embed(?:&|$)/i.test(value)
+    ? value
+    : ''
+})
+const directionsUrl = computed(() => siteAddress.value
+  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteAddress.value)}`
+  : '')
 
 useSeoDocument(() => ({
   title: `Liên hệ - ${siteName.value}`,
@@ -27,6 +40,7 @@ useSeoDocument(() => ({
               <div>
                 <p class="font-medium text-gray-900">Địa chỉ</p>
                 <p v-if="siteAddress" class="text-gray-600">{{ siteAddress }}</p>
+                <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block text-sm font-medium text-blue-600 hover:underline">Chỉ đường →</a>
               </div>
             </div>
             <div class="flex items-start gap-3">
@@ -76,5 +90,19 @@ useSeoDocument(() => ({
         </form>
       </div>
     </div>
+
+    <section v-if="mapEmbedUrl" class="mt-10" aria-labelledby="contact-map-title">
+      <h2 id="contact-map-title" class="text-xl font-semibold text-gray-900 mb-4">Bản đồ cửa hàng</h2>
+      <div class="overflow-hidden rounded-xl border border-gray-200 bg-gray-100 aspect-[4/3] md:aspect-[16/7]">
+        <iframe
+          :src="mapEmbedUrl"
+          :title="`Bản đồ ${siteName}`"
+          class="h-full w-full border-0"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          allowfullscreen
+        />
+      </div>
+    </section>
   </div>
 </template>

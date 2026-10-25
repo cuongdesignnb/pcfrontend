@@ -98,6 +98,13 @@ export interface ProductQuestion {
   answers: ProductQuestionAnswer[]
 }
 
+export interface ProductVideo {
+  id: string
+  watch_url: string
+  embed_url: string
+  thumbnail_url: string
+}
+
 export interface ProductDetail {
   id: number
   name: string
@@ -123,6 +130,7 @@ export interface ProductDetail {
   variants: ProductVariant[]
   highlights: ProductHighlight[]
   detail_blocks: ProductDetailBlock[]
+  video?: ProductVideo | null
   specifications: ProductSpecification[]
   has_specifications: boolean
   technical_section_title: string

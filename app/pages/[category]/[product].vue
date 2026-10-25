@@ -6,6 +6,8 @@ import { productUrl } from '~/utils/urls'
 import { publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
 import { isUsablePublicImageUrl } from '~/utils/media'
 
+definePageMeta({ hideMobileBottomBar: true })
+
 const route = useRoute()
 const config = useRuntimeConfig()
 const cart = useCart()
@@ -158,6 +160,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
           <div class="pdp-area-tabs"><ProductAnchorTabs :has-compatibility="Boolean(product.component_type)" :rating-count="product.rating.count" :questions-count="product.questions_count" /></div>
 
           <div class="pdp-area-content pdp-content-main">
+            <ProductVideo v-if="product.video" :video="product.video" :title="product.name" />
             <ProductDescription :description="product.description" :blocks="product.detail_blocks" :title="product.description_heading" />
             <div class="pdp-spec-compat-grid">
               <ProductSpecificationTable :specifications="product.specifications" :title="product.technical_section_title" />

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ hideMobileBottomBar: true })
+
 const { siteName, formatMoney } = useSettings()
 const {
   response,

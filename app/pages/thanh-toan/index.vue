@@ -15,6 +15,7 @@ import { createUuid } from '~/utils/createUuid'
 
 definePageMeta({
   ssr: false,
+  hideMobileBottomBar: true,
 })
 
 const config = useRuntimeConfig()

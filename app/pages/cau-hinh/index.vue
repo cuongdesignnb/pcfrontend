@@ -2,6 +2,8 @@
 import type { BuilderComponentType, BuilderFiltersState, BuilderPreset, BuilderProductOption, BuilderSelection, BuilderSort } from '~/types/pc-builder'
 import { productUrl } from '~/utils/urls'
 
+definePageMeta({ hideMobileBottomBar: true })
+
 const route = useRoute()
 const config = useRuntimeConfig()
 const toast = useToast()

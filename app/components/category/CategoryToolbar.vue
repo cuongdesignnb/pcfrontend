@@ -45,7 +45,7 @@ const emit = defineEmits<{
       <label class="category-sort-select">
         <span>Sắp xếp theo</span>
         <select :value="sort" aria-label="Sắp xếp sản phẩm" @change="emit('updateSort', ($event.target as HTMLSelectElement).value)">
-          <option v-for="option in sortOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+          <option v-for="option in sortOptions" :key="option.value" :value="option.value" :selected="option.value === sort">{{ option.label }}</option>
         </select>
       </label>
     </div>

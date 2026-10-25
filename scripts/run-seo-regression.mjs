@@ -71,9 +71,17 @@ function packageVersion(name) {
 
 function browserVersion() {
   if (!existsSync(browserPath)) return null
+  // Chrome on Windows can open a persistent browser instead of exiting on
+  // --version. Read its executable version without opening an extra window.
+  if (process.platform === 'win32') {
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-Command', '(Get-Item -LiteralPath $env:SEO_BROWSER_PATH).VersionInfo.ProductVersion'], {
+      env: { ...process.env, SEO_BROWSER_PATH: browserPath }, encoding: 'utf8', windowsHide: true, timeout: 5_000,
+    })
+    return String(result.stdout || '').trim() || null
+  }
   const profile = resolve(runRoot, 'chrome-version-profile')
   mkdirSync(profile, { recursive: true })
-  const result = spawnSync(browserPath, ['--version', '--user-data-dir=' + profile, '--no-first-run'], { encoding: 'utf8', windowsHide: true })
+  const result = spawnSync(browserPath, ['--version', '--user-data-dir=' + profile, '--no-first-run'], { encoding: 'utf8', windowsHide: true, timeout: 5_000 })
   return (result.stdout || result.stderr || '').trim() || null
 }
 
@@ -314,7 +322,7 @@ function writeVerification(summary, manifest) {
     && summary.skipped === 0
     && summary.flaky === 0
   const lines = [
-    'FRONTEND P1 SEO REGRESSION',
+    'FRONTEND BUILT-ARTIFACT SEO REGRESSION',
     'Source HEAD=' + manifest.source.head,
     'Source diff hash=' + manifest.source.diff_hash,
     'Runner=@playwright/test ' + (manifest.runner.playwright_version || 'unknown'),
@@ -331,10 +339,10 @@ function writeVerification(summary, manifest) {
     'Product media behavior=' + (manifest.layers.product_media ? 'PASS' : 'FAIL'),
     'Tests total=' + summary.total + ' passed=' + summary.passed + ' failed=' + summary.failed + ' skipped=' + summary.skipped + ' flaky=' + summary.flaky,
     'Clean reruns=' + manifest.clean_reruns.length,
-    'Typecheck=PASS (baseline; not rerun by this script)',
+    'Typecheck=NOT_RUN_BY_THIS_SCRIPT (see task verification report)',
     'Production build=' + (manifest.build.exit_code === 0 ? 'PASS' : 'FAIL'),
-    'Diff check=PASS (verified after runner source changes)',
-    'Backend evidence=IMPORTED_MATCHING_SNAPSHOT (207 tests / 1,402 assertions)',
+    'Diff check=NOT_RUN_BY_THIS_SCRIPT',
+    'Backend evidence=NOT_RUN_BY_THIS_SCRIPT',
     'Frontend regression=' + (regressionPass ? 'PASS' : 'FAIL'),
     'Product media production data=BLOCKED_DATA',
     'Production verification=NOT_PERFORMED',
@@ -448,7 +456,7 @@ const manifest = {
     playwright_version: packageVersion('@playwright/test'),
     parse5_version: packageVersion('parse5'),
     config: 'playwright.seo.config.mjs',
-    test_files: ['tests/seo/seo-regression.spec.ts'],
+    test_files: ['tests/seo/seo-regression.spec.ts', 'tests/seo/public-pages.spec.ts'],
   },
   environment: {
     node: process.version,

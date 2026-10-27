@@ -1522,3 +1522,9 @@ button:disabled { cursor: not-allowed; opacity: .65; }
   .has-mobile-bottom-bar .site-chat-button,
   .has-page-action-bar .site-chat-button { bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
+
+/* Desktop shows DesktopContactDock (call, Zalo, Messenger) instead of the
+   single floating chat button. */
+@media (min-width: 1024px) {
+  .site-chat-button { display: none; }
+}

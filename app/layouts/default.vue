@@ -11,5 +11,6 @@ const showMobileBottomBar = computed(() => route.meta.hideMobileBottomBar !== tr
     <main class="min-h-[60vh]"><slot /></main>
     <SiteFooter />
     <MobileBottomBar v-if="showMobileBottomBar" />
+    <DesktopContactDock />
   </div>
 </template>

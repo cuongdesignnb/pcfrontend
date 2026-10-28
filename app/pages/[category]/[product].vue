@@ -12,7 +12,7 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const cart = useCart()
 const toast = useToast()
-const { siteName, socialZalo, socialMessenger, currency } = useSettings()
+const { siteName, socialZalo, socialMessenger, currency, formatMoney } = useSettings()
 const { start: startBuyNow } = useBuyNow()
 const { track } = useEcommerceTracking()
 const categorySlug = computed(() => String(route.params.category || ''))
@@ -91,9 +91,24 @@ if (product.value && !canonicalPath.value) throw createError({ statusCode: 404, 
 if (product.value && canonicalPath.value && route.path !== canonicalPath.value) {
   await navigateTo({ path: canonicalPath.value, query: route.query }, { redirectCode: 301 })
 }
+// "Mô tả SEO" from the admin wins; otherwise fall back to the short
+// description, then the start of the product description, so every product
+// page has a meta description. Products with no text at all (common for
+// KIOT imports) get one built from their name, price and warranty.
+const seoDescription = computed(() => {
+  const value = product.value
+  if (!value) return undefined
+  let text = (value.seo.description || value.short_description || value.description || '').replace(/\s+/g, ' ').trim()
+  if (!text) {
+    const price = value.pricing.display_price > 0 ? ` giá ${formatMoney(value.pricing.display_price)}` : ''
+    const warranty = value.warranty_months ? `, bảo hành ${value.warranty_months} tháng` : ''
+    text = `Mua ${value.name}${price} tại ${siteName.value}${warranty}.`
+  }
+  return text.length > 160 ? `${text.slice(0, 157).replace(/\s+\S*$/, '')}…` : text
+})
 const { origin, canonicalUrl } = useSeoDocument(() => ({
   title: product.value?.seo.title || (product.value ? `${product.value.name} - ${siteName.value}` : `Sản phẩm - ${siteName.value}`),
-  description: product.value?.seo.description || product.value?.short_description,
+  description: seoDescription.value,
   path: canonicalPath.value,
   image: primaryProductImage.value,
   robots: product.value ? 'index,follow' : 'noindex,follow',
@@ -105,7 +120,7 @@ useHead(() => {
   const canonical = canonicalUrl.value
   const productSchema: Record<string, unknown> = {
     '@context': 'https://schema.org', '@type': 'Product', name: product.value.name,
-    description: product.value.seo.description || product.value.short_description || undefined,
+    description: seoDescription.value,
     brand: product.value.brand ? { '@type': 'Brand', name: product.value.brand.name } : undefined,
   }
   const imageUrls = publicProductImages.value

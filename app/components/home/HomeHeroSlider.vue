@@ -75,7 +75,7 @@ onUnmounted(clearTimer)
           <img :src="currentBanner.image || ''" :alt="currentBanner.title" class="home-hero-image" fetchpriority="high">
           <div v-if="currentBanner.metadata?.text_in_image !== 'true' && (currentBanner.title || currentBanner.description)" class="home-hero-caption">
             <span v-if="currentBanner.badge" class="home-hero-badge">{{ currentBanner.badge }}</span>
-            <h1>{{ currentBanner.title || fallbackHeading }}</h1>
+            <h2>{{ currentBanner.title || fallbackHeading }}</h2>
             <small v-if="currentBanner.description">{{ currentBanner.description }}</small>
           </div>
         </NuxtLink>
@@ -83,7 +83,7 @@ onUnmounted(clearTimer)
           <img :src="currentBanner.image || ''" :alt="currentBanner.title" class="home-hero-image" fetchpriority="high">
           <div v-if="currentBanner.metadata?.text_in_image !== 'true' && (currentBanner.title || currentBanner.description)" class="home-hero-caption">
             <span v-if="currentBanner.badge" class="home-hero-badge">{{ currentBanner.badge }}</span>
-            <h1>{{ currentBanner.title || fallbackHeading }}</h1>
+            <h2>{{ currentBanner.title || fallbackHeading }}</h2>
             <small v-if="currentBanner.description">{{ currentBanner.description }}</small>
           </div>
         </div>
@@ -102,7 +102,7 @@ onUnmounted(clearTimer)
       </div>
     </template>
     <div v-else class="home-hero-empty">
-      <h1>{{ fallbackHeading }}</h1>
+      <h2>{{ fallbackHeading }}</h2>
       <p>Đang cập nhật chương trình nổi bật</p>
     </div>
   </section>

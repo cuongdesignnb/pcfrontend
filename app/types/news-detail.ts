@@ -1,3 +1,4 @@
+import type { FaqItem } from '~/utils/faqSchema'
 import type { NewsArticle, NewsBuilderBanner } from '~/types/news'
 
 export interface NewsDetailCategory {
@@ -40,6 +41,7 @@ export interface NewsDetailPost {
     robots?: string
   }
   toc: NewsTocItem[]
+  faq?: FaqItem[]
 }
 
 export interface NewsArticleDetailResponse {

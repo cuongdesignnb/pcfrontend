@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { faqPageSchema } from '~/utils/faqSchema'
 import { categorySortOptions, useCategoryListing } from '~/composables/useCategoryListing'
 import type {
   CategoryActiveFilter,
@@ -217,6 +218,8 @@ const categoryJsonLd = computed(() => {
     },
   ].filter(item => item.item)
 
+  const faq = faqPageSchema(category.value.faq, canonicalUrl.value)
+
   return serializeJsonLd({
     '@context': 'https://schema.org',
     '@graph': [
@@ -236,6 +239,7 @@ const categoryJsonLd = computed(() => {
         '@type': 'BreadcrumbList',
         itemListElement: breadcrumbItems,
       },
+      ...(faq ? [faq] : []),
     ],
   })
 })

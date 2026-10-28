@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Fetch site settings (logo, favicon, etc.) on app init
-const { fetchSettings, siteFavicon } = useSettings()
+const { fetchSettings, siteFavicon, getString } = useSettings()
 await fetchSettings()
+useSiteTracking()
 
 const route = useRoute()
 const privateRoots = new Set([
@@ -14,8 +15,17 @@ const isPrivateRoute = computed(() => {
   return privateRoots.has(firstSegment)
 })
 
+// Search Console "HTML tag" verification: the admin pastes either the
+// content value or the whole <meta> tag; keep only a safe token.
+const googleSiteVerification = computed(() => {
+  const raw = getString('google_site_verification').trim()
+  const value = raw.match(/content=["']([^"']+)["']/i)?.[1] ?? raw
+  return /^[\w-]{10,100}$/.test(value) ? value : undefined
+})
+
 useSeoMeta({
   robots: () => isPrivateRoute.value ? 'noindex,nofollow' : undefined,
+  googleSiteVerification: () => googleSiteVerification.value,
 })
 
 // Dynamic favicon from admin settings

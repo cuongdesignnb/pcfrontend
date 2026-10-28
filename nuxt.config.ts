@@ -104,6 +104,7 @@ export default defineNuxtConfig({
     '/sitemap.xml': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
     '/sitemaps/**': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
     '/robots.txt': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=3600' } },
+    '/llms.txt': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=3600' } },
     '/san-pham': { ssr: true, isr: 60, swr: false },
     '/san-pham/**': { ssr: true, isr: 60, swr: false },
     '/danh-muc': { ssr: true, isr: 300, swr: false },

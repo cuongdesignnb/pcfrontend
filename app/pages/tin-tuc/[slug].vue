@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { faqPageSchema } from '~/utils/faqSchema'
 import type { NewsDetailPost } from '~/types/news-detail'
 import { publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
 import { newsCategoryUrl } from '~/utils/news'
@@ -87,10 +88,12 @@ const articleJsonLd = computed(() => {
     item: canonicalUrl.value,
   })
 
-  const graph = [
+  const graph: Record<string, unknown>[] = [
     { '@context': 'https://schema.org', ...articleSchema },
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: breadcrumbItems },
   ]
+  const faq = faqPageSchema(article.faq, canonicalUrl.value)
+  if (faq) graph.push(faq)
 
   return serializeJsonLd({ '@context': 'https://schema.org', '@graph': graph })
 })

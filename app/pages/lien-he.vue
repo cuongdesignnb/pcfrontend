@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { toTelHref } from '~/utils/contactLinks'
+import { serializeJsonLd } from '~/composables/useSeoDocument'
 
 const { siteName, siteHotline, siteEmail, siteAddress, businessHours, getString } = useSettings()
 
@@ -16,11 +17,16 @@ const directionsUrl = computed(() => siteAddress.value
   ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteAddress.value)}`
   : '')
 
-useSeoDocument(() => ({
+const { origin } = useSeoDocument(() => ({
   title: `Liên hệ - ${siteName.value}`,
   description: `Liên hệ ${siteName.value} - Hỗ trợ mua hàng, tư vấn kỹ thuật, bảo hành.`,
   path: '/lien-he',
 }))
+
+const business = useBusinessSchema(origin)
+useHead(() => business.value
+  ? { script: [{ key: 'contact-business-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd({ '@context': 'https://schema.org', ...business.value }) }] }
+  : {})
 </script>
 
 <template>

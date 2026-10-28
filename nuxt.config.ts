@@ -93,7 +93,8 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+        // Keyed so app.vue can swap in the favicon set in admin settings.
+        { key: 'favicon', rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
       ]
     }
   },

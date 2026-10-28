@@ -28,12 +28,20 @@ useSeoMeta({
   googleSiteVerification: () => googleSiteVerification.value,
 })
 
-// Dynamic favicon from admin settings
+// Favicon from admin settings replaces the bundled /favicon.ico (same key)
+// and doubles as the 180px touch icon for iOS home screens.
+const faviconType = (href: string) => {
+  const ext = href.split(/[?#]/)[0]?.split('.').pop()?.toLowerCase()
+  return ({ webp: 'image/webp', png: 'image/png', svg: 'image/svg+xml', ico: 'image/x-icon', jpg: 'image/jpeg', jpeg: 'image/jpeg' } as Record<string, string>)[ext ?? '']
+}
 useHead({
   htmlAttrs: { lang: 'vi' },
   link: computed(() =>
     siteFavicon.value
-      ? [{ rel: 'icon', type: 'image/png', href: siteFavicon.value }]
+      ? [
+          { key: 'favicon', rel: 'icon', type: faviconType(siteFavicon.value), href: siteFavicon.value },
+          { key: 'apple-touch-icon', rel: 'apple-touch-icon', sizes: '180x180', href: siteFavicon.value },
+        ]
       : []
   ),
 })

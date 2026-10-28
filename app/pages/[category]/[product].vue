@@ -176,7 +176,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
 
           <div class="pdp-area-content pdp-content-main">
             <ProductVideo v-if="product.video" :video="product.video" :title="product.name" />
-            <ProductDescription :description="product.description" :blocks="product.detail_blocks" :title="product.description_heading" />
+            <ProductDescription :description="product.description" :description-html="product.description_html" :blocks="product.detail_blocks" :title="product.description_heading" />
             <div class="pdp-spec-compat-grid">
               <ProductSpecificationTable :specifications="product.specifications" :title="product.technical_section_title" />
               <ProductCompatibility v-if="product.component_type" :slug="product.slug" />

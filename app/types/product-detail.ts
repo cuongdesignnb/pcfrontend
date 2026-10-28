@@ -137,6 +137,8 @@ export interface ProductDetail {
   description_heading: string
   short_description: string | null
   description: string | null
+  /** Admin editor HTML, sanitized by the API (safe links, lists, headings). */
+  description_html?: string | null
   seo: {
     title: string | null
     description: string | null

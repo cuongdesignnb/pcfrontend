@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ProductDetailBlock } from '~/types/product-detail'
 
-const props = defineProps<{ description: string | null; blocks: ProductDetailBlock[]; title?: string }>()
+const props = defineProps<{ description: string | null; descriptionHtml?: string | null; blocks: ProductDetailBlock[]; title?: string }>()
 const { getBoolean, getString, siteAddress, sitePhone, siteHotline } = useSettings()
 
 const heroBlock = computed(() => props.blocks.find(block => block.type === 'hero_banner'))
@@ -118,8 +118,10 @@ const payloadFeatures = (payload: Record<string, unknown> | undefined): string[]
       </template>
     </div>
 
-    <p v-if="description" class="mt-4 whitespace-pre-line border-t border-slate-100 pt-3 text-xs leading-5 text-slate-700">{{ description }}</p>
-    <p v-if="!description && !blocks.length" class="text-xs text-slate-500">Sản phẩm chưa có mô tả chi tiết.</p>
+    <!-- The product API sanitizes description_html before it reaches v-html. -->
+    <div v-if="descriptionHtml" class="pdp-description-html mt-4 border-t border-slate-100 pt-3" v-html="descriptionHtml" />
+    <p v-else-if="description" class="mt-4 whitespace-pre-line border-t border-slate-100 pt-3 text-xs leading-5 text-slate-700">{{ description }}</p>
+    <p v-if="!description && !descriptionHtml && !blocks.length" class="text-xs text-slate-500">Sản phẩm chưa có mô tả chi tiết.</p>
     <aside v-if="contactFooterVisible" class="mt-5 rounded-[8px] border border-blue-100 bg-blue-50/60 p-4 text-xs text-slate-700">
       <h3 class="text-sm font-bold text-slate-900">{{ contactFooterTitle }}</h3>
       <p class="mt-2 whitespace-pre-line">{{ siteAddress }}</p>

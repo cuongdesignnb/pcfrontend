@@ -38,6 +38,14 @@ export default defineNuxtRouteMiddleware((to) => {
     return navigateTo({ path: exactAliases[path], query }, { redirectCode: 301 })
   }
 
+  // Old filter links repeated the brand slug (?brands=delldell); point them at the real one.
+  if (typeof to.query.brands === 'string') {
+    const brands = to.query.brands.split(',').map(slug => slug.match(/^(.{2,})\1$/)?.[1] ?? slug).join(',')
+    if (brands !== to.query.brands) {
+      return navigateTo({ path: to.path, query: { ...to.query, brands } }, { redirectCode: 301 })
+    }
+  }
+
   const isPublicListing = path === '/san-pham'
     || path === '/tin-tuc'
     || path.startsWith('/tin-tuc/')

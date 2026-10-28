@@ -76,7 +76,7 @@ const productPath = (product: ProductCard) => productUrl(product)
       </div>
     </div>
 
-    <div class="pdp-option-row">
+    <div v-if="product.warranty_months" class="pdp-option-row">
       <span class="pdp-option-label">Gói bảo hành mở rộng</span>
       <span class="pdp-option-chip pdp-option-chip--selected">Mặc định ({{ product.warranty_months || 0 }}T)</span>
     </div>

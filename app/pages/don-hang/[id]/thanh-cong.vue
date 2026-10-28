@@ -49,6 +49,17 @@ const statusLabels: Record<string, string> = {
   not_required: 'Đơn hàng đã được ghi nhận',
 }
 
+const paymentPurposeText: Record<string, string> = {
+  full: 'Quét mã QR để thanh toán toàn bộ đơn hàng.',
+  deposit: 'Quét mã QR để chuyển tiền đặt cọc. Phần còn lại chuyển khoản sau hoặc trả khi nhận hàng.',
+  remaining: 'Đã nhận tiền cọc. Quét mã QR nếu muốn chuyển nốt phần còn lại, hoặc trả khi nhận hàng.',
+}
+const paymentStatusLabel = computed(() => ({
+  paid: 'Đã thanh toán',
+  deposited: 'Đã đặt cọc',
+  refunded: 'Đã hoàn tiền',
+})[order.value?.payment_status as string] ?? 'Chờ thanh toán')
+
 const integrationMessage = computed(
   () => statusLabels[order.value?.kiot_sync_status] || 'Đang ghi nhận đơn hàng',
 )
@@ -182,7 +193,7 @@ useSeoMeta({ title: () => 'Trạng thái đơn hàng - ' + siteName.value })
           Thanh toán bằng chuyển khoản
         </h2>
         <p class="text-gray-600 mb-4">
-          Đơn hàng đã được xác nhận tồn kho trước khi thanh toán.
+          {{ paymentPurposeText[order.payment.purpose ?? 'full'] }}
         </p>
         <img
           :src="order.payment.qr_url"
@@ -208,12 +219,14 @@ useSeoMeta({ title: () => 'Trạng thái đơn hàng - ' + siteName.value })
             <span 
               :class="[
                 'px-3 py-1 rounded-full text-sm font-medium',
-                order.payment_status === 'paid' 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-yellow-100 text-yellow-700'
+                order.payment_status === 'paid'
+                  ? 'bg-green-100 text-green-700'
+                  : order.payment_status === 'deposited'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-yellow-100 text-yellow-700'
               ]"
             >
-              {{ order.payment_status === 'paid' ? 'Đã thanh toán' : 'Chờ thanh toán' }}
+              {{ paymentStatusLabel }}
             </span>
           </div>
 
@@ -261,6 +274,16 @@ useSeoMeta({ title: () => 'Trạng thái đơn hàng - ' + siteName.value })
             <span class="text-primary-600">
               {{ new Intl.NumberFormat('vi-VN').format(order.total) }}₫
             </span>
+          </div>
+          <div v-if="Number(order.amount_paid) > 0" class="mt-2 space-y-1 text-sm text-gray-600">
+            <div class="flex justify-between">
+              <span>Đã thanh toán{{ order.payment_status === 'deposited' ? ' (tiền cọc)' : '' }}</span>
+              <span>{{ new Intl.NumberFormat('vi-VN').format(order.amount_paid) }}₫</span>
+            </div>
+            <div v-if="order.remaining_amount > 0" class="flex justify-between font-medium text-gray-800">
+              <span>Còn lại (chuyển khoản hoặc trả khi nhận hàng)</span>
+              <span>{{ new Intl.NumberFormat('vi-VN').format(order.remaining_amount) }}₫</span>
+            </div>
           </div>
         </div>
 

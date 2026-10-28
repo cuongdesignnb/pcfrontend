@@ -62,6 +62,7 @@ const form = reactive<CheckoutForm>({
   shipping_ward_code: '',
   shipping_method: 'standard',
   payment_method: '',
+  payment_option: 'full',
   notes: '',
 })
 
@@ -134,6 +135,11 @@ const quoteLoading = computed(() => quotes.loading.value)
 const shippingMethods = computed(() => quotes.quote.value?.shipping_methods ?? [])
 const hasCartError = computed(() => checkoutMode.value === 'cart' && Boolean(cart.error.value))
 const quoteHasUsablePayment = computed(() => paymentMethods.value.some(method => method.code === form.payment_method && method.available))
+// Deposit the shop accepts for this quote (Cài đặt → Thanh toán); null hides the choice.
+const sepayDepositAmount = computed(() => paymentMethods.value.find(method => method.code === 'sepay')?.deposit_amount ?? null)
+watch(sepayDepositAmount, (amount) => {
+  if (!amount && !orderResult.value) form.payment_option = 'full'
+})
 
 const issueFor = (field: string): string => {
   if (serverFieldErrors.value[field]) return serverFieldErrors.value[field]
@@ -257,9 +263,9 @@ const resumeAttempt = async (): Promise<boolean> => {
     paymentData.value = response.payment ?? null
     paymentPending.value = response.order.payment_method === 'sepay'
       && !response.payment
-      && response.order.payment_status !== 'paid'
+      && !['paid', 'deposited'].includes(response.order.payment_status)
       && !isTerminalPaymentOrder(response.order)
-    if (paymentData.value && response.order.payment_status === 'paid') paymentVerified.value = true
+    if (paymentData.value && ['paid', 'deposited'].includes(response.order.payment_status)) paymentVerified.value = true
     return true
   } catch {
     sessionStorage.removeItem('pc-checkout-attempt')
@@ -351,6 +357,7 @@ const placeOrder = async () => {
         shipping_method: form.shipping_method,
         notes: form.notes,
         payment_method: form.payment_method,
+        payment_option: form.payment_method === 'sepay' ? form.payment_option : undefined,
         items: displayLines.value.map(item => ({
           product_id: item.product_id,
           variant_id: item.variant_id,
@@ -413,6 +420,7 @@ const checkPaymentStatus = async () => {
   try {
     const response = await $fetch<{
       paid: boolean
+      deposited?: boolean
       can_pay: boolean
       payment_status: string
       order_status: string
@@ -429,11 +437,16 @@ const checkPaymentStatus = async () => {
       paymentData.value = response.payment
       paymentPending.value = false
     }
-    if (response.paid) {
+    // A confirmed deposit ends this step too; the order page shows the rest.
+    if (response.paid || response.deposited) {
       paymentPending.value = false
       paymentVerified.value = true
       stopPaymentPoll()
-      toast.add({ title: 'Thanh toán đã được xác nhận', description: 'Đang chuyển tới trang chi tiết đơn hàng.', color: 'success' })
+      toast.add({
+        title: response.paid ? 'Thanh toán đã được xác nhận' : 'Đã nhận tiền đặt cọc',
+        description: 'Đang chuyển tới trang chi tiết đơn hàng.',
+        color: 'success',
+      })
       window.setTimeout(() => { void router.push(`/don-hang/${orderResult.value?.id}/thanh-cong`) }, 1400)
     } else if (!response.can_pay && isTerminalPaymentOrder({ order_status: response.order_status, kiot_sync_status: response.kiot_sync_status })) {
       paymentPending.value = false
@@ -625,6 +638,23 @@ useSeoMeta({
                   <span class="checkout-method-badge">{{ method.code === 'cod' ? 'COD' : 'SePay' }}</span>
                 </label>
                 <p v-if="!paymentMethods.length" class="checkout-muted">Chưa có phương thức thanh toán khả dụng. Vui lòng liên hệ cửa hàng.</p>
+              </fieldset>
+
+              <fieldset v-if="form.payment_method === 'sepay' && sepayDepositAmount" class="checkout-radio-group checkout-payment-options">
+                <legend class="checkout-payment-options-title">Hình thức chuyển khoản</legend>
+                <label class="checkout-radio-card" :class="{ 'is-selected': form.payment_option === 'full' }">
+                  <input v-model="form.payment_option" type="radio" name="payment_option" value="full" :disabled="Boolean(orderResult)">
+                  <span class="checkout-radio-mark" aria-hidden="true" />
+                  <span class="checkout-radio-copy"><strong>Chuyển khoản toàn bộ</strong><small>Thanh toán đủ giá trị đơn hàng.</small></span>
+                  <strong class="checkout-radio-price">{{ quotes.quote.value?.summary.total == null ? '—' : formatMoney(quotes.quote.value.summary.total) }}</strong>
+                </label>
+                <label class="checkout-radio-card" :class="{ 'is-selected': form.payment_option === 'deposit' }">
+                  <input v-model="form.payment_option" type="radio" name="payment_option" value="deposit" :disabled="Boolean(orderResult)">
+                  <span class="checkout-radio-mark" aria-hidden="true" />
+                  <span class="checkout-radio-copy"><strong>Đặt cọc trước</strong><small>Phần còn lại chuyển khoản sau hoặc trả khi nhận hàng.</small></span>
+                  <strong class="checkout-radio-price">{{ formatMoney(sepayDepositAmount) }}</strong>
+                </label>
+                <small v-if="serverFieldErrors.payment_option" class="checkout-field-error">{{ serverFieldErrors.payment_option }}</small>
               </fieldset>
 
               <div v-if="form.payment_method === 'sepay' && !paymentData && !paymentPending" class="checkout-payment-hint" role="status">

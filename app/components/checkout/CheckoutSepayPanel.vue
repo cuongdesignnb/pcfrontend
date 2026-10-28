@@ -13,6 +13,12 @@ const emit = defineEmits<{
   copy: [value: string, field: string]
   check: []
 }>()
+
+const amountLabel = computed(() => ({
+  deposit: 'Số tiền đặt cọc',
+  remaining: 'Số tiền còn lại',
+  full: 'Số tiền',
+})[props.payment.purpose ?? 'full'])
 </script>
 
 <template>
@@ -25,7 +31,7 @@ const emit = defineEmits<{
       <div class="checkout-sepay-content">
         <div class="checkout-qr-frame"><img :src="payment.qr_url" :alt="`Mã QR thanh toán đơn ${payment.order_number}`"></div>
         <div class="checkout-sepay-details">
-          <div><span>Số tiền</span><strong class="checkout-red">{{ formatMoney(payment.amount) }}</strong></div>
+          <div><span>{{ amountLabel }}</span><strong class="checkout-red">{{ formatMoney(payment.amount) }}</strong></div>
           <div><span>Ngân hàng</span><strong>{{ payment.bank_code }}</strong></div>
           <div><span>Số tài khoản</span><strong>{{ payment.bank_account }} <button type="button" @click="emit('copy', payment.bank_account, 'bank_account')">{{ copiedField === 'bank_account' ? 'Đã sao chép' : 'Sao chép' }}</button></strong></div>
           <div><span>Chủ tài khoản</span><strong>{{ payment.account_name }}</strong></div>

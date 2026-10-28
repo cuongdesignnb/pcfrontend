@@ -59,6 +59,8 @@ export interface CheckoutPaymentMethod {
   description: string
   available: boolean
   disabled_reason: string | null
+  // SePay only: what a deposit would be for the quoted total, null when not offered.
+  deposit_amount?: number | null
 }
 
 export interface CheckoutIssue {
@@ -119,6 +121,7 @@ export interface CheckoutForm {
   shipping_ward_code: string
   shipping_method: string
   payment_method: string
+  payment_option: 'full' | 'deposit'
   notes: string
 }
 
@@ -128,6 +131,7 @@ export interface CheckoutPaymentData {
   bank_account: string
   account_name: string
   amount: number
+  purpose?: 'full' | 'deposit' | 'remaining'
   transfer_content: string
   order_number: string
 }
@@ -137,6 +141,10 @@ export interface CheckoutOrder {
   order_number: string
   payment_method: string
   payment_status: string
+  payment_option?: 'full' | 'deposit' | null
+  deposit_amount?: number | string | null
+  amount_paid?: number | string
+  remaining_amount?: number
   order_status: string
   subtotal: number | string
   discount: number | string

@@ -1263,3 +1263,14 @@
     font-weight: 800;
   }
 }
+
+.checkout-page .checkout-payment-options {
+  margin-top: 12px;
+}
+
+.checkout-page .checkout-payment-options-title {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}

@@ -1,4 +1,5 @@
 import type { ProductCard } from '~/types/product-detail'
+import type { FaqItem } from '~/utils/faqSchema'
 
 export interface CategoryListingCategory {
   id: number
@@ -15,6 +16,7 @@ export interface CategoryListingCategory {
   product_count?: number
   parent?: CategoryListingCategory | null
   children?: CategoryListingCategory[]
+  faq?: FaqItem[]
 }
 
 export interface CategoryListingBrand {

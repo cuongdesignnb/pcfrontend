@@ -18,6 +18,7 @@ type NodeLike = {
 type ParsedDocument = {
   title: string
   h1: string[]
+  h2: string[]
   canonical: string | null
   meta: Record<string, string>
   jsonLd: unknown[]
@@ -59,6 +60,7 @@ function parsedDocument(html: string): ParsedDocument {
   return {
     title: text(titleNode || '').trim(),
     h1: elements(document, 'h1').map(text).map(value => value.trim()).filter(Boolean),
+    h2: elements(document, 'h2').map(text).map(value => value.trim()).filter(Boolean),
     canonical: canonical ? attribute(canonical, 'href') : null,
     meta,
     jsonLd,
@@ -176,7 +178,7 @@ test.describe('P1 frontend SEO regression', () => {
     const result = await getSSR(request, 4173, '/?case=id01')
     saveSSR('id01-home-valid', result.html, result.document)
     assertIdentity(result.document, 'Fixture PC Center')
-    expect(result.document.h1).toContain('Fixture hero title')
+    expect(result.document.h2).toContain('Fixture hero title')
     expect(result.document.meta['og:image']).toBe(testOrigin + '/seo-fixtures/logo.svg')
   })
 
@@ -197,7 +199,7 @@ test.describe('P1 frontend SEO regression', () => {
     const result = await getSSR(request, 4175, '/?case=id03')
     saveSSR('id03-home-empty-identity', result.html, result.document)
     assertNoIdentity(result.document)
-    expect(result.document.h1).toContain('Fixture hero title')
+    expect(result.document.h2).toContain('Fixture hero title')
   })
 
   test('[SSR] IMG-01/IMG-02/IMG-03 product schema and image policy', async ({ request }) => {
@@ -257,14 +259,14 @@ test.describe('P1 frontend SEO regression', () => {
     const diagnostics = attachDiagnostics(page)
     await setScenario(request, 'identity-valid')
     await page.goto('/?case=id07', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('h1').first()).toHaveText('Fixture hero title')
+    await expect(page.locator('.home-hero-slider h2').first()).toHaveText('Fixture hero title')
     await expect(page).toHaveTitle('Fixture PC Center')
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', testOrigin + '/')
     await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1)
     await page.getByRole('button', { name: 'Banner tiếp theo' }).click()
-    await expect(page.locator('h1').first()).toHaveText('Second Fixture Hero')
+    await expect(page.locator('.home-hero-slider h2').first()).toHaveText('Second Fixture Hero')
     await page.getByRole('button', { name: 'Banner trước' }).click()
-    await expect(page.locator('h1').first()).toHaveText('Fixture hero title')
+    await expect(page.locator('.home-hero-slider h2').first()).toHaveText('Fixture hero title')
     expect(diagnostics.pageErrors).toEqual([])
   })
 
@@ -301,7 +303,7 @@ test.describe('P1 frontend SEO regression', () => {
     await setScenario(request, 'identity-valid')
     const ssr = await getSSR(request, 4173, '/?case=id09')
     await page.goto('/?case=id09', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('h1').first()).toHaveText('Fixture hero title')
+    await expect(page.locator('.home-hero-slider h2').first()).toHaveText('Fixture hero title')
     await expect(page).toHaveTitle(ssr.document.title)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', ssr.document.canonical || '')
     const browserJsonLd = await page.locator('script[type="application/ld+json"]').evaluate(element => JSON.parse(element.textContent || '{}'))
@@ -312,12 +314,12 @@ test.describe('P1 frontend SEO regression', () => {
     expect(diagnostics.pageErrors).toEqual([])
   })
 
-  test('[BROWSER] ID-08 empty hero keeps a meaningful H1', async ({ page, request }) => {
+  test('[BROWSER] ID-08 empty hero keeps a meaningful heading', async ({ page, request }) => {
     const diagnostics = attachDiagnostics(page)
     await setScenario(request, 'identity-no-banner')
     await page.goto('/?case=id08', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('.home-hero-empty h1')).toHaveText('Khám phá sản phẩm công nghệ')
-    await expect(page.locator('.home-hero-empty h1')).toBeVisible()
+    await expect(page.locator('.home-hero-empty h2')).toHaveText('Khám phá sản phẩm công nghệ')
+    await expect(page.locator('.home-hero-empty h2')).toBeVisible()
     expect(diagnostics.pageErrors).toEqual([])
   })
 
@@ -351,7 +353,7 @@ test.describe('P1 frontend SEO regression', () => {
     await expect(page.locator('h1').first()).toHaveText('Fixture Product B')
     await page.locator('a.site-brand').click()
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.locator('h1').first()).toHaveText('Fixture hero title')
+    await expect(page.locator('.home-hero-slider h2').first()).toHaveText('Fixture hero title')
     expect(documentNavigations.length).toBe(initialNavigationCount)
     expect(await page.evaluate(() => performance.getEntriesByType('navigation').length)).toBe(1)
     expect(diagnostics.pageErrors).toEqual([])
@@ -406,7 +408,7 @@ test.describe('P1 frontend SEO regression', () => {
     await page.goto('http://127.0.0.1:4175/?case=id11-empty', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveTitle('')
     await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0)
-    await expect(page.locator('h1').first()).toHaveText('Fixture hero title')
+    await expect(page.locator('.home-hero-slider h2').first()).toHaveText('Fixture hero title')
     expect(diagnostics.pageErrors).toEqual([])
   })
 })

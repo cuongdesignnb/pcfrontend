@@ -1,5 +1,10 @@
 export type RelationType = 'related' | 'accessory' | 'frequently_bought' | 'alternative'
 
+export interface WarrantyPackage {
+  months: number
+  price: number
+}
+
 export interface ProductImage {
   id: number
   url: string | null
@@ -123,6 +128,8 @@ export interface ProductDetail {
   }
   inventory: { quantity: number; purchasable: boolean; availability_label: string }
   warranty_months: number | null
+  /** Paid warranty options of the product's category; empty when none are offered. */
+  warranty_packages?: WarrantyPackage[]
   sold_count: number
   rating: ProductReviewSummary
   questions_count: number
@@ -161,5 +168,6 @@ export interface BuyNowItem {
   product_id: number
   product_slug: string
   variant_id: number | null
+  warranty_months?: number | null
   quantity: number
 }

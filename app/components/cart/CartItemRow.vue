@@ -102,6 +102,7 @@ function eventChecked(event: Event): boolean {
       <NuxtLink v-if="productPath" :to="productPath" class="cart-item-name">{{ item.product?.name || 'Sản phẩm không còn tồn tại' }}</NuxtLink>
       <span v-else class="cart-item-name">{{ item.product?.name || 'Sản phẩm không còn tồn tại' }}</span>
       <p v-if="variantText" class="cart-item-variant">Phiên bản: {{ variantText }}</p>
+      <p v-if="item.warranty" class="cart-item-variant">Bảo hành: {{ item.warranty.months }} tháng{{ item.warranty.price > 0 ? ` (+${formatMoney(item.warranty.price)})` : '' }}</p>
       <p v-for="[key, value] in variantAttributes" :key="key" class="cart-item-variant">{{ key }}: {{ value }}</p>
       <p class="cart-item-availability" :class="availabilityClass">
         <span class="cart-status-dot" aria-hidden="true" />

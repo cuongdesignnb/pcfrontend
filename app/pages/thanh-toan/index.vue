@@ -81,6 +81,9 @@ const buyNowLine = computed<CheckoutLine[]>(() => {
   const variant = intent.variant_id === null
     ? null
     : product.variants.find(item => item.id === intent.variant_id) ?? null
+  const warranty = product.warranty_packages?.find(item => item.months === intent.warranty_months) ?? null
+  const unitPrice = (variant?.pricing.display_price ?? product.pricing.display_price) + (warranty?.price ?? 0)
+  const originalUnitPrice = (variant?.pricing.price ?? product.pricing.price) + (warranty?.price ?? 0)
   return [{
     key: `${product.id}:${variant?.id ?? 'base'}`,
     product_id: product.id,
@@ -89,11 +92,12 @@ const buyNowLine = computed<CheckoutLine[]>(() => {
     variant_name: variant?.name ?? null,
     sku: variant?.sku ?? product.sku,
     quantity: intent.quantity,
-    unit_price: variant?.pricing.display_price ?? product.pricing.display_price,
-    original_unit_price: variant?.pricing.price ?? product.pricing.price,
-    line_total: (variant?.pricing.display_price ?? product.pricing.display_price) * intent.quantity,
-    line_discount: Math.max(0, (variant?.pricing.price ?? product.pricing.price) - (variant?.pricing.display_price ?? product.pricing.display_price)) * intent.quantity,
+    unit_price: unitPrice,
+    original_unit_price: originalUnitPrice,
+    line_total: unitPrice * intent.quantity,
+    line_discount: Math.max(0, originalUnitPrice - unitPrice) * intent.quantity,
     image: product.images[0]?.url ?? null,
+    warranty,
   }]
 })
 
@@ -125,6 +129,7 @@ const quotePayload = computed<CheckoutQuoteRequest>(() => {
     payload.items = [{
       product_id: buyNowItem.value.product_id,
       variant_id: buyNowItem.value.variant_id,
+      warranty_months: buyNowItem.value.warranty_months ?? null,
       quantity: buyNowItem.value.quantity,
     }]
   }
@@ -361,6 +366,7 @@ const placeOrder = async () => {
         items: displayLines.value.map(item => ({
           product_id: item.product_id,
           variant_id: item.variant_id,
+          warranty_months: item.warranty?.months ?? null,
           quantity: item.quantity,
         })),
       },

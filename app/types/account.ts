@@ -109,6 +109,8 @@ export interface AccountOrderDetail extends AccountOrderSummary {
     quantity: number
     price: number
     total: number
+    warranty_months?: number | null
+    warranty_price?: number
     image: { url: string | null; alt: string | null } | null
   }>
   shipping: {

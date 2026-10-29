@@ -31,6 +31,18 @@ const alternativeProducts = computed(() => alternativeData.value?.products || []
 const selection = useProductSelection(product)
 const addingToCart = ref(false)
 
+// Paid warranty options of the category: start on the package matching the
+// product's own warranty, otherwise the cheapest one.
+const warrantyPackages = computed(() => product.value?.warranty_packages ?? [])
+const defaultWarranty = () => {
+  const packages = warrantyPackages.value
+  if (!packages.length) return null
+  const own = packages.find(item => item.months === product.value?.warranty_months)
+  return (own ?? [...packages].sort((a, b) => a.price - b.price)[0])!.months
+}
+const selectedWarranty = ref<number | null>(defaultWarranty())
+watch(warrantyPackages, () => { selectedWarranty.value = defaultWarranty() })
+
 const selectedPrice = computed(() => selection.pricing.value?.display_price ?? product.value?.pricing.display_price ?? 0)
 const selectedQuantity = computed(() => selection.inventory.value?.quantity ?? product.value?.inventory.quantity ?? 0)
 const selectedPricing = computed<ProductDetail['pricing']>(() => {
@@ -65,7 +77,7 @@ const addToCart = async () => {
   if (!product.value || !onlinePurchasable.value || addingToCart.value) return
   addingToCart.value = true
   try {
-    const success = await cart.addItem(product.value.id, selection.quantity.value, selection.selectedVariant.value?.id)
+    const success = await cart.addItem(product.value.id, selection.quantity.value, selection.selectedVariant.value?.id, selectedWarranty.value)
     if (!success) throw new Error('CART_ADD_FAILED')
     track('add_to_cart', product.value, selection.quantity.value)
     toast.add({ title: 'Đã thêm vào giỏ hàng', description: `${product.value.name} × ${selection.quantity.value}`, color: 'success' })
@@ -79,7 +91,7 @@ const addToCart = async () => {
 const buyNow = async () => {
   if (!product.value || !onlinePurchasable.value) return
   track('begin_checkout', product.value, selection.quantity.value)
-  await startBuyNow({ product_id: product.value.id, product_slug: product.value.slug, variant_id: selection.selectedVariant.value?.id ?? null, quantity: selection.quantity.value })
+  await startBuyNow({ product_id: product.value.id, product_slug: product.value.slug, variant_id: selection.selectedVariant.value?.id ?? null, warranty_months: selectedWarranty.value, quantity: selection.quantity.value })
 }
 
 const openBuilder = () => {
@@ -162,9 +174,9 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
                 <span :class="onlinePurchasable ? 'font-semibold text-emerald-600' : 'text-slate-500'"><span aria-hidden="true">●</span> {{ contactOnly ? 'Liên hệ để báo giá' : (onlinePurchasable ? 'Còn hàng' : product.inventory.availability_label) }}</span>
                 <span v-if="onlinePurchasable && selectedQuantity" class="text-slate-400">{{ selectedQuantity }} sản phẩm</span>
                 <span v-if="selection.sku.value" class="text-slate-400">SKU: {{ selection.sku.value }}</span>
-                <span v-if="product.warranty_months" class="text-slate-500">Bảo hành: {{ product.warranty_months }} tháng</span>
+                <span v-if="selectedWarranty ?? product.warranty_months" class="text-slate-500">Bảo hành: {{ selectedWarranty ?? product.warranty_months }} tháng</span>
               </div>
-              <ProductVariantSelector :product="product" :variants="product.variants" :option-groups="selection.optionGroups.value" :selected-variant="selection.selectedVariant.value" :selected-attributes="selection.selectedAttributes.value" :alternative-products="alternativeProducts" :is-option-available="selection.isOptionAvailable" @select-variant="selection.chooseVariant" @select-attribute="selection.chooseAttribute" />
+              <ProductVariantSelector :product="product" :variants="product.variants" :option-groups="selection.optionGroups.value" :selected-variant="selection.selectedVariant.value" :selected-attributes="selection.selectedAttributes.value" :alternative-products="alternativeProducts" :is-option-available="selection.isOptionAvailable" :warranty-packages="warrantyPackages" :selected-warranty="selectedWarranty" @select-warranty="selectedWarranty = $event" @select-variant="selection.chooseVariant" @select-attribute="selection.chooseAttribute" />
               <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="onlinePurchasable" :adding="addingToCart" :can-build="Boolean(product.component_type)" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" @build="openBuilder" />
             </div>
           </section>

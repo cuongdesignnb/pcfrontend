@@ -170,9 +170,14 @@ export const useCart = () => {
 
   const fetchCart = async () => request('/cart')
 
-  const addItem = async (productId: number, quantity = 1, variantId?: number | null) => Boolean(await request('/cart/items', {
+  const addItem = async (productId: number, quantity = 1, variantId?: number | null, warrantyMonths?: number | null) => Boolean(await request('/cart/items', {
     method: 'POST',
-    body: { product_id: productId, quantity, ...(variantId ? { variant_id: variantId } : {}) },
+    body: {
+      product_id: productId,
+      quantity,
+      ...(variantId ? { variant_id: variantId } : {}),
+      ...(warrantyMonths ? { warranty_months: warrantyMonths } : {}),
+    },
   }))
 
   const updateItem = async (itemId: number, quantity: number) => Boolean(await request(`/cart/items/${itemId}`, {

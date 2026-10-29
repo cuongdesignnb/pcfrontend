@@ -1,4 +1,4 @@
-import type { ProductCard } from '~/types/product-detail'
+import type { WarrantyPackage, ProductCard } from '~/types/product-detail'
 
 export interface CartVariant {
   id: number
@@ -59,6 +59,8 @@ export interface CartItem {
   availability: CartItemAvailability
   product: ProductCard | null
   variant: CartVariant | null
+  /** Chosen paid warranty package; its price is already in the unit price. */
+  warranty?: WarrantyPackage | null
 }
 
 export interface CartSummary {

@@ -39,6 +39,7 @@ const availableBenefits = computed(() => props.benefits.filter(item => item.titl
           <div class="checkout-summary-item-copy">
             <strong>{{ item.name }}</strong>
             <small v-if="item.variant_name">{{ item.variant_name }}</small>
+            <small v-if="item.warranty">Bảo hành {{ item.warranty.months }} tháng{{ item.warranty.price > 0 ? ` (+${formatMoney(item.warranty.price)})` : '' }}</small>
             <small>Số lượng: {{ item.quantity }}</small>
           </div>
           <strong class="checkout-summary-item-price">{{ formatMoney(item.line_total) }}</strong>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProductCard, ProductDetail, ProductVariant } from '~/types/product-detail'
+import type { ProductCard, ProductDetail, ProductVariant, WarrantyPackage } from '~/types/product-detail'
 import { productUrl } from '~/utils/urls'
 
 defineProps<{
@@ -10,12 +10,17 @@ defineProps<{
   selectedAttributes: Record<string, string>
   alternativeProducts: ProductCard[]
   isOptionAvailable: (name: string, value: string) => boolean
+  warrantyPackages?: WarrantyPackage[]
+  selectedWarranty?: number | null
 }>()
 
 const emit = defineEmits<{
   selectVariant: [variant: ProductVariant]
   selectAttribute: [name: string, value: string]
+  selectWarranty: [months: number]
 }>()
+
+const { formatMoney } = useSettings()
 
 const groupLabel = (name: string) => name === 'Tản nhiệt' ? 'Phiên bản tản nhiệt' : name
 const productPath = (product: ProductCard) => productUrl(product)
@@ -76,7 +81,23 @@ const productPath = (product: ProductCard) => productUrl(product)
       </div>
     </div>
 
-    <div v-if="product.warranty_months" class="pdp-option-row">
+    <div v-if="warrantyPackages?.length" class="pdp-option-row">
+      <span class="pdp-option-label">Gói bảo hành</span>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          v-for="pkg in warrantyPackages"
+          :key="pkg.months"
+          type="button"
+          :aria-pressed="selectedWarranty === pkg.months"
+          class="pdp-option-chip"
+          :class="selectedWarranty === pkg.months ? 'pdp-option-chip--selected' : 'hover:border-blue-500 hover:text-blue-700'"
+          @click="emit('selectWarranty', pkg.months)"
+        >
+          {{ pkg.months }} tháng{{ pkg.price > 0 ? ` (+${formatMoney(pkg.price)})` : '' }}
+        </button>
+      </div>
+    </div>
+    <div v-else-if="product.warranty_months" class="pdp-option-row">
       <span class="pdp-option-label">Gói bảo hành mở rộng</span>
       <span class="pdp-option-chip pdp-option-chip--selected">Mặc định ({{ product.warranty_months || 0 }}T)</span>
     </div>

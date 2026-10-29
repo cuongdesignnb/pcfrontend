@@ -1,3 +1,4 @@
+import type { WarrantyPackage } from '~/types/product-detail'
 import type { CartItem } from '~/types/cart'
 
 export interface CheckoutLocation {
@@ -29,6 +30,7 @@ export interface CheckoutLine {
   line_total: number
   line_discount: number
   image: string | null
+  warranty?: WarrantyPackage | null
 }
 
 export interface CheckoutSummary {
@@ -101,6 +103,7 @@ export interface CheckoutQuoteRequest {
   items?: Array<{
     product_id: number
     variant_id: number | null
+    warranty_months?: number | null
     quantity: number
   }>
   shipping_province_code: string
@@ -183,4 +186,5 @@ export const cartItemToCheckoutLine = (item: CartItem): CheckoutLine => ({
   line_total: item.pricing.line_total,
   line_discount: item.pricing.line_saving,
   image: item.product?.images?.[0]?.url ?? null,
+  warranty: item.warranty ?? null,
 })

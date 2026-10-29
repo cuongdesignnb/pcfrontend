@@ -626,6 +626,26 @@
   line-height: 1.4;
 }
 
+.checkout-page .checkout-coupon-card p.is-success { color: #138452; }
+.checkout-page .checkout-coupon-card p.is-error { color: #c44955; }
+
+.checkout-page .checkout-referral-input {
+  width: calc(100% - 25px);
+  height: 34px;
+  margin: 7px 0 0 25px;
+  padding: 0 10px;
+  color: #172a55;
+  border: 1px solid #d8dfe9;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  text-transform: uppercase;
+  outline: 0;
+}
+
+.checkout-page .checkout-referral-input::placeholder { text-transform: none; }
+.checkout-page .checkout-referral-input:focus { border-color: var(--checkout-primary); }
+
 .checkout-page .checkout-summary-totals {
   display: grid;
   gap: 9px;

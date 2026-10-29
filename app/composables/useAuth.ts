@@ -9,6 +9,7 @@ export interface AuthUser {
   date_of_birth?: string | null
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null
   default_address?: Record<string, unknown> | null
+  affiliate?: { code: string | null; status: 'pending' | 'active' | 'locked' } | null
   [key: string]: unknown
 }
 
@@ -41,8 +42,12 @@ export const useAuth = () => {
   })
 
   const user = computed<AuthUser | null>(() => {
+    // useCookie parses JSON on read, so after a page load the cookie is
+    // already an object; only a value set in this session is still a string.
+    const value: unknown = userCookie.value
+    if (value && typeof value === 'object') return value as AuthUser
     try {
-      return userCookie.value ? JSON.parse(userCookie.value) as AuthUser : null
+      return typeof value === 'string' && value ? JSON.parse(value) as AuthUser : null
     } catch {
       return null
     }

@@ -178,6 +178,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
               </div>
               <ProductVariantSelector :product="product" :variants="product.variants" :option-groups="selection.optionGroups.value" :selected-variant="selection.selectedVariant.value" :selected-attributes="selection.selectedAttributes.value" :alternative-products="alternativeProducts" :is-option-available="selection.isOptionAvailable" :warranty-packages="warrantyPackages" :selected-warranty="selectedWarranty" @select-warranty="selectedWarranty = $event" @select-variant="selection.chooseVariant" @select-attribute="selection.chooseAttribute" />
               <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="onlinePurchasable" :adding="addingToCart" :can-build="Boolean(product.component_type)" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" @build="openBuilder" />
+              <ClientOnly><AffiliateShareBox v-if="canonicalPath" :product-id="product.id" :product-name="product.name" :path="canonicalPath" /></ClientOnly>
             </div>
           </section>
 

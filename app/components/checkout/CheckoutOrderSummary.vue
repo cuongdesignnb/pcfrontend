@@ -18,6 +18,9 @@ const { siteName } = useSettings()
 
 const totalQuantity = computed(() => props.quote?.summary.total_quantity ?? props.lines.reduce((sum, item) => sum + item.quantity, 0))
 const summary = computed(() => props.quote?.summary ?? null)
+const referralCode = defineModel<string>('referralCode', { default: '' })
+const referral = computed(() => props.quote?.referral ?? null)
+const discount = computed(() => (summary.value?.coupon_discount ?? 0) + (summary.value?.referral_discount ?? 0))
 const availablePaymentBadges = computed(() => props.paymentMethods.filter(method => method.available).map(method => method.code))
 const availableBenefits = computed(() => props.benefits.filter(item => item.title.trim() || item.description.trim()).slice(0, 4))
 </script>
@@ -48,13 +51,24 @@ const availableBenefits = computed(() => props.benefits.filter(item => item.titl
       </div>
 
       <div class="checkout-coupon-card">
-        <div class="checkout-inline-title"><CartIcon name="ticket" size="18" /><strong>Mã giảm giá</strong></div>
-        <p>Chương trình mã giảm giá chưa khả dụng cho checkout này.</p>
+        <label for="referral-code" class="checkout-inline-title"><CartIcon name="ticket" size="18" /><strong>Mã giới thiệu</strong></label>
+        <input
+          id="referral-code"
+          v-model="referralCode"
+          class="checkout-referral-input"
+          type="text"
+          maxlength="20"
+          autocomplete="off"
+          placeholder="Nhập mã cộng tác viên (nếu có)"
+        >
+        <p v-if="referral?.code && referral.discount" class="is-success">Mã {{ referral.code }} – giảm {{ formatMoney(referral.discount) }} cho đơn này.</p>
+        <p v-else-if="referral?.code">Bạn là khách của cộng tác viên {{ referral.affiliate_name || referral.code }}.</p>
+        <p v-if="referral?.message" :class="{ 'is-error': !referral.code }">{{ referral.message }}</p>
       </div>
 
       <dl class="checkout-summary-totals">
         <div><dt>Tạm tính</dt><dd>{{ summary ? formatMoney(summary.subtotal) : '—' }}</dd></div>
-        <div><dt>Giảm giá</dt><dd :class="{ 'is-discount': summary?.coupon_discount }">{{ summary ? (summary.coupon_discount ? `- ${formatMoney(summary.coupon_discount)}` : 'Chưa áp dụng') : '—' }}</dd></div>
+        <div><dt>Giảm giá</dt><dd :class="{ 'is-discount': discount }">{{ summary ? (discount ? `- ${formatMoney(discount)}` : 'Chưa áp dụng') : '—' }}</dd></div>
         <div><dt>Phí vận chuyển</dt><dd :class="{ 'is-discount': summary?.shipping_fee === 0 }">{{ summary?.shipping_fee === null || !summary ? '—' : (summary.shipping_fee === 0 ? 'Miễn phí' : formatMoney(summary.shipping_fee)) }}</dd></div>
       </dl>
 

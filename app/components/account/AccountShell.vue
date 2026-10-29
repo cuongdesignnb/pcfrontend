@@ -16,6 +16,7 @@ const navigation = [
   { label: 'Yêu thích', to: '/tai-khoan/yeu-thich', icon: 'heart' },
   { label: 'Địa chỉ', to: '/tai-khoan/dia-chi', icon: 'location' },
   { label: 'Bảo hành', to: '/tai-khoan/bao-hanh', icon: 'shield' },
+  { label: 'Cộng tác viên', to: '/tai-khoan/cong-tac-vien', icon: 'coin' },
 ]
 
 const isActive = (to: string, exact = false) => exact ? route.path === to : route.path === to || route.path.startsWith(`${to}/`)

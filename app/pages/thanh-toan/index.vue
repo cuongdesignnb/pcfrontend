@@ -64,6 +64,7 @@ const form = reactive<CheckoutForm>({
   payment_method: '',
   payment_option: 'full',
   notes: '',
+  referral_code: useAffiliateRef().code.value ?? '',
 })
 
 const selectedProvince = computed(() => locations.provinces.find(item => item.code === form.shipping_province_code) ?? null)
@@ -124,6 +125,8 @@ const quotePayload = computed<CheckoutQuoteRequest>(() => {
     shipping_ward_code: form.shipping_ward_code,
     shipping_method: form.shipping_method,
     payment_method: form.payment_method,
+    customer_phone: form.customer_phone.trim(),
+    referral_code: form.referral_code.trim(),
   }
   if (checkoutMode.value === 'buy_now' && buyNowItem.value) {
     payload.items = [{
@@ -290,7 +293,7 @@ watch(() => form.shipping_ward_code, (code) => {
 })
 
 watch(
-  () => [form.shipping_province_code, form.shipping_ward_code, form.shipping_method, form.payment_method] as const,
+  () => [form.shipping_province_code, form.shipping_ward_code, form.shipping_method, form.payment_method, form.customer_phone, form.referral_code] as const,
   () => {
     if (initialized.value && sourceHasItems.value && !orderResult.value) {
       quotes.scheduleQuote({ ...quotePayload.value, items: quotePayload.value.items?.map(item => ({ ...item })) })
@@ -361,6 +364,7 @@ const placeOrder = async () => {
         shipping_ward_code: form.shipping_ward_code,
         shipping_method: form.shipping_method,
         notes: form.notes,
+        referral_code: form.referral_code.trim() || undefined,
         payment_method: form.payment_method,
         payment_option: form.payment_method === 'sepay' ? form.payment_option : undefined,
         items: displayLines.value.map(item => ({
@@ -696,6 +700,7 @@ useSeoMeta({
             :submitting="isSubmitting"
             :disabled="!isFormValid"
             :mode="checkoutMode"
+            v-model:referral-code="form.referral_code"
           />
         </div>
       </form>

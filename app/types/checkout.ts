@@ -40,6 +40,7 @@ export interface CheckoutSummary {
   product_discount: number
   subtotal: number
   coupon_discount: number
+  referral_discount?: number
   shipping_fee: number | null
   total: number | null
   tax_label: string | null
@@ -93,6 +94,7 @@ export interface CheckoutQuote {
   shipping_methods: CheckoutShippingMethod[]
   payment_methods: CheckoutPaymentMethod[]
   coupon: CheckoutCoupon | null
+  referral?: CheckoutReferral
   capabilities: CheckoutCapabilities
   issues: CheckoutIssue[]
   can_place_order: boolean
@@ -110,6 +112,8 @@ export interface CheckoutQuoteRequest {
   shipping_ward_code: string
   shipping_method: string
   payment_method: string
+  customer_phone?: string
+  referral_code?: string
 }
 
 export interface CheckoutForm {
@@ -126,6 +130,15 @@ export interface CheckoutForm {
   payment_method: string
   payment_option: 'full' | 'deposit'
   notes: string
+  referral_code: string
+}
+
+/** CTV referral code result; a wrong code never blocks the order. */
+export interface CheckoutReferral {
+  code: string | null
+  affiliate_name: string | null
+  discount: number
+  message: string | null
 }
 
 export interface CheckoutPaymentData {

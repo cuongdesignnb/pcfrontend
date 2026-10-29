@@ -99,7 +99,7 @@ const payloadFeatures = (payload: Record<string, unknown> | undefined): string[]
         <div class="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <article v-for="(card, index) in payloadCards(block.payload)" :key="index" class="rounded-[7px] border border-slate-200 p-3">
             <p class="text-xs font-semibold text-slate-800">{{ payloadText(card, 'title') }}</p>
-            <p v-if="payloadText(card, 'value')" class="mt-1 text-lg font-bold text-blue-700">{{ payloadText(card, 'value') }}</p>
+            <p v-if="payloadText(card, 'value')" class="mt-1 text-lg font-bold text-brand">{{ payloadText(card, 'value') }}</p>
             <p v-if="payloadText(card, 'description')" class="mt-1 text-[11px] leading-4 text-slate-600">{{ payloadText(card, 'description') }}</p>
           </article>
         </div>
@@ -122,11 +122,11 @@ const payloadFeatures = (payload: Record<string, unknown> | undefined): string[]
     <div v-if="descriptionHtml" class="pdp-description-html mt-4 border-t border-slate-100 pt-3" v-html="descriptionHtml" />
     <p v-else-if="description" class="mt-4 whitespace-pre-line border-t border-slate-100 pt-3 text-xs leading-5 text-slate-700">{{ description }}</p>
     <p v-if="!description && !descriptionHtml && !blocks.length" class="text-xs text-slate-500">Sản phẩm chưa có mô tả chi tiết.</p>
-    <aside v-if="contactFooterVisible" class="mt-5 rounded-[8px] border border-blue-100 bg-blue-50/60 p-4 text-xs text-slate-700">
+    <aside v-if="contactFooterVisible" class="mt-5 rounded-[8px] border border-brand-soft bg-brand-soft/60 p-4 text-xs text-slate-700">
       <h3 class="text-sm font-bold text-slate-900">{{ contactFooterTitle }}</h3>
       <p class="mt-2 whitespace-pre-line">{{ siteAddress }}</p>
       <p v-if="contactFooterLandmark" class="mt-1 whitespace-pre-line text-slate-600">{{ contactFooterLandmark }}</p>
-      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2 font-semibold text-blue-700">
+      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2 font-semibold text-brand">
         <a v-if="sitePhone" :href="telHref(sitePhone)" class="hover:underline">Hotline: {{ sitePhone }}</a>
         <a v-if="siteHotline && siteHotline !== sitePhone" :href="telHref(siteHotline)" class="hover:underline">{{ siteHotline }}</a>
         <a v-if="contactFooterWebsite" :href="contactFooterWebsite" target="_blank" rel="noopener noreferrer" class="hover:underline">{{ contactFooterWebsite.replace(/^https?:\/\//, '') }}</a>

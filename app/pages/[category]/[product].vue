@@ -159,7 +159,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
   <main class="pdp-reference min-h-screen bg-slate-50 pb-24 lg:pb-12">
     <div class="pdp-container">
       <div v-if="pending" class="py-24 text-center text-sm text-slate-500">Đang tải sản phẩm…</div>
-      <div v-else-if="error || !product" class="py-24 text-center"><h1 class="text-xl font-bold text-slate-800">Không tìm thấy sản phẩm</h1><NuxtLink to="/" class="mt-4 inline-block text-sm text-blue-700 hover:underline">Quay về trang chủ</NuxtLink></div>
+      <div v-else-if="error || !product" class="py-24 text-center"><h1 class="text-xl font-bold text-slate-800">Không tìm thấy sản phẩm</h1><NuxtLink to="/" class="mt-4 inline-block text-sm text-brand hover:underline">Quay về trang chủ</NuxtLink></div>
       <template v-else>
         <ProductBreadcrumb :product="product" />
 
@@ -213,8 +213,8 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
 
 <style scoped>
 .pdp-reference {
-  --pdp-blue: #1264d8;
-  --pdp-blue-dark: #0b55bd;
+  --pdp-blue: var(--pc-primary);
+  --pdp-blue-dark: var(--pc-primary-dark);
   --pdp-orange: #ff6a00;
   --pdp-red: #ef2f2f;
   --pdp-green: #16a34a;
@@ -326,7 +326,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: #eff6ff;
+  background: var(--pc-primary-soft);
   color: var(--pdp-blue);
   font-size: 14px;
 }
@@ -334,7 +334,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
 .pdp-reference :deep(.pdp-option-row) { display: grid; grid-template-columns: 126px minmax(0, 1fr); align-items: center; gap: 8px; }
 .pdp-reference :deep(.pdp-option-label) { color: #6b7280; font-size: 11px; }
 .pdp-reference :deep(.pdp-option-chip) { display: inline-flex; min-height: 28px; align-items: center; justify-content: center; border: 1px solid #d1d5db; border-radius: 5px; background: #fff; padding: 4px 9px; color: #4b5563; font-size: 11px; line-height: 1.2; }
-.pdp-reference :deep(.pdp-option-chip--selected) { border-color: #60a5fa; background: #eff6ff; color: #1264d8; font-weight: 600; }
+.pdp-reference :deep(.pdp-option-chip--selected) { border-color: var(--pc-primary); background: var(--pc-primary-soft); color: var(--pc-primary); font-weight: 600; }
 
 .pdp-reference :deep(.pdp-anchor-tabs) { position: sticky; top: 80px; z-index: 20; display: flex; min-height: 42px; overflow-x: auto; border-bottom: 1px solid var(--pdp-border); background: rgb(255 255 255 / 96%); backdrop-filter: blur(8px); }
 .pdp-reference :deep(.pdp-anchor-tab) { display: inline-flex; min-height: 42px; flex: 0 0 auto; align-items: center; border-bottom: 2px solid transparent; padding: 0 16px; color: #6b7280; font-size: 11px; font-weight: 700; white-space: nowrap; }

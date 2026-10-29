@@ -222,7 +222,7 @@ useSeoMeta({ title: () => 'Trạng thái đơn hàng - ' + siteName.value })
                 order.payment_status === 'paid'
                   ? 'bg-green-100 text-green-700'
                   : order.payment_status === 'deposited'
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-brand-soft text-brand'
                     : 'bg-yellow-100 text-yellow-700'
               ]"
             >
@@ -288,7 +288,7 @@ useSeoMeta({ title: () => 'Trạng thái đơn hàng - ' + siteName.value })
         </div>
 
         <!-- Next Steps -->
-        <div class="bg-blue-50 rounded-xl p-6 mb-8 text-left">
+        <div class="bg-brand-soft rounded-xl p-6 mb-8 text-left">
           <h3 class="font-bold mb-2">📧 Tiếp theo</h3>
           <ul class="space-y-2 text-gray-700">
             <li>• Email xác nhận đơn hàng đã được gửi đến {{ order.customer_email }}</li>

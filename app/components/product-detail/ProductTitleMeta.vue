@@ -26,7 +26,7 @@ const toggleWishlist = async () => {
 
 <template>
   <div class="pdp-title-meta">
-    <span v-if="product.is_featured" class="inline-flex rounded bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700">Bán chạy</span>
+    <span v-if="product.is_featured" class="inline-flex rounded bg-brand-soft px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand">Bán chạy</span>
     <div class="mt-2 flex items-start justify-between gap-3">
       <h1 class="text-[20px] font-bold leading-[1.25] text-slate-900 lg:text-[22px]">{{ product.name }}</h1>
       <button

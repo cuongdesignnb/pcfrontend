@@ -1,9 +1,9 @@
 .checkout-page {
   --checkout-border: #e4e8ee;
-  --checkout-soft: #f5f8ff;
-  --checkout-blue: #1264d8;
-  --checkout-blue-dark: #0754bd;
-  --checkout-orange: #ff6700;
+  --checkout-soft: var(--pc-primary-soft);
+  --checkout-primary: var(--pc-primary);
+  --checkout-primary-dark: var(--pc-primary-dark);
+  --checkout-accent: var(--pc-accent);
   --checkout-red: #ef2f2f;
   --checkout-green: #16a05d;
   --checkout-text: #142447;
@@ -29,7 +29,7 @@
 }
 
 .checkout-page .checkout-breadcrumb a:hover {
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
 }
 
 .checkout-page .checkout-breadcrumb strong {
@@ -47,7 +47,7 @@
 
 .checkout-page .checkout-page-heading h1 {
   margin: 0;
-  color: #12244e;
+  color: var(--pc-secondary);
   font-size: clamp(25px, 2.1vw, 34px);
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -77,15 +77,15 @@
   gap: 11px;
   margin-bottom: 12px;
   padding: 10px 13px;
-  background: #f1f7ff;
-  border: 1px solid #d6e8ff;
+  background: var(--pc-primary-soft);
+  border: 1px solid var(--pc-primary-soft);
   border-radius: 6px;
 }
-.checkout-page .checkout-auth-prompt-icon { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; color: var(--checkout-blue); background: #dcecff; border-radius: 50%; }
+.checkout-page .checkout-auth-prompt-icon { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; color: var(--checkout-primary); background: var(--pc-primary-soft); border-radius: 50%; }
 .checkout-page .checkout-auth-prompt > div { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
 .checkout-page .checkout-auth-prompt strong { color: var(--checkout-text); font-size: 11px; }
 .checkout-page .checkout-auth-prompt p { margin: 0; color: var(--checkout-muted); font-size: 10px; }
-.checkout-page .checkout-auth-prompt > a { display: inline-flex; align-items: center; gap: 5px; color: var(--checkout-blue); font-size: 10px; font-weight: 800; white-space: nowrap; }
+.checkout-page .checkout-auth-prompt > a { display: inline-flex; align-items: center; gap: 5px; color: var(--checkout-primary); font-size: 10px; font-weight: 800; white-space: nowrap; }
 .checkout-page .checkout-auth-prompt > a:hover { text-decoration: underline; }
 
 .checkout-page .checkout-progress li:not(.checkout-progress-line) {
@@ -100,7 +100,7 @@
 
 .checkout-page .checkout-progress li.is-current,
 .checkout-page .checkout-progress li.is-done {
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
 }
 
 .checkout-page .checkout-progress-dot {
@@ -118,8 +118,8 @@
 
 .checkout-page .checkout-progress .is-current .checkout-progress-dot,
 .checkout-page .checkout-progress .is-done .checkout-progress-dot {
-  border-color: var(--checkout-blue);
-  background: var(--checkout-blue);
+  border-color: var(--checkout-primary);
+  background: var(--checkout-primary);
   color: #fff;
   box-shadow: 0 4px 10px rgb(18 100 216 / 18%);
 }
@@ -163,7 +163,7 @@
   min-height: 51px;
   padding: 10px 17px;
   border-bottom: 1px solid #edf0f4;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
 }
 
 .checkout-page .checkout-section-heading > div {
@@ -172,7 +172,7 @@
 
 .checkout-page .checkout-section-heading h2 {
   margin: 0;
-  color: #12244e;
+  color: var(--pc-secondary);
   font-size: 16px;
   font-weight: 800;
   line-height: 1.25;
@@ -191,7 +191,7 @@
   flex: 0 0 24px;
   place-items: center;
   border-radius: 50%;
-  background: var(--checkout-blue);
+  background: var(--checkout-primary);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -260,7 +260,7 @@
 .checkout-page .checkout-field input:focus,
 .checkout-page .checkout-field select:focus,
 .checkout-page .checkout-field textarea:focus {
-  border-color: var(--checkout-blue);
+  border-color: var(--checkout-primary);
   box-shadow: 0 0 0 3px rgb(18 100 216 / 10%);
 }
 
@@ -283,7 +283,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
   font: inherit;
   font-weight: 700;
   text-decoration: underline;
@@ -291,7 +291,7 @@
 
 .checkout-page .checkout-field-status button:hover,
 .checkout-page .checkout-link-button:hover {
-  color: var(--checkout-blue-dark);
+  color: var(--checkout-primary-dark);
 }
 
 .checkout-page .checkout-radio-group {
@@ -315,12 +315,12 @@
 }
 
 .checkout-page .checkout-radio-card:hover {
-  border-color: #9abdf1;
+  border-color: var(--pc-primary-border);
 }
 
 .checkout-page .checkout-radio-card.is-selected {
-  border-color: var(--checkout-blue);
-  background: #f5f9ff;
+  border-color: var(--checkout-primary);
+  background: var(--pc-primary-soft);
   box-shadow: 0 0 0 1px rgb(18 100 216 / 10%);
 }
 
@@ -350,19 +350,19 @@
 }
 
 .checkout-page .checkout-radio-card.is-selected .checkout-radio-mark {
-  border-color: var(--checkout-blue);
+  border-color: var(--checkout-primary);
 }
 
 .checkout-page .checkout-radio-card.is-selected .checkout-radio-mark::after {
   position: absolute;
   inset: 4px;
   border-radius: 50%;
-  background: var(--checkout-blue);
+  background: var(--checkout-primary);
   content: "";
 }
 
 .checkout-page .checkout-radio-card > input:focus-visible + .checkout-radio-mark {
-  outline: 2px solid var(--checkout-blue);
+  outline: 2px solid var(--checkout-primary);
   outline-offset: 3px;
 }
 
@@ -409,7 +409,7 @@
   place-items: center;
   border-radius: 5px;
   background: var(--checkout-soft);
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
 }
 
 .checkout-page .checkout-method-badge,
@@ -420,8 +420,8 @@
   min-height: 23px;
   padding: 3px 8px;
   border-radius: 4px;
-  background: #eaf2ff;
-  color: var(--checkout-blue);
+  background: var(--pc-primary-soft);
+  color: var(--checkout-primary);
   font-size: 10px;
   font-weight: 800;
   white-space: nowrap;
@@ -502,7 +502,7 @@
   gap: 8px;
   min-width: 0;
   margin: 0;
-  color: #12244e;
+  color: var(--pc-secondary);
   font-size: 16px;
   font-weight: 800;
 }
@@ -515,7 +515,7 @@
 
 .checkout-page .checkout-summary-heading a {
   flex: 0 0 auto;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
   font-size: 11px;
   font-weight: 700;
 }
@@ -611,7 +611,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
 }
 
 .checkout-page .checkout-inline-title strong {
@@ -694,8 +694,8 @@
   min-height: 42px;
   border: 1px solid transparent;
   border-radius: 5px;
-  background: var(--checkout-orange);
-  color: #fff;
+  background: var(--checkout-accent);
+  color: var(--pc-accent-ink);
   font-size: 14px;
   font-weight: 800;
   text-decoration: none;
@@ -762,7 +762,7 @@
   gap: 8px;
   margin: 0;
   padding: 13px 16px 0;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
   font-size: 14px;
 }
 
@@ -799,7 +799,7 @@
   place-items: center;
   border-radius: 50%;
   background: var(--checkout-soft);
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
 }
 
 .checkout-page .checkout-trust-item p {
@@ -835,7 +835,7 @@
   align-items: center;
   gap: 6px;
   margin: 0 16px 0 43px;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
   font-size: 12px;
   font-weight: 800;
 }
@@ -843,9 +843,9 @@
 .checkout-page .checkout-sepay-panel {
   margin: -2px 0 13px;
   padding: 14px 16px 15px;
-  border: 1px solid #cbdffc;
+  border: 1px solid var(--pc-primary-soft);
   border-radius: 7px;
-  background: #f4f8ff;
+  background: var(--pc-primary-soft);
 }
 
 .checkout-page .checkout-sepay-heading {
@@ -853,7 +853,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
 }
 
 .checkout-page .checkout-sepay-heading > div {
@@ -919,7 +919,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
   font: inherit;
   font-size: 10px;
   font-weight: 700;
@@ -944,16 +944,16 @@
   gap: 6px;
   min-height: 34px;
   padding: 6px 12px;
-  border: 1px solid var(--checkout-blue);
+  border: 1px solid var(--checkout-primary);
   border-radius: 5px;
   background: #fff;
-  color: var(--checkout-blue);
+  color: var(--checkout-primary);
   font-size: 11px;
   font-weight: 800;
 }
 
 .checkout-page .checkout-secondary-button:hover:not(:disabled) {
-  background: #edf5ff;
+  background: var(--pc-primary-soft);
 }
 
 .checkout-page .checkout-sepay-success {
@@ -1257,8 +1257,8 @@
     padding: 0 16px;
     border: 0;
     border-radius: 5px;
-    background: var(--checkout-orange);
-    color: #fff;
+    background: var(--checkout-accent);
+    color: var(--pc-accent-ink);
     font-size: 13px;
     font-weight: 800;
   }

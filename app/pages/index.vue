@@ -60,20 +60,14 @@ useHead(() => {
       :interval="heroInterval"
     />
     <HomeServiceStrip />
-    <HomeFeaturedCategories :categories="payload.featured_categories" />
     <HomeFlashSale
       :enabled="payload.flash_sale.enabled"
       :ends-at="payload.flash_sale.ends_at"
       :products="payload.flash_sale.products"
     />
-    <HomeTabbedProducts :best-sellers="payload.best_sellers" />
+    <HomeProductTabs :tabs="payload.product_tabs ?? []" />
     <HomeCategorySections :sections="payload.category_sections ?? []" />
-    <HomePcBuilderBanner :banner="payload.pc_builder_banner" />
-    <HomeFeatureColumns
-      :combo-banners="payload.combo_banners"
-      :setup-banners="payload.setup_banners"
-      :accessories="payload.featured_accessories"
-    />
+    <HomeStoreActivities :activities="payload.store_activities ?? []" />
     <HomeNews :posts="payload.posts" />
     <HomeTestimonials :testimonials="payload.testimonials" />
   </div>

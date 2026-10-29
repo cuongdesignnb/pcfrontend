@@ -109,7 +109,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         :aria-label="`Xem ảnh ${index + 1}`"
         :aria-pressed="selectedIndex === index"
         class="pdp-gallery-thumb"
-        :class="selectedIndex === index ? 'border-blue-600' : 'border-slate-200 hover:border-blue-300'"
+        :class="selectedIndex === index ? 'border-brand' : 'border-slate-200 hover:border-brand-border'"
         @click="selectImage(index)"
       >
         <img :src="image.url!" :alt="image.alt || `${product.name} ${index + 1}`" :data-product-image-id="image.id" loading="lazy" decoding="async" @error="markImageBroken(image.id)">
@@ -239,8 +239,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .pdp-gallery-share:hover {
-  border-color: #93c5fd;
-  color: #1264d8;
+  border-color: var(--pc-primary-border);
+  color: var(--pc-primary);
 }
 
 .pdp-gallery-counter {

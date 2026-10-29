@@ -36,7 +36,7 @@ const productPath = (product: ProductCard) => productUrl(product)
           v-for="alternative in alternativeProducts"
           :key="alternative.id"
           :to="productPath(alternative)"
-          class="pdp-option-chip hover:border-blue-500 hover:text-blue-700"
+          class="pdp-option-chip hover:border-brand hover:text-brand"
         >
           {{ alternative.brand?.name || alternative.name }}
         </NuxtLink>
@@ -54,7 +54,7 @@ const productPath = (product: ProductCard) => productUrl(product)
             :disabled="!isOptionAvailable(group.name, value)"
             :aria-pressed="selectedAttributes[group.name] === value"
             class="pdp-option-chip disabled:cursor-not-allowed disabled:opacity-40"
-            :class="selectedAttributes[group.name] === value ? 'pdp-option-chip--selected' : 'hover:border-blue-500 hover:text-blue-700'"
+            :class="selectedAttributes[group.name] === value ? 'pdp-option-chip--selected' : 'hover:border-brand hover:text-brand'"
             @click="emit('selectAttribute', group.name, value)"
           >
             {{ value }}
@@ -73,7 +73,7 @@ const productPath = (product: ProductCard) => productUrl(product)
           :disabled="!variant.inventory.is_available"
           :aria-pressed="selectedVariant?.id === variant.id"
           class="pdp-option-chip text-left disabled:cursor-not-allowed disabled:opacity-40"
-          :class="selectedVariant?.id === variant.id ? 'pdp-option-chip--selected' : 'hover:border-blue-500 hover:text-blue-700'"
+          :class="selectedVariant?.id === variant.id ? 'pdp-option-chip--selected' : 'hover:border-brand hover:text-brand'"
           @click="emit('selectVariant', variant)"
         >
           {{ variant.name }}
@@ -90,7 +90,7 @@ const productPath = (product: ProductCard) => productUrl(product)
           type="button"
           :aria-pressed="selectedWarranty === pkg.months"
           class="pdp-option-chip"
-          :class="selectedWarranty === pkg.months ? 'pdp-option-chip--selected' : 'hover:border-blue-500 hover:text-blue-700'"
+          :class="selectedWarranty === pkg.months ? 'pdp-option-chip--selected' : 'hover:border-brand hover:text-brand'"
           @click="emit('selectWarranty', pkg.months)"
         >
           {{ pkg.months }} tháng{{ pkg.price > 0 ? ` (+${formatMoney(pkg.price)})` : '' }}

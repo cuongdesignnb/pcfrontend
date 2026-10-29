@@ -2,81 +2,28 @@
 import type { MenuItemData } from '~/types/menu'
 import { categoryUrl, storefrontPath } from '~/utils/urls'
 
-const props = defineProps<{ items: MenuItemData[] }>()
+// Top-level items of the admin "Header" menu, in the order set there.
+defineProps<{ items: MenuItemData[] }>()
 
-interface NavigationTarget {
-  key: string
-  title: string
-  icon: string
-  fallback: string
-  matches: string[]
-}
-
-interface ResolvedNavigationItem extends NavigationTarget {
-  item: MenuItemData | null
-  path: string
-  label: string
-}
-
-const targets: NavigationTarget[] = [
-  { key: 'pc-gaming', title: 'PC Gaming', icon: '▦', fallback: '/pc-gaming', matches: ['pc gaming'] },
-  { key: 'pc-graphics', title: 'PC Đồ Họa', icon: '◈', fallback: '/pc-do-hoa-render', matches: ['pc đồ họa', 'pc đồ hoạ', 'render'] },
-  { key: 'laptop', title: 'Laptop', icon: '▱', fallback: '/laptop', matches: ['laptop'] },
-  { key: 'components', title: 'Linh kiện', icon: '⌘', fallback: '/linh-kien-pc', matches: ['linh kiện'] },
-  { key: 'monitor', title: 'Màn hình', icon: '▣', fallback: '/man-hinh', matches: ['màn hình'] },
-  { key: 'network', title: 'Thiết bị mạng', icon: '◉', fallback: '/san-pham?search=router', matches: ['thiết bị mạng', 'mạng'] },
-  { key: 'accessories', title: 'Phụ kiện', icon: '♧', fallback: '/phu-kien', matches: ['phụ kiện'] },
-  { key: 'sale', title: 'Khuyến mãi', icon: '%', fallback: '/linh-kien-pc', matches: ['khuyến mãi', 'flash sale', 'sale'] },
-  { key: 'news', title: 'Tin tức', icon: '▤', fallback: '/tin-tuc', matches: ['tin tức', 'blog'] },
-  { key: 'builder', title: 'PC Builder', icon: '⚙', fallback: '/cau-hinh', matches: ['build pc', 'pc builder', 'cấu hình'] },
-]
-
-function flatten(items: MenuItemData[]): MenuItemData[] {
-  return items.flatMap(item => [item, ...flatten(item.children || [])])
-}
-
-function cleanPath(path: string | null | undefined, fallback: string): string {
-  const normalized = storefrontPath(path)
-  return normalized === '/' && (!path || path === '#') ? fallback : normalized
-}
-
-function resolveUrl(item: MenuItemData | null, fallback: string): string {
-  if (!item) return fallback
+function resolveUrl(item: MenuItemData): string {
   if (item.type === 'category' && item.category?.slug) return categoryUrl(item.category)
-  return cleanPath(item.url, fallback)
+  return storefrontPath(item.url)
 }
-
-const navigationItems = computed<ResolvedNavigationItem[]>(() => {
-  const allItems = flatten(props.items)
-  return targets.map(target => {
-    const exact = allItems.find(candidate => target.matches.includes(candidate.title.trim().toLocaleLowerCase()))
-    const item = exact || allItems.find(candidate => {
-      const title = candidate.title.trim().toLocaleLowerCase()
-      return target.matches.some(match => title === match || title.includes(match))
-    }) || null
-    return {
-      ...target,
-      item,
-      path: resolveUrl(item, target.fallback),
-      label: item?.title?.trim() || target.title,
-    }
-  })
-})
 </script>
 
 <template>
   <nav class="header-navigation" aria-label="Điều hướng chính">
     <ul class="header-navigation-list">
-      <li v-for="item in navigationItems" :key="item.key" class="header-navigation-item">
+      <li v-for="item in items" :key="item.id" class="header-navigation-item">
         <NuxtLink
-          :to="item.path"
-          :target="item.item?.target === '_blank' ? '_blank' : undefined"
-          :rel="item.item?.target === '_blank' ? 'noopener noreferrer' : undefined"
+          :to="resolveUrl(item)"
+          :target="item.target === '_blank' ? '_blank' : undefined"
+          :rel="item.target === '_blank' ? 'noopener noreferrer' : undefined"
           class="header-navigation-link"
+          :class="item.css_class || undefined"
         >
-          <span class="header-nav-icon" aria-hidden="true">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
-          <span v-if="item.item?.badge_text" class="header-nav-badge">{{ item.item.badge_text }}</span>
+          <span>{{ item.title }}</span>
+          <span v-if="item.badge_text" class="header-nav-badge">{{ item.badge_text }}</span>
         </NuxtLink>
       </li>
     </ul>

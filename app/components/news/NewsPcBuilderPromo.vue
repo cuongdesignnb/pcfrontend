@@ -30,14 +30,14 @@ defineProps<{
       <NuxtLink to="/cau-hinh" class="news-pc-builder-button">Bắt đầu build PC ngay <span aria-hidden="true">→</span></NuxtLink>
     </div>
     <svg v-if="!banner?.image" class="news-pc-builder-art" aria-hidden="true" viewBox="0 0 220 180" fill="none">
-      <rect x="112" y="30" width="74" height="118" rx="5" fill="#0d4b92" stroke="#62a8ff" stroke-width="2" />
-      <rect x="124" y="45" width="50" height="74" rx="3" fill="#092e60" stroke="#6fc1ff" stroke-width="1.5" />
+      <rect x="112" y="30" width="74" height="118" rx="5" fill="var(--pc-primary-dark)" stroke="var(--pc-primary-border)" stroke-width="2" />
+      <rect x="124" y="45" width="50" height="74" rx="3" fill="var(--pc-secondary)" stroke="var(--pc-primary-border)" stroke-width="1.5" />
       <circle cx="149" cy="133" r="8" fill="#ff6700" fill-opacity=".9" />
-      <path d="M26 124h70l19 17H7l19-17Z" fill="#0b407d" stroke="#73b9ff" stroke-width="2" />
-      <rect x="37" y="61" width="55" height="56" rx="3" fill="#0a376d" stroke="#62a8ff" stroke-width="2" />
+      <path d="M26 124h70l19 17H7l19-17Z" fill="var(--pc-secondary)" stroke="var(--pc-primary-border)" stroke-width="2" />
+      <rect x="37" y="61" width="55" height="56" rx="3" fill="var(--pc-secondary)" stroke="var(--pc-primary-border)" stroke-width="2" />
       <circle cx="54" cy="78" r="8" stroke="#ff8c42" stroke-width="2" />
       <circle cx="76" cy="78" r="8" stroke="#4ee1ff" stroke-width="2" />
-      <path d="M48 101h34M54 95v12M76 95v12" stroke="#9bd1ff" stroke-width="2" stroke-linecap="round" />
+      <path d="M48 101h34M54 95v12M76 95v12" stroke="var(--pc-primary-border)" stroke-width="2" stroke-linecap="round" />
     </svg>
   </section>
 </template>

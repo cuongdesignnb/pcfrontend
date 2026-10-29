@@ -47,7 +47,7 @@ useHead(() => ({
 <style scoped>
 .static-page { max-width: 1180px; margin: 0 auto; padding: 24px 20px 56px; color: #172c55; }
 .static-page-breadcrumb { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; font-size: 14px; overflow-wrap: anywhere; }
-.static-page-breadcrumb a { color: #1261db; }
+.static-page-breadcrumb a { color: var(--pc-primary); }
 .static-page-article { padding: 32px; border: 1px solid #e1e7ef; border-radius: 12px; background: #fff; }
 .static-page h1 { margin: 0 0 26px; font-size: clamp(24px, 3vw, 34px); line-height: 1.3; font-weight: 700; overflow-wrap: anywhere; }
 .static-page-body { font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
@@ -55,7 +55,7 @@ useHead(() => ({
 .static-page-body :deep(h2), .static-page-body :deep(h3), .static-page-body :deep(h4) { margin: 24px 0 12px; font-weight: 700; line-height: 1.4; }
 .static-page-body :deep(h2) { font-size: 24px; }
 .static-page-body :deep(h3) { font-size: 20px; }
-.static-page-body :deep(a) { color: #1261db; text-decoration: underline; }
+.static-page-body :deep(a) { color: var(--pc-primary); text-decoration: underline; }
 .static-page-body :deep(ul) { list-style: disc; padding-left: 24px; }
 .static-page-body :deep(ol) { list-style: decimal; padding-left: 24px; }
 .static-page-body :deep(img), .static-page-body :deep(iframe) { max-width: 100%; }
@@ -63,6 +63,6 @@ useHead(() => ({
 .static-page-body :deep(table) { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 20px 0; }
 .static-page-body :deep(th), .static-page-body :deep(td) { padding: 10px 14px; border: 1px solid #dde4ed; text-align: left; }
 .static-page-body :deep(pre) { max-width: 100%; overflow-x: auto; }
-.static-page-body :deep(blockquote) { margin: 18px 0; padding: 10px 20px; border-left: 3px solid #1261db; background: #f5f8ff; }
+.static-page-body :deep(blockquote) { margin: 18px 0; padding: 10px 20px; border-left: 3px solid var(--pc-primary); background: var(--pc-primary-soft); }
 @media (max-width: 640px) { .static-page { padding: 16px 12px 32px; } .static-page-article { padding: 20px 16px; } }
 </style>

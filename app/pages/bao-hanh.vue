@@ -13,8 +13,8 @@ useSeoDocument(() => ({
     <h1 class="text-3xl font-bold text-gray-900 mb-6">Chính sách bảo hành</h1>
 
     <div class="prose prose-lg max-w-none text-gray-700 space-y-6">
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-        <p class="text-blue-800 font-medium">
+      <div class="bg-brand-soft border border-brand-border rounded-xl p-6 mb-8">
+        <p class="text-brand-dark font-medium">
           {{ siteName }} cam kết bảo hành chính hãng 100% cho tất cả sản phẩm. Mọi sản phẩm đều có phiếu bảo hành
           và được hỗ trợ trực tiếp bởi đội ngũ kỹ thuật viên chuyên nghiệp.
         </p>
@@ -59,18 +59,18 @@ useSeoDocument(() => ({
       <h2 class="text-2xl font-semibold text-gray-900 mt-8 mb-4">4. Quy trình bảo hành</h2>
       <div class="grid sm:grid-cols-3 gap-4">
         <div class="bg-gray-50 rounded-xl p-5 text-center">
-          <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">1</div>
+          <div class="w-10 h-10 bg-brand text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">1</div>
           <p class="font-medium text-gray-900 mb-1">Liên hệ</p>
           <p v-if="siteHotline" class="text-sm text-gray-500">Hotline {{ siteHotline }} hoặc mang sản phẩm đến cửa hàng</p>
           <p v-else class="text-sm text-gray-500">Vui lòng liên hệ cửa hàng để được tiếp nhận bảo hành</p>
         </div>
         <div class="bg-gray-50 rounded-xl p-5 text-center">
-          <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">2</div>
+          <div class="w-10 h-10 bg-brand text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">2</div>
           <p class="font-medium text-gray-900 mb-1">Kiểm tra</p>
           <p class="text-sm text-gray-500">Kỹ thuật viên kiểm tra và xác nhận lỗi (1-3 ngày)</p>
         </div>
         <div class="bg-gray-50 rounded-xl p-5 text-center">
-          <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">3</div>
+          <div class="w-10 h-10 bg-brand text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">3</div>
           <p class="font-medium text-gray-900 mb-1">Xử lý</p>
           <p class="text-sm text-gray-500">Sửa chữa / đổi mới và trả sản phẩm (3-7 ngày)</p>
         </div>

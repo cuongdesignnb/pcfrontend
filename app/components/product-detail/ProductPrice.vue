@@ -17,7 +17,7 @@ const installmentMessage = computed(() => getString('storefront_installment_mess
     <p v-if="contactOnly" class="mt-1 text-xs text-slate-500">Liên hệ tư vấn để nhận báo giá và ưu đãi chính xác.</p>
     <p v-else-if="pricing.saving > 0" class="mt-1 text-xs font-semibold text-red-600">Tiết kiệm: {{ formatMoney(pricing.saving) }}</p>
     <p v-if="!contactOnly && installmentMessage" class="mt-2 inline-flex items-center gap-2 rounded bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600">
-      <span class="text-blue-600" aria-hidden="true">▣</span>
+      <span class="text-brand" aria-hidden="true">▣</span>
       {{ installmentMessage }}
     </p>
   </section>

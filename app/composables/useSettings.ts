@@ -87,6 +87,20 @@ export const useSettings = () => {
   const warehouseAddresses = computed(() => getString('warehouse_addresses', siteAddress.value))
   const businessHours = computed(() => getString('business_hours'))
   const contactMap = computed(() => getString('contact_map'))
+  // Admin settings keep only a Google Maps embed src; re-check the shape so a
+  // stale or edited value can never turn into an arbitrary iframe.
+  const mapEmbedUrl = computed(() => {
+    const value = getString('contact_map_embed_url').trim()
+    return /^https:\/\/(?:www\.)?google\.com\/maps\/embed\?/i.test(value)
+      || /^https:\/\/(?:maps|www)\.google\.com\/maps\?(?:[^#]*&)?output=embed(?:&|$)/i.test(value)
+      ? value
+      : ''
+  })
+  const mapDirectionsUrl = computed(() => {
+    const link = getString('contact_maps_url').trim()
+    if (/^https:\/\//i.test(link)) return link
+    return siteAddress.value ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteAddress.value)}` : ''
+  })
 
   const socialFacebook = computed(() => getString('social_facebook'))
   const socialYoutube = computed(() => getString('social_youtube'))
@@ -128,6 +142,8 @@ export const useSettings = () => {
     siteDescription,
     siteLogo,
     siteLogoWhite,
+    mapEmbedUrl,
+    mapDirectionsUrl,
     siteFavicon,
     currency,
     sitePhone,

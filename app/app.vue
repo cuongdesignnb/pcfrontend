@@ -34,8 +34,22 @@ const faviconType = (href: string) => {
   const ext = href.split(/[?#]/)[0]?.split('.').pop()?.toLowerCase()
   return ({ webp: 'image/webp', png: 'image/png', svg: 'image/svg+xml', ico: 'image/x-icon', jpg: 'image/jpeg', jpeg: 'image/jpeg' } as Record<string, string>)[ext ?? '']
 }
+// Theme colours from Cài đặt → Giao diện; main.css derives the shades.
+const themeCss = computed(() => {
+  const colours = [
+    ['--pc-primary', 'theme_primary_color'],
+    ['--pc-secondary', 'theme_secondary_color'],
+    ['--pc-accent', 'theme_accent_color'],
+  ].flatMap(([property, key]) => {
+    const value = getString(key!).trim()
+    return /^#[0-9a-f]{6}$/i.test(value) ? [`${property}:${value}`] : []
+  })
+  return colours.length ? `:root{${colours.join(';')}}` : ''
+})
+
 useHead({
   htmlAttrs: { lang: 'vi' },
+  style: computed(() => themeCss.value ? [{ key: 'theme-colors', innerHTML: themeCss.value }] : []),
   link: computed(() =>
     siteFavicon.value
       ? [

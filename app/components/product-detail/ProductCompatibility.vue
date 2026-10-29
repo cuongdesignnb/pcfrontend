@@ -47,7 +47,7 @@ const statusClass = (status: CompatibilityFact['status']) => status === 'ok' ? '
       </dl>
       <ul v-if="data.warnings.length" class="mt-3 space-y-1.5"><li v-for="warning in data.warnings" :key="warning" class="rounded-[6px] bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-800">{{ warning }}</li></ul>
       <p v-if="!data.facts.length && !data.warnings.length" class="mt-3 text-xs text-slate-500">Chưa có dữ liệu tương thích để hiển thị.</p>
-      <NuxtLink :to="`/cau-hinh?product=${encodeURIComponent(slug)}`" class="mt-3 inline-flex h-8 w-full items-center justify-center rounded-[6px] border border-blue-400 text-[11px] font-semibold uppercase text-blue-700 hover:bg-blue-50">Kiểm tra trên PC Builder</NuxtLink>
+      <NuxtLink :to="`/cau-hinh?product=${encodeURIComponent(slug)}`" class="mt-3 inline-flex h-8 w-full items-center justify-center rounded-[6px] border border-brand text-[11px] font-semibold uppercase text-brand hover:bg-brand-soft">Kiểm tra trên PC Builder</NuxtLink>
     </template>
     <p v-else class="mt-3 text-xs text-slate-500">Chưa có dữ liệu tương thích để hiển thị.</p>
   </section>

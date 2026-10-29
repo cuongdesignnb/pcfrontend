@@ -56,18 +56,18 @@ const benefits = computed(() => [
     <div v-if="contactOnly" class="mt-3 rounded-[6px] border border-orange-200 bg-orange-50 p-3">
       <p class="text-xs leading-5 text-orange-900">Sản phẩm chưa có giá bán trực tuyến. Liên hệ để nhận báo giá và được tư vấn cấu hình phù hợp.</p>
       <div v-if="zaloHref || messengerHref" class="mt-3 grid gap-2">
-        <a v-if="zaloHref" :href="zaloHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[#0068ff] px-3 text-xs font-bold uppercase text-white hover:bg-[#0058d9]">Chat Zalo</a>
-        <a v-if="messengerHref" :href="messengerHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[#1684fb] px-3 text-xs font-bold uppercase text-white hover:bg-[#0d6ed2]">Chat Messenger</a>
+        <a v-if="zaloHref" :href="zaloHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[#0068ff] px-3 text-xs font-bold uppercase text-white hover:bg-[var(--pc-primary)]">Chat Zalo</a>
+        <a v-if="messengerHref" :href="messengerHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[var(--pc-primary)] px-3 text-xs font-bold uppercase text-white hover:bg-[var(--pc-primary)]">Chat Messenger</a>
       </div>
     </div>
     <div v-else class="mt-3 grid gap-2">
-      <button type="button" :disabled="!purchasable" class="h-9 rounded-[6px] bg-orange-600 px-3 text-xs font-bold uppercase text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-45" @click="emit('buy')">Mua ngay</button>
-      <button type="button" :disabled="!purchasable" class="h-9 rounded-[6px] bg-blue-700 px-3 text-xs font-bold uppercase text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-45" @click="emit('add')">Thêm vào giỏ</button>
+      <button type="button" :disabled="!purchasable" class="h-9 rounded-[6px] bg-accent px-3 text-xs font-bold uppercase text-accent-ink hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-45" @click="emit('buy')">Mua ngay</button>
+      <button type="button" :disabled="!purchasable" class="h-9 rounded-[6px] bg-brand px-3 text-xs font-bold uppercase text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45" @click="emit('add')">Thêm vào giỏ</button>
     </div>
 
     <div v-if="benefits.length" class="mt-3 space-y-2 border-t border-slate-100 pt-3">
       <div v-for="benefit in benefits" :key="benefit.text" class="flex items-start gap-2 text-[10px] leading-4 text-slate-600">
-        <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs text-blue-700" aria-hidden="true">{{ benefit.icon }}</span>
+        <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs text-brand" aria-hidden="true">{{ benefit.icon }}</span>
         <span>{{ benefit.text }}</span>
       </div>
     </div>

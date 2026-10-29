@@ -96,7 +96,7 @@ const playing = ref(false)
 .product-video__link {
   display: inline-block;
   margin-top: 8px;
-  color: #1264d8;
+  color: var(--pc-primary);
   font-size: 13px;
   font-weight: 600;
 }

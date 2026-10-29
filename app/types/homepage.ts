@@ -31,8 +31,29 @@ export interface HomepageCategoryCard {
 
 export interface HomepageCategorySection {
   category: HomepageCategoryCard & { description: string | null }
+  /** Visible child categories, shown as quick filter chips. */
+  children: HomepageCategoryCard[]
   product_count: number
   products: ProductCard[]
+}
+
+export interface HomepageProductTab {
+  label: string
+  category: HomepageCategoryCard
+  products: ProductCard[]
+}
+
+export interface HomepageStoreActivity {
+  id: number
+  title: string
+  type: 'image' | 'video'
+  image: string | null
+  video: {
+    provider: 'youtube' | 'facebook' | 'file'
+    embed_url: string | null
+    file_url: string | null
+    thumbnail_url: string | null
+  } | null
 }
 
 export interface HomepagePost {
@@ -60,22 +81,14 @@ export interface HomepageResponse {
   hero_banners: HomepageBanner[]
   sidebar_banners: HomepageBanner[]
   category_sidebar: HomepageCategoryCard[]
-  featured_categories: HomepageCategoryCard[]
   category_sections: HomepageCategorySection[]
   flash_sale: {
     enabled: boolean
     ends_at: string | null
     products: ProductCard[]
   }
-  best_sellers: {
-    laptop: ProductCard[]
-    pc_gaming: ProductCard[]
-    components: ProductCard[]
-  }
-  pc_builder_banner: HomepageBanner | null
-  combo_banners: HomepageBanner[]
-  setup_banners: HomepageBanner[]
-  featured_accessories: ProductCard[]
+  product_tabs: HomepageProductTab[]
+  store_activities: HomepageStoreActivity[]
   posts: HomepagePost[]
   testimonials: HomepageTestimonial[]
 }

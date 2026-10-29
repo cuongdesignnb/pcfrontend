@@ -34,7 +34,7 @@ const submit = async () => {
 <template>
   <section class="pdp-panel">
     <details>
-      <summary class="cursor-pointer text-xs font-bold text-blue-700">Viết đánh giá</summary>
+      <summary class="cursor-pointer text-xs font-bold text-brand">Viết đánh giá</summary>
       <p class="mt-2 text-[11px] text-slate-500">Đánh giá được kiểm duyệt trước khi công khai.</p>
       <p v-if="isAuthenticated" class="mt-3 text-xs text-slate-600">Đang đăng nhập: {{ user?.name }}</p>
       <form class="mt-3 space-y-3" @submit.prevent="submit">
@@ -42,7 +42,7 @@ const submit = async () => {
         <div v-if="!isAuthenticated" class="grid gap-2 sm:grid-cols-2"><label class="text-xs font-medium text-slate-700">Họ tên<input v-model="form.guest_name" required class="mt-1 h-8 w-full rounded-[6px] border border-slate-200 px-2 text-xs font-normal" /></label><label class="text-xs font-medium text-slate-700">Email<input v-model="form.guest_email" required type="email" class="mt-1 h-8 w-full rounded-[6px] border border-slate-200 px-2 text-xs font-normal" /></label></div>
         <label class="block text-xs font-medium text-slate-700">Tiêu đề (không bắt buộc)<input v-model="form.title" maxlength="150" class="mt-1 h-8 w-full rounded-[6px] border border-slate-200 px-2 text-xs font-normal" /></label>
         <label class="block text-xs font-medium text-slate-700">Nội dung<textarea v-model="form.body" required minlength="10" maxlength="2000" rows="4" class="mt-1 w-full rounded-[6px] border border-slate-200 px-2 py-1.5 text-xs font-normal" /></label>
-        <button type="submit" :disabled="!canSubmit || submitting" class="h-8 rounded-[6px] bg-blue-700 px-3 text-xs font-bold text-white hover:bg-blue-800 disabled:opacity-45">{{ submitting ? 'Đang gửi…' : 'Gửi đánh giá' }}</button>
+        <button type="submit" :disabled="!canSubmit || submitting" class="h-8 rounded-[6px] bg-brand px-3 text-xs font-bold text-white hover:bg-brand-dark disabled:opacity-45">{{ submitting ? 'Đang gửi…' : 'Gửi đánh giá' }}</button>
       </form>
     </details>
   </section>

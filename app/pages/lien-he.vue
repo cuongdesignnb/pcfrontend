@@ -2,20 +2,7 @@
 import { toTelHref } from '~/utils/contactLinks'
 import { serializeJsonLd } from '~/composables/useSeoDocument'
 
-const { siteName, siteHotline, siteEmail, siteAddress, businessHours, getString } = useSettings()
-
-// Admin settings keep only a Google Maps embed src; re-check the shape so a
-// stale or edited value can never turn into an arbitrary iframe.
-const mapEmbedUrl = computed(() => {
-  const value = getString('contact_map_embed_url').trim()
-  return /^https:\/\/(?:www\.)?google\.com\/maps\/embed\?/i.test(value)
-    || /^https:\/\/(?:maps|www)\.google\.com\/maps\?(?:[^#]*&)?output=embed(?:&|$)/i.test(value)
-    ? value
-    : ''
-})
-const directionsUrl = computed(() => siteAddress.value
-  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteAddress.value)}`
-  : '')
+const { siteName, siteHotline, siteEmail, siteAddress, businessHours, mapEmbedUrl, mapDirectionsUrl: directionsUrl } = useSettings()
 
 const { origin } = useSeoDocument(() => ({
   title: `Liên hệ - ${siteName.value}`,
@@ -40,13 +27,13 @@ useHead(() => business.value
           <h2 class="text-xl font-semibold text-gray-900 mb-4">Thông tin liên hệ</h2>
           <div class="space-y-4">
             <div class="flex items-start gap-3">
-              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              <div class="w-10 h-10 bg-brand-soft rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               </div>
               <div>
                 <p class="font-medium text-gray-900">Địa chỉ</p>
                 <p v-if="siteAddress" class="text-gray-600">{{ siteAddress }}</p>
-                <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block text-sm font-medium text-blue-600 hover:underline">Chỉ đường →</a>
+                <a v-if="directionsUrl" :href="directionsUrl" target="_blank" rel="noopener noreferrer" class="mt-1 inline-block text-sm font-medium text-brand hover:underline">Chỉ đường →</a>
               </div>
             </div>
             <div class="flex items-start gap-3">
@@ -55,7 +42,7 @@ useHead(() => business.value
               </div>
               <div>
                 <p class="font-medium text-gray-900">Hotline</p>
-                <a v-if="siteHotline && toTelHref(siteHotline)" :href="toTelHref(siteHotline)" class="text-gray-600 hover:text-blue-600">{{ siteHotline }}</a>
+                <a v-if="siteHotline && toTelHref(siteHotline)" :href="toTelHref(siteHotline)" class="text-gray-600 hover:text-brand">{{ siteHotline }}</a>
                 <p v-if="businessHours" class="text-xs text-gray-500">{{ businessHours }}</p>
               </div>
             </div>
@@ -65,7 +52,7 @@ useHead(() => business.value
               </div>
               <div>
                 <p class="font-medium text-gray-900">Email</p>
-                <a v-if="siteEmail" :href="`mailto:${siteEmail}`" class="text-gray-600 hover:text-blue-600">{{ siteEmail }}</a>
+                <a v-if="siteEmail" :href="`mailto:${siteEmail}`" class="text-gray-600 hover:text-brand">{{ siteEmail }}</a>
               </div>
             </div>
           </div>

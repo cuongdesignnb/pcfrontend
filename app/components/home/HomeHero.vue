@@ -19,7 +19,7 @@ withDefaults(defineProps<{
       <div class="home-hero-grid">
         <HomeCategorySidebar :categories="categorySidebar" />
         <HomeHeroSlider :banners="heroBanners.slice(0, 3)" :autoplay="autoplay" :interval="interval" />
-        <HomeSidePromotions :banners="sidebarBanners.slice(0, 3)" />
+        <HomeSidePromotions :banners="sidebarBanners.slice(0, 2)" />
       </div>
     </div>
   </section>

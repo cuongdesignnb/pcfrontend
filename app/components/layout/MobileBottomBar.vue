@@ -86,7 +86,7 @@ const isActive = (path: string) => (path === '/' ? route.path === '/' : route.pa
 }
 
 .mobile-bottom-bar__item.is-active {
-  color: var(--pc-blue, #1264d8);
+  color: var(--pc-primary);
 }
 
 .mobile-bottom-bar__item--call {

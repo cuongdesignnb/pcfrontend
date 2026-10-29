@@ -24,6 +24,8 @@ const {
   socialZalo,
   socialMessenger,
   socialInstagram,
+  mapEmbedUrl,
+  mapDirectionsUrl,
   getString,
   getBoolean,
 } = useSettings()
@@ -75,6 +77,18 @@ const paymentMethods = computed(() => {
   return methods
 })
 
+// Fanpage & YouTube column: the Facebook Page Plugin of the configured page
+// and a card linking to the configured YouTube channel.
+const facebookPageUrl = computed(() => {
+  const href = toSocialHref(socialFacebook.value, 'facebook')
+  return /^https:\/\/(?:www\.|m\.|web\.)?facebook\.com\/[^/?#]+/i.test(href) ? href : ''
+})
+const facebookPluginSrc = computed(() => facebookPageUrl.value
+  ? `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(facebookPageUrl.value)}&tabs=&width=340&height=130&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`
+  : '')
+const youtubeHref = computed(() => toSocialHref(socialYoutube.value, 'youtube'))
+const youtubeHandle = computed(() => youtubeHref.value.match(/youtube\.com\/(@[^/?#]+)/i)?.[1] ?? '')
+
 const hotlineHref = computed(() => toTelHref(siteHotline.value))
 const chatLink = computed(() => {
   const link = socialLinks.value.find(item => item.key === 'zalo' || item.key === 'messenger' || item.key === 'facebook')
@@ -92,52 +106,75 @@ const chatLink = computed(() => {
   <footer class="site-footer">
     <div class="pc-container site-footer-grid">
       <section class="site-footer-about">
-        <NuxtLink to="/" class="site-footer-logo">
+        <NuxtLink to="/" class="site-footer-logo" :class="{ 'is-on-light': !siteLogoWhite && siteLogo }">
           <img v-if="siteLogoWhite || siteLogo" :src="siteLogoWhite || siteLogo" :alt="siteName">
           <span v-else class="site-footer-logo-fallback">{{ siteName }}</span>
         </NuxtLink>
         <p>{{ siteDescription || siteTagline }}</p>
+        <ul class="site-footer-contact">
+          <li v-if="siteAddress">{{ siteAddress }}</li>
+          <li v-if="siteHotline && hotlineHref">Hotline: <a :href="hotlineHref">{{ siteHotline }}</a></li>
+          <li v-if="siteEmail"><a :href="`mailto:${siteEmail}`">{{ siteEmail }}</a></li>
+          <li v-if="businessHours">{{ businessHours }}</li>
+        </ul>
         <div v-if="socialLinks.length" class="site-footer-socials" aria-label="Mạng xã hội">
           <a v-for="link in socialLinks" :key="link.key" :href="link.href" target="_blank" rel="noopener noreferrer" :aria-label="link.label">
             {{ link.mark }}
           </a>
         </div>
-        <div v-if="(siteHotline && hotlineHref) || siteEmail" class="site-footer-contact">
-          <a v-if="siteHotline && hotlineHref" :href="hotlineHref">{{ siteHotline }}</a>
-          <a v-if="siteEmail" :href="`mailto:${siteEmail}`">{{ siteEmail }}</a>
-        </div>
       </section>
 
-      <section v-for="column in footerColumns" :key="column.id">
-        <h3>{{ column.title }}</h3>
-        <ul>
-          <li v-for="link in column.links" :key="link.id">
-            <NuxtLink
-              :to="resolveFooterUrl(link)"
-              :target="link.target === '_blank' ? '_blank' : undefined"
-              :rel="link.target === '_blank' ? 'noopener noreferrer' : undefined"
-            >
-              {{ link.title }}
-            </NuxtLink>
-          </li>
-        </ul>
+      <div class="site-footer-links">
+        <section v-for="column in footerColumns" :key="column.id">
+          <h3>{{ column.title }}</h3>
+          <ul>
+            <li v-for="link in column.links" :key="link.id">
+              <NuxtLink
+                :to="resolveFooterUrl(link)"
+                :target="link.target === '_blank' ? '_blank' : undefined"
+                :rel="link.target === '_blank' ? 'noopener noreferrer' : undefined"
+              >
+                {{ link.title }}
+              </NuxtLink>
+            </li>
+          </ul>
+        </section>
+        <section v-if="paymentMethods.length">
+          <h3>THANH TOÁN</h3>
+          <div class="site-footer-payments">
+            <span v-for="method in paymentMethods" :key="method.label" :title="method.detail">{{ method.label }}</span>
+          </div>
+        </section>
+      </div>
+
+      <section v-if="mapEmbedUrl" class="site-footer-map">
+        <h3>BẢN ĐỒ CỬA HÀNG</h3>
+        <iframe :src="mapEmbedUrl" :title="`Bản đồ ${siteName}`" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen />
+        <a v-if="mapDirectionsUrl" :href="mapDirectionsUrl" target="_blank" rel="noopener noreferrer">Chỉ đường trên Google Maps <span aria-hidden="true">›</span></a>
       </section>
 
-      <section>
-        <h3>THANH TOÁN</h3>
-        <div class="site-footer-payments">
-          <span v-for="method in paymentMethods" :key="method.label" :title="method.detail">{{ method.label }}</span>
-        </div>
-        <p v-if="siteAddress" class="site-footer-address">{{ siteAddress }}</p>
-        <p v-if="businessHours" class="site-footer-hours">{{ businessHours }}</p>
+      <section v-if="facebookPluginSrc || youtubeHref" class="site-footer-social-embeds">
+        <h3>FANPAGE &amp; YOUTUBE</h3>
+        <iframe
+          v-if="facebookPluginSrc"
+          :src="facebookPluginSrc"
+          title="Fanpage Facebook"
+          class="site-footer-fanpage"
+          loading="lazy"
+          scrolling="no"
+          allow="encrypted-media"
+        />
+        <a v-if="youtubeHref" :href="youtubeHref" target="_blank" rel="noopener noreferrer" class="site-footer-youtube">
+          <span class="site-footer-youtube-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 7.5v9l7.5-4.5z" /></svg></span>
+          <span><strong>Kênh YouTube {{ siteName }}</strong><small>{{ youtubeHandle || 'Xem video mới nhất' }}</small></span>
+        </a>
+        <FooterNewsletter />
       </section>
-
-      <FooterNewsletter />
+      <FooterNewsletter v-else />
     </div>
 
     <div class="pc-container site-footer-bottom">
       <span>© {{ year }} {{ siteName }}. All rights reserved.</span>
-      <span v-if="siteHotline">Hotline: {{ siteHotline }}</span>
     </div>
 
     <a v-if="chatLink" :href="chatLink.href" target="_blank" rel="noopener noreferrer" class="site-chat-button">

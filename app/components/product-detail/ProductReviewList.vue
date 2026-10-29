@@ -56,7 +56,7 @@ const emptyStars = (review: ProductReview) => '★'.repeat(Math.max(0, 5 - revie
         <div class="flex flex-wrap items-center gap-x-2 gap-y-1"><strong class="text-xs text-slate-800">{{ review.reviewer_name }}</strong><span class="text-[11px] text-amber-500">{{ stars(review) }}<span class="text-slate-200">{{ emptyStars(review) }}</span></span><span v-if="review.verified_purchase" class="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] text-emerald-700">Đã mua hàng</span><time class="text-[9px] text-slate-400">{{ formattedDate(review.created_at) }}</time></div>
         <h3 v-if="review.title" class="mt-1 text-xs font-semibold text-slate-800">{{ review.title }}</h3>
         <p v-if="review.body" class="mt-1 whitespace-pre-line text-[11px] leading-4 text-slate-600">{{ review.body }}</p>
-        <p v-if="review.admin_reply" class="mt-2 rounded-[6px] bg-blue-50 px-2.5 py-2 text-[11px] leading-4 text-blue-900"><strong>Phản hồi từ cửa hàng:</strong> {{ review.admin_reply }}</p>
+        <p v-if="review.admin_reply" class="mt-2 rounded-[6px] bg-brand-soft px-2.5 py-2 text-[11px] leading-4 text-brand-dark"><strong>Phản hồi từ cửa hàng:</strong> {{ review.admin_reply }}</p>
       </article>
     </div>
     <p v-else-if="!loading && !featuredReviews.length" class="mt-3 text-xs text-slate-500">Chưa có đánh giá phù hợp.</p>

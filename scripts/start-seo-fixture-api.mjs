@@ -75,7 +75,7 @@ const server = createServer(async (request, response) => {
 
   if (url.pathname === '/api/v1/settings') return send(request, response, 200, settingsFor(scenario))
   if (url.pathname === '/api/v1/homepage') return send(request, response, 200, homepageFor(scenario))
-  if (url.pathname === '/api/v1/menus/header') return send(request, response, 200, headerMenu)
+  if (url.pathname === '/api/v1/menus/header' || url.pathname === '/api/v1/menus/sidebar') return send(request, response, 200, headerMenu)
   if (url.pathname === '/api/v1/menus/footer') return send(request, response, 200, footerMenu)
   if (url.pathname === '/api/v1/cart') return send(request, response, 200, emptyCart)
   if (url.pathname === '/api/v1/wishlist') return send(request, response, 200, { ids: [] })

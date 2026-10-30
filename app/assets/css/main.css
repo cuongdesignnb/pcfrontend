@@ -434,6 +434,8 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 .footer-newsletter-message.is-success { color: #9de1b5 !important; }
 .footer-newsletter-message.is-error { color: #ffb0aa !important; }
 .site-footer-bottom { display: flex; min-height: 42px; align-items: center; justify-content: center; gap: 20px; color: #8ea7c1; border-top: 1px solid rgba(255,255,255,.12); font-size: 11px; }
+.site-footer-legal { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; color: #a9bdd2; border-top: 1px solid rgba(255,255,255,.12); font-size: 12px; line-height: 1.55; text-align: center; }
+.site-footer-legal strong { color: #fff; font-size: 13px; letter-spacing: .02em; }
 .site-chat-button { position: fixed; right: 20px; bottom: 17px; z-index: 40; display: inline-flex; align-items: center; gap: 7px; padding: 10px 15px; color: #fff; background: var(--pc-primary); border-radius: 18px; box-shadow: 0 5px 16px color-mix(in srgb, var(--pc-primary) 30%, transparent); font-size: 10px; font-weight: 700; }
 .site-chat-button:hover { background: var(--pc-primary-dark); }
 .site-chat-button > span { color: var(--pc-primary-soft); font-size: 9px; }

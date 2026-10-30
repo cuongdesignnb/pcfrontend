@@ -89,6 +89,21 @@ const facebookPluginSrc = computed(() => facebookPageUrl.value
 const youtubeHref = computed(() => toSocialHref(socialYoutube.value, 'youtube'))
 const youtubeHandle = computed(() => youtubeHref.value.match(/youtube\.com\/(@[^/?#]+)/i)?.[1] ?? '')
 
+// Required by Bộ Công Thương: the business behind the site. The policy pages
+// reach the footer through the footer menu API.
+const legalLines = computed(() => {
+  const registration = getString('legal_registration_number')
+  const issued = [getString('legal_registration_date') && `ngày cấp ${getString('legal_registration_date')}`, getString('legal_registration_place') && `nơi cấp ${getString('legal_registration_place')}`].filter(Boolean).join(', ')
+  return [
+    registration && `Giấy chứng nhận đăng ký hộ kinh doanh số ${registration}${issued ? `, ${issued}` : ''}`,
+    getString('legal_head_office_address', siteAddress.value) && `Địa chỉ trụ sở: ${getString('legal_head_office_address', siteAddress.value)}`,
+    getString('legal_email', siteEmail.value) && `Email tiếp nhận thông tin: ${getString('legal_email', siteEmail.value)}`,
+    getString('legal_representative') && `Người đại diện theo pháp luật: ${getString('legal_representative')}`,
+    getString('legal_operator') && `Người chịu trách nhiệm quản lý và vận hành website: ${getString('legal_operator')}`,
+  ].filter((line): line is string => Boolean(line))
+})
+const legalName = computed(() => getString('legal_business_name'))
+
 const hotlineHref = computed(() => toTelHref(siteHotline.value))
 const chatLink = computed(() => {
   const link = socialLinks.value.find(item => item.key === 'zalo' || item.key === 'messenger' || item.key === 'facebook')
@@ -173,6 +188,10 @@ const chatLink = computed(() => {
       <FooterNewsletter v-else />
     </div>
 
+    <div v-if="legalName || legalLines.length" class="pc-container site-footer-legal">
+      <strong v-if="legalName">{{ legalName }}</strong>
+      <span v-for="line in legalLines" :key="line">{{ line }}</span>
+    </div>
     <div class="pc-container site-footer-bottom">
       <span>© {{ year }} {{ siteName }}. All rights reserved.</span>
     </div>

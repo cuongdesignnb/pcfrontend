@@ -194,6 +194,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
               <ProductSpecificationTable :specifications="product.specifications" :title="product.technical_section_title" />
               <ProductCompatibility v-if="product.component_type" :slug="product.slug" />
             </div>
+            <ProductCompliance v-if="product.compliance" :compliance="product.compliance" />
           </div>
 
           <aside class="pdp-area-relations pdp-relations-rail">

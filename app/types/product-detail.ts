@@ -130,6 +130,8 @@ export interface ProductDetail {
   warranty_months: number | null
   /** Paid warranty options of the product's category; empty when none are offered. */
   warranty_packages?: WarrantyPackage[]
+  /** Nghị định 37/2026: year of manufacture, refurbished label, warnings, usage and storage. */
+  compliance?: ProductCompliance
   sold_count: number
   rating: ProductReviewSummary
   questions_count: number
@@ -170,4 +172,12 @@ export interface BuyNowItem {
   variant_id: number | null
   warranty_months?: number | null
   quantity: number
+}
+
+export interface ProductCompliance {
+  manufacture_year: number | null
+  is_refurbished: boolean
+  refurbished_label: string | null
+  warning_info: string | null
+  usage_instructions: string | null
 }

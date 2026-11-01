@@ -20,11 +20,20 @@ interface AffiliateCommissionRow {
   cancelled_reason: string | null
   created_at: string
 }
+interface AffiliatePayoutRow {
+  id: number
+  amount: number
+  status: 'pending' | 'paid' | 'cancelled'
+  bank_account_number: string | null
+  paid_at: string | null
+  created_at: string
+}
 interface AffiliateDashboard {
   affiliate: AffiliateProfile | null
   id_card_required: boolean
   stats?: { clicks: number; customers: number; orders: number }
-  wallet?: { available: number; pending: number; next_approval_at: string | null; total_earned: number; min_payout: number }
+  wallet?: { available: number; pending: number; next_approval_at: string | null; total_earned: number; min_payout: number; payout_pending: number; withdrawn: number }
+  payouts?: AffiliatePayoutRow[]
   commissions?: { data: AffiliateCommissionRow[]; meta: { current_page: number; last_page: number; total: number } }
 }
 
@@ -49,6 +58,13 @@ const referralLink = computed(() => affiliate.value?.code && import.meta.client 
 const formatMoney = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)}đ`
 const formatDate = (value: string | null) => value ? new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value)) : ''
 const statusLabel = { pending: 'Chờ duyệt', approved: 'Được rút', cancelled: 'Đã huỷ' } as const
+const payoutStatusLabel = { pending: 'Chờ chuyển khoản', paid: 'Đã rút', cancelled: 'Đã huỷ' } as const
+const payoutNote = ref('')
+const payoutError = ref('')
+const canWithdraw = computed(() => {
+  const wallet = dashboard.value?.wallet
+  return Boolean(wallet && wallet.available > 0 && wallet.available >= wallet.min_payout && !wallet.payout_pending)
+})
 
 const load = async () => {
   loading.value = true
@@ -101,6 +117,22 @@ const savePayoutSchedule = async () => {
   }
 }
 
+const requestPayout = async () => {
+  if (!canWithdraw.value || saving.value) return
+  saving.value = true
+  payoutNote.value = ''
+  payoutError.value = ''
+  try {
+    await auth.authFetch(`${config.public.apiBase}/affiliate/me/payouts`, { method: 'POST' })
+    payoutNote.value = 'Đã gửi lệnh rút. Cửa hàng sẽ chuyển khoản và báo "Đã rút" tại đây.'
+    await load()
+  } catch (error: unknown) {
+    payoutError.value = (error as { data?: { message?: string } }).data?.message ?? 'Không thể gửi lệnh rút. Vui lòng thử lại.'
+  } finally {
+    saving.value = false
+  }
+}
+
 const goToPage = (next: number) => { page.value = next; void load() }
 
 onMounted(() => { void load() })
@@ -138,10 +170,18 @@ useSeoMeta({ title: () => `Cộng tác viên - ${siteName.value}`, robots: 'noin
       </section>
 
       <div class="account-stat-grid ctv-stats">
-        <div class="account-stat-card"><span class="ctv-muted">Số dư được rút</span><strong>{{ formatMoney(dashboard?.wallet?.available ?? 0) }}</strong><small class="ctv-muted">Rút tối thiểu {{ formatMoney(dashboard?.wallet?.min_payout ?? 0) }}</small></div>
+        <div class="account-stat-card">
+          <span class="ctv-muted">Số dư được rút</span><strong>{{ formatMoney(dashboard?.wallet?.available ?? 0) }}</strong>
+          <small v-if="dashboard?.wallet?.payout_pending" class="ctv-muted">Đang chờ chuyển {{ formatMoney(dashboard.wallet.payout_pending) }}</small>
+          <small v-else class="ctv-muted">Rút tối thiểu {{ formatMoney(dashboard?.wallet?.min_payout ?? 0) }}</small>
+          <button type="button" class="account-primary-button ctv-withdraw" :disabled="!canWithdraw || saving" @click="requestPayout">Rút tiền</button>
+        </div>
         <div class="account-stat-card"><span class="ctv-muted">Hoa hồng đang chờ về</span><strong>{{ formatMoney(dashboard?.wallet?.pending ?? 0) }}</strong><small v-if="dashboard?.wallet?.next_approval_at" class="ctv-muted">Dự kiến duyệt từ {{ formatDate(dashboard.wallet.next_approval_at) }}</small><small v-else class="ctv-muted">Duyệt sau khi đơn giao thành công</small></div>
         <div class="account-stat-card"><span class="ctv-muted">Lượt bấm · Khách · Đơn</span><strong>{{ dashboard?.stats?.clicks ?? 0 }} · {{ dashboard?.stats?.customers ?? 0 }} · {{ dashboard?.stats?.orders ?? 0 }}</strong></div>
       </div>
+
+      <p v-if="payoutNote" class="account-success-note">{{ payoutNote }}</p>
+      <p v-if="payoutError" class="account-form-error">{{ payoutError }}</p>
 
       <form class="account-form-card" @submit.prevent="savePayoutSchedule">
         <h2 class="ctv-title">Lịch rút tiền</h2>
@@ -156,8 +196,23 @@ useSeoMeta({ title: () => `Cộng tác viên - ${siteName.value}`, robots: 'noin
         </div>
         <p v-if="savedNote" class="account-success-note">{{ savedNote }}</p>
         <p v-if="formError" class="account-form-error">{{ formError }}</p>
-        <p class="ctv-muted">Đến ngày đã chọn, cửa hàng chuyển số dư được rút vào tài khoản {{ affiliate.bank_name }} {{ affiliate.bank_account_number }}.</p>
+        <p class="ctv-muted">Đến ngày đã chọn, hệ thống tự tạo lệnh rút toàn bộ số dư được rút và cửa hàng chuyển vào tài khoản {{ affiliate.bank_name }} {{ affiliate.bank_account_number }}. Bạn cũng có thể bấm "Rút tiền" bất cứ lúc nào.</p>
       </form>
+
+      <section v-if="dashboard?.payouts?.length" class="account-list-card ctv-payouts">
+        <h2 class="ctv-title">Lệnh rút tiền</h2>
+        <table class="ctv-table">
+          <thead><tr><th>Ngày tạo</th><th>Số tiền</th><th>Tài khoản</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr v-for="row in dashboard.payouts" :key="row.id">
+              <td>{{ formatDate(row.created_at) }}</td>
+              <td><strong>{{ formatMoney(row.amount) }}</strong></td>
+              <td>{{ row.bank_account_number }}</td>
+              <td :class="row.status === 'paid' ? 'is-approved' : `is-${row.status}`">{{ payoutStatusLabel[row.status] }}<small v-if="row.paid_at">{{ formatDate(row.paid_at) }}</small></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
 
       <section class="account-list-card">
         <h2 class="ctv-title">Lịch sử hoa hồng</h2>
@@ -192,6 +247,8 @@ useSeoMeta({ title: () => `Cộng tác viên - ${siteName.value}`, robots: 'noin
 .ctv-link-row input { flex: 1; min-width: 0; min-height: 36px; padding: 0 10px; border: 1px solid #d5e0ed; border-radius: 5px; font-size: 12px; }
 .ctv-stats { margin: 12px 0; }
 .ctv-stats .account-stat-card { min-height: 0; }
+.ctv-withdraw { align-self: flex-start; margin-top: 6px; min-height: 30px; padding: 0 14px; font-size: 12px; }
+.ctv-payouts { margin-bottom: 12px; }
 .ctv-payout-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 10px; }
 .ctv-payout-row label { display: flex; flex-direction: column; gap: 4px; color: #30466f; font-size: 11px; font-weight: 700; }
 .ctv-payout-row select { min-height: 36px; padding: 0 10px; border: 1px solid #d5e0ed; border-radius: 5px; }

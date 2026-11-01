@@ -2,7 +2,10 @@ export type RelationType = 'related' | 'accessory' | 'frequently_bought' | 'alte
 
 export interface WarrantyPackage {
   months: number
+  /** Added to each unit; negative for a package cheaper than the listed price. */
   price: number
+  /** Set when the price is a share of the unit price, so a variant can be repriced. */
+  percent?: number | null
 }
 
 export interface ProductImage {
@@ -130,6 +133,8 @@ export interface ProductDetail {
   warranty_months: number | null
   /** Paid warranty options of the product's category; empty when none are offered. */
   warranty_packages?: WarrantyPackage[]
+  /** The product's id in the catalog feeds (kiot:123), sent with Pixel events. */
+  catalog_content_id?: string
   /** Nghị định 37/2026: year of manufacture, refurbished label, warnings, usage and storage. */
   compliance?: ProductCompliance
   sold_count: number

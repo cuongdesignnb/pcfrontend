@@ -200,19 +200,18 @@ const categoryJsonLd = computed(() => {
     })
     .filter((item): item is { '@type': string; position: number; url: string } => item !== null)
 
+  const ancestors = category.value.ancestors ?? (category.value.parent ? [category.value.parent] : [])
   const breadcrumbItems = [
     { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: canonicalAbsoluteUrl(origin.value, '/') },
-    ...(category.value.parent
-      ? [{
-          '@type': 'ListItem',
-          position: 2,
-          name: category.value.parent.name,
-          item: canonicalAbsoluteUrl(origin.value, category.value.parent.canonical_path || `/${category.value.parent.slug}`),
-        }]
-      : []),
+    ...ancestors.map((ancestor, index) => ({
+      '@type': 'ListItem',
+      position: index + 2,
+      name: ancestor.name,
+      item: canonicalAbsoluteUrl(origin.value, ancestor.canonical_path || `/${ancestor.slug}`),
+    })),
     {
       '@type': 'ListItem',
-      position: category.value.parent ? 3 : 2,
+      position: ancestors.length + 2,
       name: category.value.name,
       item: canonicalUrl.value,
     },

@@ -3,6 +3,7 @@ const config = useRuntimeConfig()
 const route = useRoute()
 const toast = useToast()
 const { siteName } = useSettings()
+const { trackPurchase } = useEcommerceTracking()
 
 const orderId = route.params.id as string
 const order = ref<any>(null)
@@ -29,6 +30,7 @@ const refreshOrder = async () => {
       { headers: orderHeaders() },
     )
     accessDenied.value = false
+    if (order.value?.order_status !== 'cancelled') trackPurchase(order.value)
   } catch {
     order.value = null
     accessDenied.value = true

@@ -15,6 +15,8 @@ export interface CategoryListingCategory {
   canonical_url?: string | null
   product_count?: number
   parent?: CategoryListingCategory | null
+  /** Root first; two entries for a third-level category (Laptop cũ → Dell). */
+  ancestors?: CategoryListingCategory[]
   children?: CategoryListingCategory[]
   faq?: FaqItem[]
 }

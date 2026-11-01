@@ -31,19 +31,27 @@ const alternativeProducts = computed(() => alternativeData.value?.products || []
 const selection = useProductSelection(product)
 const addingToCart = ref(false)
 
-// Paid warranty options of the category: start on the package matching the
-// product's own warranty, otherwise the cheapest one.
-const warrantyPackages = computed(() => product.value?.warranty_packages ?? [])
+// Warranty options the customer ticks: start on the package matching the
+// product's own warranty, otherwise the one at no extra cost, otherwise the
+// shortest. A percent package is repriced for the chosen variant, the same
+// way the server charges it (rounded up to the next 1,000đ, never below 0đ).
+const variantBasePrice = computed(() => selection.pricing.value?.display_price ?? product.value?.pricing.display_price ?? 0)
+const warrantyPackages = computed(() => (product.value?.warranty_packages ?? []).map((pkg) => {
+  if (pkg.percent === null || pkg.percent === undefined) return pkg
+  const base = Math.max(0, variantBasePrice.value)
+  return { ...pkg, price: Math.max(-base, Math.ceil(base * pkg.percent / 100 / 1000) * 1000) }
+}))
 const defaultWarranty = () => {
-  const packages = warrantyPackages.value
+  const packages = product.value?.warranty_packages ?? []
   if (!packages.length) return null
   const own = packages.find(item => item.months === product.value?.warranty_months)
-  return (own ?? [...packages].sort((a, b) => a.price - b.price)[0])!.months
+  const free = packages.find(item => item.price === 0 && (item.percent ?? 0) === 0)
+  return (own ?? free ?? packages[0])!.months
 }
 const selectedWarranty = ref<number | null>(defaultWarranty())
-watch(warrantyPackages, () => { selectedWarranty.value = defaultWarranty() })
+watch(() => product.value?.warranty_packages, () => { selectedWarranty.value = defaultWarranty() })
+const warrantyExtra = computed(() => warrantyPackages.value.find(pkg => pkg.months === selectedWarranty.value)?.price ?? 0)
 
-const selectedPrice = computed(() => selection.pricing.value?.display_price ?? product.value?.pricing.display_price ?? 0)
 const selectedQuantity = computed(() => selection.inventory.value?.quantity ?? product.value?.inventory.quantity ?? 0)
 const selectedPricing = computed<ProductDetail['pricing']>(() => {
   const base = product.value?.pricing || { price: 0, sale_price: null, display_price: 0, discount_percent: 0, saving: 0 }
@@ -57,6 +65,18 @@ const selectedPricing = computed<ProductDetail['pricing']>(() => {
     display_price: displayPrice,
     discount_percent: salePrice !== null && price > 0 ? Math.max(0, Math.round((1 - salePrice / price) * 100)) : 0,
     saving: salePrice !== null ? Math.max(0, price - salePrice) : 0,
+  }
+})
+// What the customer pays with the chosen warranty package, shown in the price box.
+const pricingWithWarranty = computed<ProductDetail['pricing']>(() => {
+  const base = selectedPricing.value
+  const extra = warrantyExtra.value
+  if (!extra || base.display_price <= 0) return base
+  return {
+    ...base,
+    price: Math.max(0, base.price + extra),
+    sale_price: base.sale_price === null ? null : Math.max(0, base.sale_price + extra),
+    display_price: Math.max(0, base.display_price + extra),
   }
 })
 const contactOnly = computed(() => selectedPricing.value.display_price <= 0)
@@ -79,7 +99,7 @@ const addToCart = async () => {
   try {
     const success = await cart.addItem(product.value.id, selection.quantity.value, selection.selectedVariant.value?.id, selectedWarranty.value)
     if (!success) throw new Error('CART_ADD_FAILED')
-    track('add_to_cart', product.value, selection.quantity.value)
+    track('add_to_cart', product.value, selection.quantity.value, { variantId: selection.selectedVariant.value?.id, unitPrice: pricingWithWarranty.value.display_price })
     toast.add({ title: 'Đã thêm vào giỏ hàng', description: `${product.value.name} × ${selection.quantity.value}`, color: 'success' })
   } catch {
     toast.add({ title: 'Không thể thêm vào giỏ', description: 'Vui lòng thử lại sau.', color: 'error' })
@@ -90,7 +110,7 @@ const addToCart = async () => {
 
 const buyNow = async () => {
   if (!product.value || !onlinePurchasable.value) return
-  track('begin_checkout', product.value, selection.quantity.value)
+  track('begin_checkout', product.value, selection.quantity.value, { variantId: selection.selectedVariant.value?.id, unitPrice: pricingWithWarranty.value.display_price })
   await startBuyNow({ product_id: product.value.id, product_slug: product.value.slug, variant_id: selection.selectedVariant.value?.id ?? null, warranty_months: selectedWarranty.value, quantity: selection.quantity.value })
 }
 
@@ -169,7 +189,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
             <div class="pdp-info-column">
               <ProductTitleMeta :product="product" :sku="selection.sku.value" @reviews="scrollTo('danh-gia')" />
               <ProductHighlights :highlights="product.highlights" :short-description="product.short_description" />
-              <ProductPrice :pricing="selectedPricing" :contact-only="contactOnly" />
+              <ProductPrice :pricing="pricingWithWarranty" :contact-only="contactOnly" />
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                 <span :class="onlinePurchasable ? 'font-semibold text-emerald-600' : 'text-slate-500'"><span aria-hidden="true">●</span> {{ contactOnly ? 'Liên hệ để báo giá' : (onlinePurchasable ? 'Còn hàng' : product.inventory.availability_label) }}</span>
                 <span v-if="onlinePurchasable && selectedQuantity" class="text-slate-400">{{ selectedQuantity }} sản phẩm</span>
@@ -184,7 +204,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
 
           <div class="pdp-area-summary"><ProductPurchaseSummary :product="product" :variant="selection.selectedVariant.value" :quantity="selection.quantity.value" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @add="addToCart" @buy="buyNow" /></div>
           <div class="pdp-area-benefits"><ProductServiceBenefits :warranty-months="product.warranty_months" /></div>
-          <div v-if="!contactOnly" class="pdp-area-delivery"><ProductDeliveryPreview :subtotal="selectedPrice * selection.quantity.value" /></div>
+          <div v-if="!contactOnly" class="pdp-area-delivery"><ProductDeliveryPreview :subtotal="pricingWithWarranty.display_price * selection.quantity.value" /></div>
           <div class="pdp-area-tabs"><ProductAnchorTabs :has-compatibility="Boolean(product.component_type)" :rating-count="product.rating.count" :questions-count="product.questions_count" /></div>
 
           <div class="pdp-area-content pdp-content-main">
@@ -207,7 +227,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
           <div class="pdp-area-bottom pdp-bottom-row"><ProductQuestions :slug="product.slug" /><ProductRecentlyViewed :slug="product.slug" /></div>
         </div>
 
-        <ProductMobilePurchaseBar :price="selectedPrice" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @add="addToCart" @buy="buyNow" />
+        <ProductMobilePurchaseBar :price="pricingWithWarranty.display_price" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @add="addToCart" @buy="buyNow" />
       </template>
     </div>
   </main>

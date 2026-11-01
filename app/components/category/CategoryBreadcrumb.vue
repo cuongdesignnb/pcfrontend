@@ -2,15 +2,16 @@
 import type { CategoryListingCategory } from '~/types/category-listing'
 import { categoryUrl } from '~/utils/urls'
 
-defineProps<{ category: CategoryListingCategory | null }>()
+const props = defineProps<{ category: CategoryListingCategory | null }>()
+const ancestors = computed(() => props.category?.ancestors ?? (props.category?.parent ? [props.category.parent] : []))
 </script>
 
 <template>
   <nav class="category-breadcrumb" aria-label="Breadcrumb">
     <NuxtLink to="/">Trang chủ</NuxtLink>
     <span aria-hidden="true">/</span>
-    <template v-if="category?.parent">
-      <NuxtLink :to="categoryUrl(category.parent)">{{ category.parent.name }}</NuxtLink>
+    <template v-for="ancestor in ancestors" :key="ancestor.id">
+      <NuxtLink :to="categoryUrl(ancestor)">{{ ancestor.name }}</NuxtLink>
       <span aria-hidden="true">/</span>
     </template>
     <span class="is-current" aria-current="page">{{ category?.name || 'Danh mục sản phẩm' }}</span>

@@ -5,7 +5,7 @@ const auth = useAuth()
 const steps = [
   { title: 'Đăng ký tài khoản CTV', text: 'Điền số điện thoại và tài khoản ngân hàng. Cửa hàng duyệt và cấp mã riêng cho bạn, ví dụ CTV023.' },
   { title: 'Chia sẻ link sản phẩm', text: 'Ở mỗi trang sản phẩm, bấm "Lấy link" để copy hoặc chia sẻ lên Facebook, Zalo kèm mã của bạn.' },
-  { title: 'Khách được giảm giá', text: 'Khách mua lần đầu qua link hoặc mã của bạn được giảm giá. Khách gắn với bạn cho mọi đơn sau, kể cả mua qua điện thoại hay tại cửa hàng.' },
+  { title: 'Khách được giảm giá', text: 'Khách mua qua link hoặc mã của bạn được giảm giá cho mọi đơn laptop, và đơn linh kiện, phụ kiện, sửa chữa từ 2 triệu. Khách gắn với bạn cho mọi đơn sau, kể cả mua qua điện thoại hay tại cửa hàng.' },
   { title: 'Nhận hoa hồng về ví', text: 'Hoa hồng được duyệt sau khi khách nhận hàng. Bạn tự chọn 1–3 ngày rút tiền mỗi tháng.' },
 ]
 const ctaTarget = computed(() => auth.isAuthenticated.value ? '/tai-khoan/cong-tac-vien' : '/dang-ky?redirect=/tai-khoan/cong-tac-vien')

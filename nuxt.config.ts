@@ -101,6 +101,12 @@ export default defineNuxtConfig({
 
   // Route rules for rendering strategy
   routeRules: {
+    // D3: short price-range links for Messenger buttons, onto the used-laptop
+    // listing with the in-stock and price filters already applied.
+    '/laptop-duoi-5-trieu': { redirect: { to: '/laptop-cu?in_stock=1&max_price=4999999', statusCode: 302 } },
+    '/laptop-5-8-trieu': { redirect: { to: '/laptop-cu?in_stock=1&min_price=5000000&max_price=8000000', statusCode: 302 } },
+    '/laptop-tu-5-den-8-trieu': { redirect: { to: '/laptop-cu?in_stock=1&min_price=5000000&max_price=8000000', statusCode: 302 } },
+    '/laptop-tren-8-trieu': { redirect: { to: '/laptop-cu?in_stock=1&min_price=8000001', statusCode: 302 } },
     '/': { ssr: true, isr: 300, swr: false },
     '/sitemap.xml': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
     '/sitemaps/**': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },

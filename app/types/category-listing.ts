@@ -59,10 +59,27 @@ export interface CategoryListingPricePreset {
   max: number | null
 }
 
+export interface CategoryListingPriceLanding {
+  slug: string
+  label: string
+  path: string
+  min: number | null
+  max: number | null
+}
+
+export interface CategoryListingLanding {
+  slug: string
+  min_price: number | null
+  max_price: number | null
+  in_stock: boolean
+}
+
 export interface CategoryListingFilters {
   brands: CategoryListingBrand[]
   price_range: { min: number; max: number }
   price_presets: CategoryListingPricePreset[]
+  /** Price-range pages of this category, e.g. /laptop-duoi-5-trieu. */
+  price_landings?: CategoryListingPriceLanding[]
   groups: CategoryListingFilterGroup[]
   specs: CategoryListingSpecFilter[]
 }
@@ -93,6 +110,8 @@ export interface CategoryListingResponse {
   products: CategoryListingPagination
   recommendations: ProductCard[]
   filters: CategoryListingFilters
+  /** Set when the page is a price-range page rather than the category. */
+  landing?: CategoryListingLanding | null
 }
 
 export interface CategoryActiveFilter {

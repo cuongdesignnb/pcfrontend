@@ -19,6 +19,8 @@ const props = defineProps<{
   pricePresets: readonly CategoryListingPricePreset[]
 }>()
 
+const route = useRoute()
+
 const emit = defineEmits<{
   toggleBrand: [brandSlug: string]
   toggleSubCategory: [categorySlug: string]
@@ -59,6 +61,15 @@ function handlePriceApply(min: number | undefined, max: number | undefined) {
     </section>
 
     <CategoryBrandFilter :brands="filters.brands" :selected="selectedBrands" @toggle="emit('toggleBrand', $event)" />
+
+    <nav v-if="filters.price_landings?.length" class="category-filter-section category-filter-landings" aria-label="Laptop theo tầm giá">
+      <h2 class="category-filter-title">Theo tầm giá</h2>
+      <ul>
+        <li v-for="landing in filters.price_landings" :key="landing.slug">
+          <NuxtLink :to="landing.path" :aria-current="route.path === landing.path ? 'page' : undefined">{{ landing.label }}</NuxtLink>
+        </li>
+      </ul>
+    </nav>
 
     <CategoryPriceFilter :min="minPrice" :max="maxPrice" :range="filters.price_range" :presets="pricePresets" @apply="handlePriceApply" />
 

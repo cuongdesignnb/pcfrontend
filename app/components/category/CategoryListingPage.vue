@@ -51,11 +51,14 @@ const filters = computed<CategoryListingFilters>(() => {
     brands: responseFilters?.brands || [],
     price_range: responseFilters?.price_range || { min: 0, max: 0 },
     price_presets: responseFilters?.price_presets || [],
+    price_landings: responseFilters?.price_landings || [],
     groups: responseFilters?.groups || [],
     specs: responseFilters?.specs || [],
   }
 })
 const pricePresets = computed(() => filters.value.price_presets)
+// A price-range page always lists in-stock products.
+const stockChecked = computed(() => inStock.value || Boolean(data.value?.landing))
 const products = computed(() => data.value?.products.data || [])
 const recommendations = computed(() => data.value?.recommendations || [])
 const promoBanner = computed(() => data.value?.promo_banner || null)
@@ -261,7 +264,7 @@ useHead(() => categoryJsonLd.value
           :selected-sub-category="selectedSubCategory"
           :min-price="minPrice"
           :max-price="maxPrice"
-          :in-stock="inStock"
+          :in-stock="stockChecked"
           :dynamic-filters="dynamicFilters"
           :spec-filters="specFilters"
           :collapsed-groups="collapsedGroups"
@@ -323,7 +326,7 @@ useHead(() => categoryJsonLd.value
         :selected-sub-category="selectedSubCategory"
         :min-price="minPrice"
         :max-price="maxPrice"
-        :in-stock="inStock"
+        :in-stock="stockChecked"
         :dynamic-filters="dynamicFilters"
         :spec-filters="specFilters"
         :collapsed-groups="collapsedGroups"

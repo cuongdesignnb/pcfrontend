@@ -1054,6 +1054,9 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 .category-filter-sidebar-header h2 { margin: 0; color: #19284a; font-size: 18px; font-weight: 800; }
 .category-filter-section { padding: 13px 14px; border-bottom: 1px solid #eef1f5; }
 .category-filter-title, .category-filter-heading { display: flex; width: 100%; min-height: 21px; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 10px; padding: 0; color: #1b2b50; background: transparent; border: 0; font-size: 12px; font-weight: 800; text-align: left; }
+.category-filter-landings ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.category-filter-landings a { display: block; padding: 6px 9px; color: #1b2b50; border: 1px solid #e3e8ef; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; }
+.category-filter-landings a:hover, .category-filter-landings a[aria-current="page"] { color: #0e7490; border-color: #67c5d6; background: #f0fbfd; }
 .category-filter-title--with-count small { color: #94a0b0; font-size: 10px; font-weight: 600; }
 .category-filter-heading { margin-bottom: 9px; cursor: pointer; }
 .category-filter-heading svg { width: 14px; height: 14px; flex: 0 0 14px; color: #71809a; transition: transform .16s ease; }

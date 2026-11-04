@@ -4,12 +4,11 @@ const props = defineProps<{
   maxQuantity: number
   purchasable: boolean
   adding: boolean
-  canBuild: boolean
   contactOnly: boolean
   zaloHref: string
   messengerHref: string
 }>()
-const emit = defineEmits<{ 'update:quantity': [quantity: number]; add: []; buy: []; build: [] }>()
+const emit = defineEmits<{ 'update:quantity': [quantity: number]; add: []; buy: []}>()
 
 const updateQuantity = (event: Event) => {
   const value = Number((event.target as HTMLInputElement).value) || 1
@@ -45,6 +44,5 @@ const updateQuantity = (event: Event) => {
       </div>
     </div>
     <p v-if="!contactOnly && !purchasable" class="rounded-[6px] bg-slate-100 px-3 py-2 text-xs text-slate-600">Sản phẩm hiện chưa thể đặt trực tuyến.</p>
-    <button v-if="canBuild" type="button" class="h-9 w-full rounded-[6px] border border-brand bg-white px-4 text-xs font-semibold uppercase text-brand hover:bg-brand-soft" @click="emit('build')">Thêm vào PC Builder</button>
   </section>
 </template>

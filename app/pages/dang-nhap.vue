@@ -71,7 +71,7 @@ useSeoMeta({ title: `Đăng nhập - ${siteName.value}` })
 
         <div class="auth-form-panel">
           <div class="auth-form-heading">
-            <span class="auth-eyebrow">PC CENTER MEMBER</span>
+            <span class="auth-eyebrow">LAPTOPPLUS.VN MEMBER</span>
             <h1>Đăng nhập</h1>
             <p>Chào mừng bạn quay trở lại {{ siteName }}.</p>
             <small v-if="isCheckoutIntent" class="auth-intent-note">Đăng nhập để tiếp tục thanh toán và đồng bộ giỏ hàng của bạn.</small>

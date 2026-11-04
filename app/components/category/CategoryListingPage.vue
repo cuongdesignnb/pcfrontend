@@ -199,9 +199,9 @@ const categoryJsonLd = computed(() => {
     .map((item, index) => {
       const path = productUrl(item)
       const url = canonicalAbsoluteUrl(origin.value, path)
-      return url ? { '@type': 'ListItem', position: index + 1, url } : null
+      return url ? { '@type': 'ListItem', position: index + 1, url, name: item.name } : null
     })
-    .filter((item): item is { '@type': string; position: number; url: string } => item !== null)
+    .filter((item): item is { '@type': string; position: number; url: string; name: string } => item !== null)
 
   const ancestors = category.value.ancestors ?? (category.value.parent ? [category.value.parent] : [])
   const breadcrumbItems = [

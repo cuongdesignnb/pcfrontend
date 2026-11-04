@@ -1,6 +1,5 @@
 <script setup lang="ts">
 const props = defineProps<{
-  hasCompatibility: boolean
   ratingCount: number
   questionsCount: number
 }>()
@@ -11,7 +10,6 @@ let observer: IntersectionObserver | null = null
 const tabs = computed(() => [
   { id: 'mo-ta', label: 'MÔ TẢ' },
   { id: 'thong-so', label: 'THÔNG SỐ KỸ THUẬT' },
-  { id: 'tuong-thich', label: 'TƯƠNG THÍCH PC BUILDER', condition: props.hasCompatibility },
   { id: 'danh-gia', label: `ĐÁNH GIÁ (${props.ratingCount})` },
   { id: 'hoi-dap', label: `HỎI ĐÁP (${props.questionsCount})` },
 ])
@@ -38,7 +36,7 @@ onUnmounted(() => observer?.disconnect())
 <template>
   <nav aria-label="Điều hướng nội dung sản phẩm" class="pdp-anchor-tabs">
     <a
-      v-for="tab in tabs.filter(tab => !tab.condition || props.hasCompatibility)"
+      v-for="tab in tabs"
       :key="tab.id"
       :href="`#${tab.id}`"
       class="pdp-anchor-tab"

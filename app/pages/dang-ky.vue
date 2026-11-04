@@ -83,7 +83,7 @@ useSeoMeta({ title: `Đăng ký - ${siteName.value}` })
 
         <div class="auth-form-panel">
           <div class="auth-form-heading">
-            <span class="auth-eyebrow">PC CENTER MEMBER</span>
+            <span class="auth-eyebrow">LAPTOPPLUS.VN MEMBER</span>
             <h1>Tạo tài khoản</h1>
             <p>Tham gia cộng đồng công nghệ cùng {{ siteName }}.</p>
           </div>

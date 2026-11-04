@@ -59,10 +59,10 @@ const availableBenefits = computed(() => props.benefits.filter(item => item.titl
           type="text"
           maxlength="20"
           autocomplete="off"
-          placeholder="Nhập mã cộng tác viên (nếu có)"
+          placeholder="Nhập mã giới thiệu (nếu có)"
         >
         <p v-if="referral?.code && referral.discount" class="is-success">Mã {{ referral.code }} – giảm {{ formatMoney(referral.discount) }} cho đơn này.</p>
-        <p v-else-if="referral?.code">Bạn là khách của cộng tác viên {{ referral.affiliate_name || referral.code }}.</p>
+        <p v-else-if="referral?.code">Bạn được giới thiệu bởi {{ referral.affiliate_name || referral.code }}.</p>
         <p v-if="referral?.message" :class="{ 'is-error': !referral.code }">{{ referral.message }}</p>
       </div>
 

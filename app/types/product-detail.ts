@@ -137,6 +137,8 @@ export interface ProductDetail {
   catalog_content_id?: string
   /** Nghị định 37/2026: year of manufacture, refurbished label, warnings, usage and storage. */
   compliance?: ProductCompliance
+  /** schema.org pieces built by the API: condition, seller, warranty, return policy, shipping, reviews. */
+  structured_data?: ProductStructuredData
   sold_count: number
   rating: ProductReviewSummary
   questions_count: number
@@ -177,6 +179,18 @@ export interface BuyNowItem {
   variant_id: number | null
   warranty_months?: number | null
   quantity: number
+}
+
+export interface ProductStructuredData {
+  /** The product's brand, or one named by its category or name. */
+  brand: string | null
+  item_condition: string
+  price_valid_until: string
+  seller: Record<string, unknown>
+  warranty: Record<string, unknown> | null
+  return_policy: Record<string, unknown>
+  shipping_details: Record<string, unknown>
+  reviews: Record<string, unknown>[]
 }
 
 export interface ProductCompliance {

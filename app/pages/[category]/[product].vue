@@ -114,10 +114,6 @@ const buyNow = async () => {
   await startBuyNow({ product_id: product.value.id, product_slug: product.value.slug, variant_id: selection.selectedVariant.value?.id ?? null, warranty_months: selectedWarranty.value, quantity: selection.quantity.value })
 }
 
-const openBuilder = () => {
-  if (product.value?.component_type) navigateTo(`/cau-hinh?product=${encodeURIComponent(product.value.slug)}`)
-}
-
 const canonicalPath = computed(() => product.value?.seo.canonical_path || (product.value ? productUrl(product.value) : null))
 if (product.value && !canonicalPath.value) throw createError({ statusCode: 404, statusMessage: 'Sản phẩm chưa được gắn danh mục công khai.' })
 if (product.value && canonicalPath.value && route.path !== canonicalPath.value) {
@@ -153,15 +149,35 @@ useHead(() => {
   const productSchema: Record<string, unknown> = {
     '@context': 'https://schema.org', '@type': 'Product', name: product.value.name,
     description: seoDescription.value,
-    brand: product.value.brand ? { '@type': 'Brand', name: product.value.brand.name } : undefined,
   }
+  const brandName = product.value.brand?.name || product.value.structured_data?.brand
+  if (brandName) productSchema.brand = { '@type': 'Brand', name: brandName }
   const imageUrls = publicProductImages.value
     .map(image => publicAbsoluteUrl(origin.value, image.url))
     .filter((image): image is string => Boolean(image))
   if (imageUrls.length) productSchema.image = imageUrls
   if (product.value.sku) productSchema.sku = product.value.sku
-  if (selectedPricing.value.display_price > 0) productSchema.offers = { '@type': 'Offer', priceCurrency: currency.value.toUpperCase(), price: selectedPricing.value.display_price, availability: onlinePurchasable.value ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', url: canonical }
-  if (product.value.rating.count > 0 && product.value.rating.average !== null) productSchema.aggregateRating = { '@type': 'AggregateRating', ratingValue: product.value.rating.average, reviewCount: product.value.rating.count }
+  const structured = product.value.structured_data
+  if (selectedPricing.value.display_price > 0) {
+    productSchema.offers = {
+      '@type': 'Offer', priceCurrency: currency.value.toUpperCase(), price: selectedPricing.value.display_price,
+      // Follows the stock synced from KIOT, like the "Còn hàng" label.
+      availability: onlinePurchasable.value ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', url: canonical,
+      ...(structured ? {
+        itemCondition: structured.item_condition,
+        priceValidUntil: structured.price_valid_until,
+        seller: structured.seller,
+        ...(structured.warranty ? { warranty: structured.warranty } : {}),
+        hasMerchantReturnPolicy: structured.return_policy,
+        shippingDetails: structured.shipping_details,
+      } : {}),
+    }
+  }
+  // Only real, approved reviews: no rating markup without them.
+  if (product.value.rating.count > 0 && product.value.rating.average !== null) {
+    productSchema.aggregateRating = { '@type': 'AggregateRating', ratingValue: product.value.rating.average, reviewCount: product.value.rating.count, bestRating: 5, worstRating: 1 }
+    if (structured?.reviews.length) productSchema.review = structured.reviews
+  }
   const breadcrumbSchema = {
     '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: publicAbsoluteUrl(origin.value, '/') },
@@ -197,7 +213,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
                 <span v-if="selectedWarranty ?? product.warranty_months" class="text-slate-500">Bảo hành: {{ selectedWarranty ?? product.warranty_months }} tháng</span>
               </div>
               <ProductVariantSelector :product="product" :variants="product.variants" :option-groups="selection.optionGroups.value" :selected-variant="selection.selectedVariant.value" :selected-attributes="selection.selectedAttributes.value" :alternative-products="alternativeProducts" :is-option-available="selection.isOptionAvailable" :warranty-packages="warrantyPackages" :selected-warranty="selectedWarranty" @select-warranty="selectedWarranty = $event" @select-variant="selection.chooseVariant" @select-attribute="selection.chooseAttribute" />
-              <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="onlinePurchasable" :adding="addingToCart" :can-build="Boolean(product.component_type)" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" @build="openBuilder" />
+              <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="onlinePurchasable" :adding="addingToCart" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" />
               <ClientOnly><AffiliateShareBox v-if="canonicalPath" :product-id="product.id" :product-name="product.name" :path="canonicalPath" /></ClientOnly>
             </div>
           </section>
@@ -205,14 +221,13 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
           <div class="pdp-area-summary"><ProductPurchaseSummary :product="product" :variant="selection.selectedVariant.value" :quantity="selection.quantity.value" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" @add="addToCart" @buy="buyNow" /></div>
           <div class="pdp-area-benefits"><ProductServiceBenefits :warranty-months="product.warranty_months" /></div>
           <div v-if="!contactOnly" class="pdp-area-delivery"><ProductDeliveryPreview :subtotal="pricingWithWarranty.display_price * selection.quantity.value" /></div>
-          <div class="pdp-area-tabs"><ProductAnchorTabs :has-compatibility="Boolean(product.component_type)" :rating-count="product.rating.count" :questions-count="product.questions_count" /></div>
+          <div class="pdp-area-tabs"><ProductAnchorTabs :rating-count="product.rating.count" :questions-count="product.questions_count" /></div>
 
           <div class="pdp-area-content pdp-content-main">
             <ProductVideo v-if="product.video" :video="product.video" :title="product.name" />
             <ProductDescription :description="product.description" :description-html="product.description_html" :blocks="product.detail_blocks" :title="product.description_heading" />
             <div class="pdp-spec-compat-grid">
               <ProductSpecificationTable :specifications="product.specifications" :title="product.technical_section_title" />
-              <ProductCompatibility v-if="product.component_type" :slug="product.slug" />
             </div>
             <ProductCompliance v-if="product.compliance" :compliance="product.compliance" />
           </div>

@@ -13,7 +13,7 @@ const isActive = (path: string) => (path === '/' ? route.path === '/' : route.pa
 </script>
 
 <template>
-  <nav class="mobile-bottom-bar" aria-label="Điều hướng nhanh">
+  <nav class="mobile-bottom-bar" data-track-location="mobile_bar" aria-label="Điều hướng nhanh">
     <NuxtLink to="/" class="mobile-bottom-bar__item" :class="{ 'is-active': isActive('/') }" :aria-current="isActive('/') ? 'page' : undefined">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-5.5h3V20h5V9.5" /></svg>
       <span>Trang chủ</span>

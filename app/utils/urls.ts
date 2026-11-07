@@ -44,7 +44,7 @@ export function storefrontPath(pathOrUrl: string | null | undefined): string {
     '/categories/': '/danh-muc',
     '/configurator': '/cau-hinh',
     '/blog': '/tin-tuc',
-    '/about': '/gioi-thieu',
+    '/about': '/gioi-thieu-laptop-plus',
     '/contact': '/lien-he',
     '/warranty': '/bao-hanh',
     '/shipping': '/van-chuyen',

@@ -158,6 +158,8 @@ useHead(() => {
   if (imageUrls.length) productSchema.image = imageUrls
   if (product.value.sku) productSchema.sku = product.value.sku
   const structured = product.value.structured_data
+  if (structured?.gtin) productSchema.gtin = structured.gtin
+  if (structured?.mpn) productSchema.mpn = structured.mpn
   if (selectedPricing.value.display_price > 0) {
     productSchema.offers = {
       '@type': 'Offer', priceCurrency: currency.value.toUpperCase(), price: selectedPricing.value.display_price,

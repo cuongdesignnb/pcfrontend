@@ -12,7 +12,7 @@ const visible = computed(() => Boolean(telHref.value || zaloHref.value || messen
 </script>
 
 <template>
-  <aside v-if="visible" class="contact-dock" aria-label="Liên hệ nhanh">
+  <aside v-if="visible" class="contact-dock" data-track-location="floating" aria-label="Liên hệ nhanh">
     <a v-if="messengerHref" :href="messengerHref" target="_blank" rel="noopener noreferrer" class="contact-dock__item contact-dock__item--messenger" aria-label="Chat Messenger">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.4 2 2 6.1 2 11.4c0 2.8 1.2 5.3 3.2 7v3.3l3-1.7c1.1.3 2.3.5 3.8.5 5.6 0 10-4.1 10-9.2S17.6 2 12 2Zm1 12.3-2.5-2.7-5 2.7 5.5-5.8 2.6 2.7 4.9-2.7-5.5 5.8Z" /></svg>
       <span class="contact-dock__label">Messenger</span>

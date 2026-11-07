@@ -18,12 +18,19 @@ useHead(() => ({
   script: [{
     key: 'static-page-jsonld', type: 'application/ld+json',
     innerHTML: serializeJsonLd({
-      '@context': 'https://schema.org', '@type': 'WebPage',
-      name: props.page.title,
-      ...(canonicalUrl.value ? { url: canonicalUrl.value } : {}),
-      ...(description.value ? { description: description.value } : {}),
-      ...(props.page.updated_at && !Number.isNaN(Date.parse(props.page.updated_at))
-        ? { dateModified: props.page.updated_at } : {}),
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'WebPage',
+          name: props.page.title,
+          ...(canonicalUrl.value ? { url: canonicalUrl.value } : {}),
+          ...(description.value ? { description: description.value } : {}),
+          ...(props.page.updated_at && !Number.isNaN(Date.parse(props.page.updated_at))
+            ? { dateModified: props.page.updated_at } : {}),
+        },
+        // Schema added to this page in admin (LocalBusiness, FAQPage…).
+        ...props.page.schema,
+      ],
     }),
   }],
 }))

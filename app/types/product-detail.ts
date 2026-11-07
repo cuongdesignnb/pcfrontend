@@ -184,6 +184,10 @@ export interface BuyNowItem {
 export interface ProductStructuredData {
   /** The product's brand, or one named by its category or name. */
   brand: string | null
+  /** Barcode when it is a valid GTIN-8/12/13/14. */
+  gtin?: string | null
+  /** Manufacturer part number from the specifications. */
+  mpn?: string | null
   item_condition: string
   price_valid_until: string
   seller: Record<string, unknown>

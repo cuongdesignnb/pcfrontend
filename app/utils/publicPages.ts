@@ -17,5 +17,8 @@ export function parsePublicPage(value: unknown): PublicPage | null {
     meta_title: typeof record.meta_title === 'string' ? record.meta_title : null,
     meta_description: typeof record.meta_description === 'string' ? record.meta_description : null,
     updated_at: typeof record.updated_at === 'string' ? record.updated_at : null,
+    schema: Array.isArray(record.schema)
+      ? record.schema.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item) && '@type' in item)
+      : [],
   }
 }

@@ -187,7 +187,19 @@ useHead(() => {
       { '@type': 'ListItem', position: product.value.category ? 3 : 2, name: product.value.name, item: canonical },
     ],
   }
-  return { script: [{ key: 'product-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd(productSchema) }, { key: 'product-breadcrumb-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumbSchema) }] }
+  const video = product.value.video
+  // Google needs name, thumbnail and uploadDate for a VideoObject.
+  const videoSchema = video?.upload_date ? {
+    '@context': 'https://schema.org', '@type': 'VideoObject',
+    name: product.value.name, description: seoDescription.value,
+    thumbnailUrl: [video.thumbnail_url], uploadDate: video.upload_date,
+    contentUrl: video.watch_url, embedUrl: video.embed_url,
+  } : null
+  return { script: [
+    { key: 'product-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd(productSchema) },
+    { key: 'product-breadcrumb-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumbSchema) },
+    ...(videoSchema ? [{ key: 'product-video-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd(videoSchema) }] : []),
+  ] }
 })
 
 onMounted(() => { if (product.value) track('view_item', product.value) })

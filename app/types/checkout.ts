@@ -131,6 +131,7 @@ export interface CheckoutForm {
   payment_option: 'full' | 'deposit'
   notes: string
   referral_code: string
+  video_code: string
 }
 
 /** CTV referral code result; a wrong code never blocks the order. */

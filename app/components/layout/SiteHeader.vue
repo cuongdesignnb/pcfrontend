@@ -10,7 +10,9 @@ interface MenuResponse {
 const config = useRuntimeConfig()
 const cart = useCart()
 const mobileOpen = ref(false)
-const { siteAddress, siteHotline, businessHours } = useSettings()
+const { siteAddress, siteHotline, businessHours, getString } = useSettings()
+// Admin → Cài đặt → Trang chủ; empty keeps the address and opening hours.
+const topbarText = computed(() => getString('storefront_topbar_text').trim())
 const hotlineHref = computed(() => toTelHref(siteHotline.value))
 
 // Admin → Menu: "Header" is the red bar, "Sidebar" the "Danh mục sản phẩm"
@@ -31,9 +33,10 @@ onMounted(() => {
 
 <template>
   <header class="site-header sticky top-0 z-50 bg-white">
-    <div v-if="siteAddress || businessHours || siteHotline" class="header-topbar hidden lg:block">
+    <div v-if="topbarText || siteAddress || businessHours || siteHotline" class="header-topbar hidden lg:block">
       <div class="pc-container header-topbar-inner">
-        <span>
+        <span v-if="topbarText">{{ topbarText }}</span>
+        <span v-else>
           <template v-if="siteAddress">{{ siteAddress }}</template>
           <template v-if="siteAddress && businessHours"> · </template>
           <template v-if="businessHours">{{ businessHours }}</template>

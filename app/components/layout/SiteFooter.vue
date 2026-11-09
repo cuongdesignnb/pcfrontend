@@ -72,8 +72,13 @@ const socialLinks = computed(() => [
 const paymentMethods = computed(() => {
   const methods: { label: string; detail: string }[] = []
   const bankName = getString('payment_bank_name')
-  if (bankName) methods.push({ label: 'SePay / VietQR', detail: bankName })
+  // payment_sepay_enabled follows the checkout: bank transfer is shown only when customers can pay that way.
+  if (getBoolean('payment_sepay_enabled', Boolean(bankName))) {
+    methods.push({ label: 'Chuyển khoản', detail: bankName ? `SePay / VietQR – ${bankName}` : 'SePay / VietQR' })
+  }
   if (getBoolean('payment_cod_enabled', true)) methods.push({ label: 'COD', detail: 'Thanh toán khi nhận hàng' })
+  const extra = getString('payment_footer_extra').trim()
+  if (extra) methods.push({ label: extra, detail: extra })
   return methods
 })
 

@@ -65,7 +65,9 @@ const form = reactive<CheckoutForm>({
   payment_option: 'full',
   notes: '',
   referral_code: useAffiliateRef().code.value ?? '',
+  video_code: '',
 })
+const utmSource = useUtmSource().utm
 
 const selectedProvince = computed(() => locations.provinces.find(item => item.code === form.shipping_province_code) ?? null)
 const selectedWard = computed(() => locations.wards.find(item => item.code === form.shipping_ward_code) ?? null)
@@ -365,6 +367,10 @@ const placeOrder = async () => {
         shipping_method: form.shipping_method,
         notes: form.notes,
         referral_code: form.referral_code.trim() || undefined,
+        utm_source: utmSource.value?.utm_source || undefined,
+        utm_campaign: utmSource.value?.utm_campaign || undefined,
+        utm_content: utmSource.value?.utm_content || undefined,
+        video_code: form.video_code.trim() || undefined,
         payment_method: form.payment_method,
         payment_option: form.payment_method === 'sepay' ? form.payment_option : undefined,
         items: displayLines.value.map(item => ({
@@ -685,6 +691,11 @@ useSeoMeta({
                 <textarea id="order-notes" v-model="form.notes" maxlength="1000" rows="4" placeholder="Ví dụ: Giao hàng trong giờ hành chính…" :aria-invalid="Boolean(issueFor('notes'))" />
                 <div class="checkout-counter" :class="{ 'is-limit': form.notes.length >= 1000 }">{{ form.notes.length }}/1000</div>
                 <small v-if="issueFor('notes')">{{ issueFor('notes') }}</small>
+              </div>
+              <div class="checkout-field">
+                <label for="order-video-code">Mã video (nếu có)</label>
+                <input id="order-video-code" v-model="form.video_code" type="text" maxlength="100" autocomplete="off" placeholder="Mã trong video bạn đã xem, ví dụ: V123" :aria-invalid="Boolean(issueFor('video_code'))">
+                <small v-if="issueFor('video_code')">{{ issueFor('video_code') }}</small>
               </div>
             </CheckoutSection>
           </main>

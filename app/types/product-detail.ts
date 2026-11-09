@@ -111,6 +111,8 @@ export interface ProductVideo {
   watch_url: string
   embed_url: string
   thumbnail_url: string
+  /** ISO date for VideoObject.uploadDate (older APIs leave it out). */
+  upload_date?: string | null
 }
 
 export interface ProductDetail {

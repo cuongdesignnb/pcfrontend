@@ -81,7 +81,16 @@ export const useBusinessSchema = (origin: Ref<string | null>) => {
       node.contactPoint = { '@type': 'ContactPoint', telephone: siteHotline.value, contactType: 'customer service', areaServed: 'VN', availableLanguage: 'vi' }
     }
     if (siteEmail.value) node.email = siteEmail.value
-    if (siteAddress.value) node.address = { '@type': 'PostalAddress', streetAddress: siteAddress.value, addressCountry: 'VN' }
+    if (siteAddress.value) {
+      const locality = getString('contact_address_locality').trim()
+      const region = getString('contact_address_region').trim()
+      node.address = {
+        '@type': 'PostalAddress', streetAddress: siteAddress.value,
+        ...(locality ? { addressLocality: locality } : {}),
+        ...(region ? { addressRegion: region } : {}),
+        addressCountry: 'VN',
+      }
+    }
     if (isLocal && openingHours) node.openingHours = openingHours
     if (isLocal && map) node.hasMap = map
     if (sameAs.length) node.sameAs = sameAs

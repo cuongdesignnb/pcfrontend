@@ -17,7 +17,7 @@ const emptyStars = (review: ProductReview) => '★'.repeat(Math.max(0, 5 - revie
   <section id="danh-gia" class="pdp-panel scroll-mt-28">
     <div class="flex items-center justify-between gap-3">
       <h2 class="pdp-section-title">Đánh giá sản phẩm</h2>
-      <span class="text-[11px] text-slate-500">{{ summary.count }} đánh giá</span>
+      <span v-if="summary.count" class="text-[11px] text-slate-500">{{ summary.count }} đánh giá</span>
     </div>
 
     <div class="mt-3 grid gap-4 lg:grid-cols-[28%_minmax(0,1fr)]">
@@ -37,7 +37,7 @@ const emptyStars = (review: ProductReview) => '★'.repeat(Math.max(0, 5 - revie
           </div>
         </article>
       </div>
-      <p v-else class="text-xs text-slate-500">Chưa có đánh giá phù hợp.</p>
+      <p v-else class="text-xs text-slate-500">{{ summary.count ? 'Chưa có đánh giá phù hợp.' : 'Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá sản phẩm này.' }}</p>
     </div>
 
     <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">

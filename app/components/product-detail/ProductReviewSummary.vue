@@ -6,7 +6,8 @@ defineProps<{ summary: ProductReviewSummary }>()
 
 <template>
   <section class="pdp-review-summary">
-    <div class="text-center sm:text-left">
+    <div v-if="!summary.count" class="text-center text-[12px] text-slate-500 sm:text-left">Chưa có đánh giá</div>
+    <div v-else class="text-center sm:text-left">
       <strong class="block text-[32px] leading-none text-slate-900">{{ summary.average ?? '—' }}<span class="text-base font-medium text-slate-500">/5</span></strong>
       <div class="mt-1 text-sm tracking-[0.12em] text-amber-500" aria-label="Xếp hạng sao">★★★★★</div>
       <p class="mt-1 text-[11px] text-slate-500">Dựa trên {{ summary.count }} đánh giá</p>

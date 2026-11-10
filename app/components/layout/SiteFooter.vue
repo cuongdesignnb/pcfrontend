@@ -108,6 +108,14 @@ const legalLines = computed(() => {
   ].filter((line): line is string => Boolean(line))
 })
 const legalName = computed(() => getString('legal_business_name'))
+// "Đã thông báo Bộ Công Thương" badge: shown once the profile link is set.
+const webUrl = (value: string) => /^https?:\/\//i.test(value) ? value : ''
+const bctBadge = computed(() => {
+  const href = webUrl(getString('legal_bct_url'))
+  const image = getString('legal_bct_image')
+  const src = /^(https?:\/\/|\/)/i.test(image) ? image : ''
+  return href && src ? { href, src } : null
+})
 
 const hotlineHref = computed(() => toTelHref(siteHotline.value))
 const chatLink = computed(() => {
@@ -193,9 +201,12 @@ const chatLink = computed(() => {
       <FooterNewsletter v-else />
     </div>
 
-    <div v-if="legalName || legalLines.length" class="pc-container site-footer-legal">
+    <div v-if="legalName || legalLines.length || bctBadge" class="pc-container site-footer-legal">
       <strong v-if="legalName">{{ legalName }}</strong>
       <span v-for="line in legalLines" :key="line">{{ line }}</span>
+      <a v-if="bctBadge" :href="bctBadge.href" target="_blank" rel="noopener noreferrer" class="site-footer-bct" title="Đã thông báo Bộ Công Thương">
+        <img :src="bctBadge.src" alt="Đã thông báo Bộ Công Thương" width="150" height="57" loading="lazy">
+      </a>
     </div>
     <div class="pc-container site-footer-bottom">
       <span>© {{ year }} {{ siteName }}. All rights reserved.</span>

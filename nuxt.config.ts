@@ -105,6 +105,8 @@ export default defineNuxtConfig({
     '/laptop-5-8-trieu': { redirect: { to: '/laptop-tu-5-den-8-trieu', statusCode: 301 } },
     '/': { ssr: true, isr: 300, swr: false },
     '/sitemap.xml': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
+    // Token-protected catalog feeds, passed through from the backend (server/routes/feeds).
+    '/feeds/**': { ssr: true, isr: false, swr: false, prerender: false },
     '/sitemaps/**': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
     '/robots.txt': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=3600' } },
     '/llms.txt': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=3600' } },

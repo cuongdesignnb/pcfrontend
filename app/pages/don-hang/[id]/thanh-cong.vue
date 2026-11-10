@@ -4,6 +4,7 @@ const route = useRoute()
 const toast = useToast()
 const { siteName } = useSettings()
 const { trackPurchase } = useEcommerceTracking()
+const auth = useAuth()
 
 const orderId = route.params.id as string
 const order = ref<any>(null)
@@ -11,13 +12,28 @@ const loading = ref(true)
 const accessDenied = ref(false)
 const orderAccessToken = ref('')
 
-const orderHeaders = (): Record<string, string> => {
-  if (!orderAccessToken.value) return {}
-  return { 'X-Order-Access-Token': orderAccessToken.value }
+const orderHeaders = (): Record<string, string> => ({
+  ...(orderAccessToken.value ? { 'X-Order-Access-Token': orderAccessToken.value } : {}),
+  ...(auth.token.value ? { Authorization: `Bearer ${auth.token.value}` } : {}),
+})
+
+const canRequestOrder = () => Boolean(orderAccessToken.value || auth.token.value)
+
+const readStoredAccessToken = (): string => {
+  const stored = sessionStorage.getItem(`pc-order-access-token:${orderId}`)
+  if (stored) return stored
+  // Tabs that placed the order before this key existed kept it in the attempt.
+  try {
+    const attempt = JSON.parse(sessionStorage.getItem('pc-checkout-attempt') || 'null') as { order_id?: number; access_token?: string } | null
+    if (attempt && String(attempt.order_id) === orderId && typeof attempt.access_token === 'string') return attempt.access_token
+  } catch {
+    // Ignore a damaged entry.
+  }
+  return ''
 }
 
 const refreshOrder = async () => {
-  if (!orderAccessToken.value) {
+  if (!canRequestOrder()) {
     order.value = null
     accessDenied.value = true
     loading.value = false
@@ -86,11 +102,10 @@ const integrationStatusClass = computed(() => {
 let statusInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
-  orderAccessToken.value =
-    sessionStorage.getItem(`pc-order-access-token:${orderId}`) || ''
+  orderAccessToken.value = readStoredAccessToken()
   await refreshOrder()
 
-  if (orderAccessToken.value) {
+  if (order.value) {
     statusInterval = setInterval(async () => {
       if (isWaiting.value) {
         await refreshOrder()

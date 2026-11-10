@@ -189,6 +189,22 @@ const saveAttempt = (order: CheckoutOrder) => {
     access_token: orderAccessToken.value,
     checkout_mode: checkoutMode.value,
   }))
+  // The order page reads the token by order id; guests have no other way in.
+  sessionStorage.setItem(`pc-order-access-token:${order.id}`, orderAccessToken.value)
+}
+
+// Once the order is handed to its own page, the next checkout in this tab must
+// start with fresh keys, or the server treats it as a retry of this order.
+const finishAttempt = () => {
+  if (!import.meta.client) return
+  sessionStorage.removeItem('pc-checkout-attempt')
+  sessionStorage.removeItem('pc-checkout-idempotency-key')
+  sessionStorage.removeItem('pc-checkout-order-access-token')
+}
+
+const goToOrderPage = async (orderId: number) => {
+  finishAttempt()
+  await router.push(`/don-hang/${orderId}/thanh-cong`)
 }
 
 const readString = (record: Record<string, unknown>, keys: string[]): string => {
@@ -395,7 +411,7 @@ const placeOrder = async () => {
       paymentPending.value = true
       schedulePaymentPoll(5000)
     } else {
-      await router.push(`/don-hang/${response.order.id}/thanh-cong`)
+      await goToOrderPage(response.order.id)
     }
   } catch (caught) {
     const payload = normaliseError(caught)
@@ -463,7 +479,8 @@ const checkPaymentStatus = async () => {
         description: 'Đang chuyển tới trang chi tiết đơn hàng.',
         color: 'success',
       })
-      window.setTimeout(() => { void router.push(`/don-hang/${orderResult.value?.id}/thanh-cong`) }, 1400)
+      const paidOrderId = orderResult.value.id
+      window.setTimeout(() => { void goToOrderPage(paidOrderId) }, 1400)
     } else if (!response.can_pay && isTerminalPaymentOrder({ order_status: response.order_status, kiot_sync_status: response.kiot_sync_status })) {
       paymentPending.value = false
       stopPaymentPoll()

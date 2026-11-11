@@ -1,7 +1,10 @@
-// Remember the UTM tags of the visit for 30 days. Browser only, so pages
-// served from the ISR cache still pick them up.
+import { UTM_KEYS } from '~/composables/useUtmSource'
+
+// Remember the UTM tags and the landing page of the visit for 30 days.
+// Browser only, so pages served from the ISR cache still pick them up.
 export default defineNuxtRouteMiddleware((to) => {
   if (!import.meta.client) return
-  if (!['utm_source', 'utm_campaign', 'utm_content'].some(key => key in to.query)) return
-  useUtmSource().capture(to.query)
+  const source = useUtmSource()
+  if (UTM_KEYS.some(key => key in to.query)) source.capture(to.query, to.fullPath)
+  else source.rememberLanding(to.fullPath)
 })

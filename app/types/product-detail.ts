@@ -149,6 +149,8 @@ export interface ProductDetail {
   highlights: ProductHighlight[]
   detail_blocks: ProductDetailBlock[]
   video?: ProductVideo | null
+  /** "Lấy key ngay": outside page that hands out a licence key at once. */
+  instant_key_url?: string | null
   specifications: ProductSpecification[]
   has_specifications: boolean
   technical_section_title: string

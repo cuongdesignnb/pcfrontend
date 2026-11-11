@@ -67,7 +67,7 @@ const form = reactive<CheckoutForm>({
   referral_code: useAffiliateRef().code.value ?? '',
   video_code: '',
 })
-const utmSource = useUtmSource().utm
+const { utm: utmSource, landing: landingPage } = useUtmSource()
 
 const selectedProvince = computed(() => locations.provinces.find(item => item.code === form.shipping_province_code) ?? null)
 const selectedWard = computed(() => locations.wards.find(item => item.code === form.shipping_ward_code) ?? null)
@@ -384,8 +384,10 @@ const placeOrder = async () => {
         notes: form.notes,
         referral_code: form.referral_code.trim() || undefined,
         utm_source: utmSource.value?.utm_source || undefined,
+        utm_medium: utmSource.value?.utm_medium || undefined,
         utm_campaign: utmSource.value?.utm_campaign || undefined,
         utm_content: utmSource.value?.utm_content || undefined,
+        landing_page: landingPage.value || undefined,
         video_code: form.video_code.trim() || undefined,
         payment_method: form.payment_method,
         payment_option: form.payment_method === 'sepay' ? form.payment_option : undefined,

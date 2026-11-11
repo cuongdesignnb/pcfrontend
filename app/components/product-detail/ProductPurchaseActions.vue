@@ -7,8 +7,10 @@ const props = defineProps<{
   contactOnly: boolean
   zaloHref: string
   messengerHref: string
+  /** Licence products: partner page for an instant key ('' = no button). */
+  instantKeyHref?: string
 }>()
-const emit = defineEmits<{ 'update:quantity': [quantity: number]; add: []; buy: []}>()
+const emit = defineEmits<{ 'update:quantity': [quantity: number]; add: []; buy: []; 'instant-key': [] }>()
 
 const updateQuantity = (event: Event) => {
   const value = Number((event.target as HTMLInputElement).value) || 1
@@ -32,6 +34,20 @@ const updateQuantity = (event: Event) => {
       </div>
       <p v-else class="text-xs text-slate-500">Kênh chat đang được cập nhật. Vui lòng liên hệ cửa hàng để nhận báo giá.</p>
     </template>
+    <template v-else-if="instantKeyHref">
+      <div v-if="purchasable" class="grid gap-2 sm:grid-cols-[116px_minmax(0,1fr)]">
+        <div class="flex h-10 overflow-hidden rounded-[6px] border border-slate-300 bg-white">
+          <button type="button" class="w-9 text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Giảm số lượng" :disabled="quantity <= 1" @click="emit('update:quantity', quantity - 1)">−</button>
+          <input :value="quantity" type="number" min="1" :max="maxQuantity" aria-label="Số lượng" class="min-w-0 flex-1 border-x border-slate-300 text-center text-xs" @input="updateQuantity">
+          <button type="button" class="w-9 text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Tăng số lượng" :disabled="quantity >= maxQuantity" @click="emit('update:quantity', quantity + 1)">+</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" :disabled="adding" class="h-10 rounded-[6px] bg-brand px-3 text-xs font-bold uppercase text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45" @click="emit('buy')">Mua key (shop gửi)</button>
+          <a :href="instantKeyHref" target="_blank" rel="sponsored nofollow noopener" class="flex h-10 items-center justify-center rounded-[6px] bg-accent px-3 text-xs font-bold uppercase text-accent-ink hover:brightness-95" @click="emit('instant-key')">Lấy key ngay</a>
+        </div>
+      </div>
+      <a v-else :href="instantKeyHref" target="_blank" rel="sponsored nofollow noopener" class="flex h-10 items-center justify-center rounded-[6px] bg-accent px-3 text-xs font-bold uppercase text-accent-ink hover:brightness-95" @click="emit('instant-key')">Lấy key ngay</a>
+    </template>
     <div v-else class="grid gap-2 sm:grid-cols-[116px_minmax(0,1fr)]">
       <div class="flex h-10 overflow-hidden rounded-[6px] border border-slate-300 bg-white">
         <button type="button" class="w-9 text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Giảm số lượng" :disabled="!purchasable || quantity <= 1" @click="emit('update:quantity', quantity - 1)">−</button>
@@ -43,6 +59,6 @@ const updateQuantity = (event: Event) => {
         <button type="button" :disabled="!purchasable || adding" class="h-10 rounded-[6px] bg-brand px-3 text-xs font-bold uppercase text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45" @click="emit('add')">{{ adding ? 'Đang thêm…' : 'Thêm vào giỏ' }}</button>
       </div>
     </div>
-    <p v-if="!contactOnly && !purchasable" class="rounded-[6px] bg-slate-100 px-3 py-2 text-xs text-slate-600">Sản phẩm hiện chưa thể đặt trực tuyến.</p>
+    <p v-if="!contactOnly && !purchasable && !instantKeyHref" class="rounded-[6px] bg-slate-100 px-3 py-2 text-xs text-slate-600">Sản phẩm hiện chưa thể đặt trực tuyến.</p>
   </section>
 </template>

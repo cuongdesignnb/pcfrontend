@@ -10,8 +10,9 @@ const props = defineProps<{
   contactOnly: boolean
   zaloHref: string
   messengerHref: string
+  instantKeyHref?: string
 }>()
-const emit = defineEmits<{ add: []; buy: [] }>()
+const emit = defineEmits<{ add: []; buy: []; 'instant-key': [] }>()
 const { formatMoney, getString } = useSettings()
 const primaryImage = computed(() => props.product.images.find(image => isUsablePublicImageUrl(image.url)) || null)
 
@@ -59,6 +60,10 @@ const benefits = computed(() => [
         <a v-if="zaloHref" :href="zaloHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[#0068ff] px-3 text-xs font-bold uppercase text-white hover:bg-[var(--pc-primary)]">Chat Zalo</a>
         <a v-if="messengerHref" :href="messengerHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[var(--pc-primary)] px-3 text-xs font-bold uppercase text-white hover:bg-[var(--pc-primary)]">Chat Messenger</a>
       </div>
+    </div>
+    <div v-else-if="instantKeyHref" class="mt-3 grid gap-2">
+      <button v-if="purchasable" type="button" class="h-9 rounded-[6px] bg-brand px-3 text-xs font-bold uppercase text-white hover:bg-brand-dark" @click="emit('buy')">Mua key (shop gửi)</button>
+      <a :href="instantKeyHref" target="_blank" rel="sponsored nofollow noopener" class="flex h-9 items-center justify-center rounded-[6px] bg-accent px-3 text-xs font-bold uppercase text-accent-ink hover:brightness-95" @click="emit('instant-key')">Lấy key ngay</a>
     </div>
     <div v-else class="mt-3 grid gap-2">
       <button type="button" :disabled="!purchasable" class="h-9 rounded-[6px] bg-accent px-3 text-xs font-bold uppercase text-accent-ink hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-45" @click="emit('buy')">Mua ngay</button>

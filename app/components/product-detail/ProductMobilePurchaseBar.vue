@@ -5,14 +5,16 @@ defineProps<{
   contactOnly: boolean
   zaloHref: string
   messengerHref: string
+  instantKeyHref?: string
 }>()
-const emit = defineEmits<{ add: []; buy: [] }>()
+const emit = defineEmits<{ add: []; buy: []; 'instant-key': [] }>()
 const { formatMoney } = useSettings()
 </script>
 
 <template>
   <div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-lg lg:hidden">
     <div v-if="contactOnly" class="mx-auto flex max-w-xl items-center gap-2"><strong class="min-w-0 flex-1 text-lg text-red-600">Liên hệ</strong><a v-if="zaloHref" :href="zaloHref" target="_blank" rel="noopener noreferrer" class="rounded-lg bg-[#0068ff] px-3 py-2.5 text-sm font-bold text-white">Zalo</a><a v-if="messengerHref" :href="messengerHref" target="_blank" rel="noopener noreferrer" class="rounded-lg bg-[#1684fb] px-3 py-2.5 text-sm font-bold text-white">Messenger</a></div>
+    <div v-else-if="instantKeyHref" class="mx-auto flex max-w-xl items-center gap-2"><strong class="min-w-0 flex-1 text-lg text-brand">{{ purchasable ? formatMoney(price) : '' }}</strong><button v-if="purchasable" type="button" class="rounded-lg bg-brand px-3 py-2.5 text-sm font-bold text-white" @click="emit('buy')">Mua key (shop gửi)</button><a :href="instantKeyHref" target="_blank" rel="sponsored nofollow noopener" class="rounded-lg bg-accent px-3 py-2.5 text-sm font-bold text-accent-ink" @click="emit('instant-key')">Lấy key ngay</a></div>
     <div v-else class="mx-auto flex max-w-xl items-center gap-3"><strong class="min-w-0 flex-1 text-lg text-brand">{{ formatMoney(price) }}</strong><button type="button" :disabled="!purchasable" class="rounded-lg bg-accent px-4 py-2.5 text-sm font-bold text-accent-ink disabled:opacity-45" @click="emit('buy')">Mua ngay</button><button type="button" :disabled="!purchasable" class="rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white disabled:opacity-45" @click="emit('add')">Thêm giỏ</button></div>
   </div>
 </template>

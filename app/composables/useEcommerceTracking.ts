@@ -99,5 +99,16 @@ export const useEcommerceTracking = () => {
     }, { eventID: `order-${order.order_number ?? order.id}` })
   }
 
-  return { track, trackPurchase }
+  /** "Lấy key ngay" click: the key comes from a partner page. */
+  const trackInstantKeyClick = (product: ProductDetail, url: string) => {
+    if (!import.meta.client) return
+    window.gtag?.('event', 'click_affiliate', {
+      item_id: contentId(product),
+      item_name: product.name,
+      item_category: product.category?.name,
+      link_url: url,
+    })
+  }
+
+  return { track, trackPurchase, trackInstantKeyClick }
 }

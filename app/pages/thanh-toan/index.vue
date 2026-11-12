@@ -445,7 +445,7 @@ const schedulePaymentPoll = (delay = 5000) => {
 }
 
 const isTerminalPaymentOrder = (order: Pick<CheckoutOrder, 'order_status' | 'kiot_sync_status'>) =>
-  order.order_status === 'cancelled' || ['cancelled', 'rejected'].includes(order.kiot_sync_status)
+  order.order_status === 'cancelled' || order.kiot_sync_status === 'cancelled'
 
 const checkPaymentStatus = async () => {
   if (!orderResult.value || paymentPollInFlight || paymentVerified.value || document.visibilityState === 'hidden') return

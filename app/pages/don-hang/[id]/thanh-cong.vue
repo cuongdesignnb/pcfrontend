@@ -60,8 +60,10 @@ const statusLabels: Record<string, string> = {
   sending: 'Đang kiểm tra tồn kho',
   retrying: 'Đang chờ kết nối hệ thống kho',
   synced: 'Đơn hàng đã được xác nhận',
-  rejected: 'Đơn hàng không thể xác nhận',
-  failed: 'Đồng bộ gặp lỗi, vui lòng liên hệ',
+  // The website keeps the order when the stock system has not taken it yet;
+  // the shop confirms it by phone.
+  rejected: 'Đơn hàng đã được ghi nhận, shop sẽ gọi xác nhận',
+  failed: 'Đơn hàng đã được ghi nhận, shop sẽ gọi xác nhận',
   cancel_pending: 'Đang gửi yêu cầu hủy',
   cancelled: 'Đơn hàng đã được hủy',
   not_required: 'Đơn hàng đã được ghi nhận',
@@ -91,7 +93,7 @@ const integrationStatusClass = computed(() => {
     return 'bg-green-100 text-green-700'
   }
   if (['rejected', 'failed'].includes(order.value?.kiot_sync_status)) {
-    return 'bg-red-100 text-red-700'
+    return 'bg-amber-100 text-amber-800'
   }
   if (order.value?.kiot_sync_status === 'cancelled') {
     return 'bg-gray-100 text-gray-700'

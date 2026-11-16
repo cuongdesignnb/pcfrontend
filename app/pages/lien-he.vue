@@ -11,6 +11,7 @@ const { origin } = useSeoDocument(() => ({
 }))
 
 const business = useBusinessSchema(origin)
+const { form: contact, status: contactStatus, message: contactMessage, submit: submitContact } = useContactForm()
 useHead(() => business.value
   ? { script: [{ key: 'contact-business-jsonld', type: 'application/ld+json', innerHTML: serializeJsonLd({ '@context': 'https://schema.org', ...business.value }) }] }
   : {})
@@ -60,26 +61,35 @@ useHead(() => business.value
       </div>
 
       <!-- Contact Form -->
-      <div class="bg-gray-50 rounded-xl p-6">
+      <div class="relative bg-gray-50 rounded-xl p-6">
         <h2 class="text-xl font-semibold text-gray-900 mb-4">Gửi tin nhắn</h2>
-        <form class="space-y-4" @submit.prevent>
+        <form class="space-y-4" novalidate @submit.prevent="submitContact">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Họ tên</label>
-            <input type="text" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Nhập họ tên">
+            <label for="contact-name" class="block text-sm font-medium text-gray-700 mb-1">Họ tên <span class="text-red-500">*</span></label>
+            <input id="contact-name" v-model="contact.name" type="text" required maxlength="150" autocomplete="name" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Nhập họ tên">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Nhập email">
+            <label for="contact-phone" class="block text-sm font-medium text-gray-700 mb-1">Số điện thoại <span class="text-red-500">*</span></label>
+            <input id="contact-phone" v-model="contact.phone" type="tel" required maxlength="30" autocomplete="tel" inputmode="tel" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Nhập số điện thoại">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-            <input type="tel" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Nhập số điện thoại">
+            <label for="contact-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="contact-email" v-model="contact.email" type="email" maxlength="191" autocomplete="email" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Nhập email (không bắt buộc)">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nội dung</label>
-            <textarea rows="4" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Nhập nội dung cần hỗ trợ"></textarea>
+            <label for="contact-message" class="block text-sm font-medium text-gray-700 mb-1">Nội dung <span class="text-red-500">*</span></label>
+            <textarea id="contact-message" v-model="contact.message" rows="4" required maxlength="5000" class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Nhập nội dung cần hỗ trợ"></textarea>
           </div>
-          <UButton type="submit" size="lg" class="w-full justify-center">Gửi tin nhắn</UButton>
+          <!-- Honeypot: hidden from people, bots fill it in. -->
+          <div class="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+            <label for="contact-website">Website</label>
+            <input id="contact-website" v-model="contact.website" type="text" name="website" tabindex="-1" autocomplete="off">
+          </div>
+          <p v-if="contactStatus === 'success'" class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700" role="status">{{ contactMessage }}</p>
+          <p v-else-if="contactStatus === 'error'" class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">{{ contactMessage }}</p>
+          <UButton type="submit" size="lg" class="w-full justify-center" :loading="contactStatus === 'loading'" :disabled="contactStatus === 'loading'">
+            {{ contactStatus === 'loading' ? 'Đang gửi...' : 'Gửi tin nhắn' }}
+          </UButton>
         </form>
       </div>
     </div>

@@ -9,8 +9,11 @@ const props = defineProps<{
   messengerHref: string
   /** Licence products: partner page for an instant key ('' = no button). */
   instantKeyHref?: string
+  /** "Link mua ngoài": one button to another site replaces everything else ('' = none). */
+  externalBuyHref?: string
+  externalBuyLabel?: string
 }>()
-const emit = defineEmits<{ 'update:quantity': [quantity: number]; add: []; buy: []; 'instant-key': [] }>()
+const emit = defineEmits<{ 'update:quantity': [quantity: number]; add: []; buy: []; 'instant-key': []; 'external-buy': [] }>()
 
 const updateQuantity = (event: Event) => {
   const value = Number((event.target as HTMLInputElement).value) || 1
@@ -20,7 +23,11 @@ const updateQuantity = (event: Event) => {
 
 <template>
   <section class="space-y-2 pt-1">
-    <template v-if="contactOnly">
+    <template v-if="externalBuyHref">
+      <a :href="externalBuyHref" target="_blank" rel="nofollow noopener sponsored" class="flex h-10 items-center justify-center rounded-[6px] bg-accent px-3 text-xs font-bold uppercase text-accent-ink hover:brightness-95" @click="emit('external-buy')">{{ externalBuyLabel || 'Mua tại trang đối tác' }}</a>
+      <p class="text-xs text-slate-500">Sản phẩm được bán tại trang đối tác, mở trong tab mới.</p>
+    </template>
+    <template v-else-if="contactOnly">
       <p class="rounded-[6px] bg-orange-50 px-3 py-2 text-xs leading-5 text-orange-800">Sản phẩm này cần được báo giá trực tiếp. Chọn kênh chat thuận tiện để được hỗ trợ nhanh.</p>
       <div v-if="zaloHref || messengerHref" class="grid gap-2 sm:grid-cols-2">
         <a v-if="zaloHref" :href="zaloHref" target="_blank" rel="noopener noreferrer" class="flex h-10 items-center justify-center gap-2 rounded-[6px] bg-[#0068ff] px-3 text-xs font-bold uppercase text-white hover:bg-[var(--pc-primary)]">
@@ -59,6 +66,6 @@ const updateQuantity = (event: Event) => {
         <button type="button" :disabled="!purchasable || adding" class="h-10 rounded-[6px] bg-brand px-3 text-xs font-bold uppercase text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45" @click="emit('add')">{{ adding ? 'Đang thêm…' : 'Thêm vào giỏ' }}</button>
       </div>
     </div>
-    <p v-if="!contactOnly && !purchasable && !instantKeyHref" class="rounded-[6px] bg-slate-100 px-3 py-2 text-xs text-slate-600">Sản phẩm hiện chưa thể đặt trực tuyến.</p>
+    <p v-if="!externalBuyHref && !contactOnly && !purchasable && !instantKeyHref" class="rounded-[6px] bg-slate-100 px-3 py-2 text-xs text-slate-600">Sản phẩm hiện chưa thể đặt trực tuyến.</p>
   </section>
 </template>

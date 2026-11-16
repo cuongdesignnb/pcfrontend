@@ -110,5 +110,16 @@ export const useEcommerceTracking = () => {
     })
   }
 
-  return { track, trackPurchase, trackInstantKeyClick }
+  // "Link mua ngoài": the product is bought on another site.
+  const trackExternalBuyClick = (product: ProductDetail, url: string) => {
+    if (!import.meta.client) return
+    window.gtag?.('event', 'click_external_buy', {
+      item_id: contentId(product),
+      item_name: product.name,
+      item_category: product.category?.name,
+      link_url: url,
+    })
+  }
+
+  return { track, trackPurchase, trackInstantKeyClick, trackExternalBuyClick }
 }

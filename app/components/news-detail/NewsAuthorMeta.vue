@@ -6,6 +6,11 @@ const props = defineProps<{
   post: NewsDetailPost
 }>()
 
+const authorPath = computed(() => {
+  const path = props.post.author?.canonical_path
+  return path && path.startsWith('/tin-tuc/tac-gia/') ? path : null
+})
+
 const initials = computed(() => {
   const name = props.post.author?.name?.trim() || 'Tác giả'
   return name.charAt(0).toUpperCase()
@@ -19,8 +24,9 @@ const initials = computed(() => {
       <span v-else aria-hidden="true">{{ initials }}</span>
     </div>
     <div class="news-detail-author-copy">
-      <strong>{{ post.author?.name || 'Tác giả' }}</strong>
-      <small>Tác giả</small>
+      <NuxtLink v-if="authorPath" :to="authorPath" rel="author" class="news-detail-author-link"><strong>{{ post.author?.name }}</strong></NuxtLink>
+      <strong v-else>{{ post.author?.name || 'Tác giả' }}</strong>
+      <small>{{ post.author?.job_title || 'Tác giả' }}</small>
     </div>
     <div class="news-detail-meta-facts">
       <span>

@@ -175,6 +175,9 @@
   white-space: nowrap;
 }
 
+.news-detail-author-link { min-width: 0; text-decoration: none; }
+.news-detail-author-link:hover strong { color: var(--pc-primary); text-decoration: underline; }
+
 .news-detail-author-copy small,
 .news-detail-meta-facts,
 .news-detail-meta-facts span {

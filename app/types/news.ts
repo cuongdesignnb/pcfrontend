@@ -8,6 +8,8 @@ export interface NewsArticleCategory {
 
 export interface NewsArticleAuthor {
   name: string
+  slug?: string | null
+  canonical_path?: string | null
 }
 
 export interface NewsArticle {

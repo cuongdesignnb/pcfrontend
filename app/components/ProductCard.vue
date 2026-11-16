@@ -34,6 +34,11 @@ const discountPercent = computed(() => {
 const isWishlisted = computed(() => wishlist.ids.value.includes(props.product.id))
 const ratingScore = computed(() => Math.round(Number(props.product.rating?.average || 0)))
 const resolvedProductUrl = computed(() => productUrl(props.product))
+// "Link mua ngoài": the card's buy button opens the partner page instead.
+const externalBuyHref = computed(() => {
+  const url = (props.product.external_buy_url || '').trim()
+  return /^https:\/\/[^\s]+$/i.test(url) ? url : ''
+})
 const categoryActionLabel = computed(() => {
   if (props.product.has_variants) return 'Chọn phiên bản'
   if (!props.product.inventory.purchasable) return props.product.inventory.availability_label
@@ -61,6 +66,11 @@ function formatSoldCount(value: number): string {
     return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1).replace('.0', '')}k`
   }
   return String(value)
+}
+
+function trackExternalCardClick() {
+  if (!import.meta.client) return
+  window.gtag?.('event', 'click_external_buy', { item_id: String(props.product.id), item_name: props.product.name, link_url: externalBuyHref.value })
 }
 
 async function handleCategoryAction(event: MouseEvent) {
@@ -155,8 +165,18 @@ async function handleCategoryAction(event: MouseEvent) {
       </svg>
     </button>
 
+    <a
+      v-if="showProductAction && externalBuyHref"
+      :href="externalBuyHref"
+      target="_blank"
+      rel="nofollow noopener sponsored"
+      class="product-card-category-action product-card-compact-action"
+      @click="trackExternalCardClick"
+    >
+      <span>{{ product.external_buy_label || 'Mua tại đối tác' }}</span>
+    </a>
     <button
-      v-if="showProductAction"
+      v-else-if="showProductAction"
       type="button"
       class="product-card-category-action product-card-compact-action"
       :disabled="categoryActionDisabled"

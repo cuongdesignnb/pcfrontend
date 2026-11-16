@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PublicPage } from '~/types/public-page'
-import { serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
+import { normalizeRobots, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
 
 const props = defineProps<{ page: PublicPage }>()
 const { siteName } = useSettings()
@@ -12,6 +12,7 @@ const description = computed(() => props.page.meta_description?.trim()
 const { canonicalUrl } = useSeoDocument(() => ({
   title: title.value, description: description.value,
   path: props.page.canonical_path, type: 'website',
+  canonicalUrl: props.page.canonical_url, robots: normalizeRobots(props.page.robots),
 }))
 
 useHead(() => ({

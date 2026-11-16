@@ -54,6 +54,9 @@ export interface CheckoutShippingMethod {
   disabled_reason: string | null
   fee: number | null
   eta: string | null
+  // False for store pickup: no delivery address is needed.
+  requires_address?: boolean
+  pickup_address?: string | null
 }
 
 export interface CheckoutPaymentMethod {
@@ -92,6 +95,8 @@ export interface CheckoutQuote {
   items: CheckoutLine[]
   summary: CheckoutSummary
   shipping_methods: CheckoutShippingMethod[]
+  // The method the totals use: the requested one, or the first the shop has turned on.
+  shipping_method?: string
   payment_methods: CheckoutPaymentMethod[]
   coupon: CheckoutCoupon | null
   referral?: CheckoutReferral
@@ -166,6 +171,8 @@ export interface CheckoutOrder {
   subtotal: number | string
   discount: number | string
   shipping_fee: number | string
+  shipping_method?: string
+  shipping_method_label?: string
   total: number | string
   shipping_city: string | null
   shipping_ward: string | null

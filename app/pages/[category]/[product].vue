@@ -3,7 +3,7 @@ import type { ProductCard, ProductDetail } from '~/types/product-detail'
 import { toSocialHref } from '~/utils/contactLinks'
 import { getErrorStatusCode } from '~/utils/errors'
 import { productUrl } from '~/utils/urls'
-import { publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
+import { normalizeRobots, publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
 import { isUsablePublicImageUrl } from '~/utils/media'
 
 definePageMeta({ hideMobileBottomBar: true })
@@ -14,7 +14,7 @@ const cart = useCart()
 const toast = useToast()
 const { siteName, socialZalo, socialMessenger, currency, formatMoney } = useSettings()
 const { start: startBuyNow } = useBuyNow()
-const { track, trackInstantKeyClick } = useEcommerceTracking()
+const { track, trackInstantKeyClick, trackExternalBuyClick } = useEcommerceTracking()
 const categorySlug = computed(() => String(route.params.category || ''))
 const slug = computed(() => String(route.params.product || ''))
 const { data, pending, error } = await useProductDetail(slug, categorySlug)
@@ -87,8 +87,17 @@ const instantKeyHref = computed(() => {
 const onInstantKey = () => {
   if (product.value && instantKeyHref.value) trackInstantKeyClick(product.value, instantKeyHref.value)
 }
-const contactOnly = computed(() => selectedPricing.value.display_price <= 0 && !instantKeyHref.value)
-const onlinePurchasable = computed(() => selection.purchasable.value && selectedPricing.value.display_price > 0)
+// "Link mua ngoài": one button to another site replaces cart/buy/contact.
+const externalBuyHref = computed(() => {
+  const url = (product.value?.external_buy_url || '').trim()
+  return /^https:\/\/[^\s]+$/i.test(url) ? url : ''
+})
+const externalBuyLabel = computed(() => product.value?.external_buy_label?.trim() || 'Mua tại trang đối tác')
+const onExternalBuy = () => {
+  if (product.value && externalBuyHref.value) trackExternalBuyClick(product.value, externalBuyHref.value)
+}
+const contactOnly = computed(() => !externalBuyHref.value && selectedPricing.value.display_price <= 0 && !instantKeyHref.value)
+const onlinePurchasable = computed(() => !externalBuyHref.value && selection.purchasable.value && selectedPricing.value.display_price > 0)
 const publicProductImages = computed(() => product.value?.images.filter(image => isUsablePublicImageUrl(image.url)) ?? [])
 const primaryProductImage = computed(() => publicProductImages.value[0]?.url ?? null)
 
@@ -146,8 +155,9 @@ const { origin, canonicalUrl } = useSeoDocument(() => ({
   title: product.value?.seo.title || (product.value ? `${product.value.name} - ${siteName.value}` : `Sản phẩm - ${siteName.value}`),
   description: seoDescription.value,
   path: canonicalPath.value,
+  canonicalUrl: product.value?.seo.canonical_url,
   image: primaryProductImage.value,
-  robots: product.value ? 'index,follow' : 'noindex,follow',
+  robots: product.value ? normalizeRobots(product.value.seo.robots) : 'noindex,follow',
   type: 'product',
 }))
 
@@ -235,14 +245,14 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
                 <span v-if="selectedWarranty ?? product.warranty_months" class="text-slate-500">Bảo hành: {{ selectedWarranty ?? product.warranty_months }} tháng</span>
               </div>
               <ProductVariantSelector :product="product" :variants="product.variants" :option-groups="selection.optionGroups.value" :selected-variant="selection.selectedVariant.value" :selected-attributes="selection.selectedAttributes.value" :alternative-products="alternativeProducts" :is-option-available="selection.isOptionAvailable" :warranty-packages="warrantyPackages" :selected-warranty="selectedWarranty" @select-warranty="selectedWarranty = $event" @select-variant="selection.chooseVariant" @select-attribute="selection.chooseAttribute" />
-              <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="onlinePurchasable" :adding="addingToCart" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" :instant-key-href="instantKeyHref" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" @instant-key="onInstantKey" />
+              <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="onlinePurchasable" :adding="addingToCart" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" :instant-key-href="instantKeyHref" :external-buy-href="externalBuyHref" :external-buy-label="externalBuyLabel" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" @instant-key="onInstantKey" @external-buy="onExternalBuy" />
               <ClientOnly><AffiliateShareBox v-if="canonicalPath" :product-id="product.id" :product-name="product.name" :path="canonicalPath" /></ClientOnly>
             </div>
           </section>
 
-          <div class="pdp-area-summary"><ProductPurchaseSummary :product="product" :variant="selection.selectedVariant.value" :quantity="selection.quantity.value" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" :instant-key-href="instantKeyHref" @add="addToCart" @buy="buyNow" @instant-key="onInstantKey" /></div>
+          <div class="pdp-area-summary"><ProductPurchaseSummary :product="product" :variant="selection.selectedVariant.value" :quantity="selection.quantity.value" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" :instant-key-href="instantKeyHref" :external-buy-href="externalBuyHref" :external-buy-label="externalBuyLabel" @add="addToCart" @buy="buyNow" @instant-key="onInstantKey" @external-buy="onExternalBuy" /></div>
           <div class="pdp-area-benefits"><ProductServiceBenefits :warranty-months="product.warranty_months" /></div>
-          <div v-if="!contactOnly" class="pdp-area-delivery"><ProductDeliveryPreview :subtotal="pricingWithWarranty.display_price * selection.quantity.value" /></div>
+          <div v-if="!contactOnly && !externalBuyHref" class="pdp-area-delivery"><ProductDeliveryPreview :subtotal="pricingWithWarranty.display_price * selection.quantity.value" /></div>
           <div class="pdp-area-tabs"><ProductAnchorTabs :rating-count="product.rating.count" :questions-count="product.questions_count" /></div>
 
           <div class="pdp-area-content pdp-content-main">
@@ -264,7 +274,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
           <div class="pdp-area-bottom pdp-bottom-row"><ProductQuestions :slug="product.slug" /><ProductRecentlyViewed :slug="product.slug" /></div>
         </div>
 
-        <ProductMobilePurchaseBar :price="pricingWithWarranty.display_price" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" :instant-key-href="instantKeyHref" @add="addToCart" @buy="buyNow" @instant-key="onInstantKey" />
+        <ProductMobilePurchaseBar :price="pricingWithWarranty.display_price" :purchasable="onlinePurchasable" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" :instant-key-href="instantKeyHref" :external-buy-href="externalBuyHref" :external-buy-label="externalBuyLabel" @add="addToCart" @buy="buyNow" @instant-key="onInstantKey" @external-buy="onExternalBuy" />
       </template>
     </div>
   </main>

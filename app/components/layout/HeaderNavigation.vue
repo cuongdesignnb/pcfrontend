@@ -22,6 +22,7 @@ function resolveUrl(item: MenuItemData): string {
           class="header-navigation-link"
           :class="item.css_class || undefined"
         >
+          <MenuItemIcon :icon="item.icon" />
           <span>{{ item.title }}</span>
           <span v-if="item.badge_text" class="header-nav-badge">{{ item.badge_text }}</span>
         </NuxtLink>

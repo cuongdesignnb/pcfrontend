@@ -54,7 +54,7 @@ function selectItem(item: MenuItemData) {
       <div class="header-category-panel-list">
         <div v-for="item in props.items" :key="item.id" class="header-category-panel-item" @mouseenter="selectItem(item)">
           <NuxtLink :to="resolveUrl(item)" class="header-category-panel-link" @focus="selectItem(item)" @click="close">
-            <span>{{ item.title }}</span>
+            <span><MenuItemIcon :icon="item.icon" />{{ item.title }}</span>
             <svg v-if="item.children?.length" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9 5 7 7-7 7" />
             </svg>
@@ -65,7 +65,7 @@ function selectItem(item: MenuItemData) {
         <template v-for="item in props.items.filter(candidate => candidate.id === activeId)" :key="item.id">
           <p class="header-category-subtitle">{{ item.title }}</p>
           <NuxtLink v-for="child in item.children" :key="child.id" :to="resolveUrl(child)" @click="close">
-            {{ child.title }}
+            <MenuItemIcon :icon="child.icon" />{{ child.title }}
           </NuxtLink>
         </template>
       </div>

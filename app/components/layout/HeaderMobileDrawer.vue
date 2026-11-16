@@ -74,7 +74,7 @@ function resolveUrl(item: MenuItemData): string {
         <nav class="mobile-drawer-nav">
           <div v-for="item in props.items" :key="item.id" class="mobile-drawer-item">
             <div class="mobile-drawer-item-row">
-              <NuxtLink :to="resolveUrl(item)" @click="emit('close')">{{ item.title }}</NuxtLink>
+              <NuxtLink :to="resolveUrl(item)" @click="emit('close')"><MenuItemIcon :icon="item.icon" />{{ item.title }}</NuxtLink>
               <button v-if="item.children?.length" type="button" :aria-expanded="expanded.includes(item.id)" :aria-label="`Mở ${item.title}`" @click="toggle(item.id)">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" :class="{ 'is-open': expanded.includes(item.id) }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" />
@@ -83,7 +83,7 @@ function resolveUrl(item: MenuItemData): string {
             </div>
             <div v-if="item.children?.length && expanded.includes(item.id)" class="mobile-drawer-children">
               <NuxtLink v-for="child in item.children" :key="child.id" :to="resolveUrl(child)" @click="emit('close')">
-                {{ child.title }}
+                <MenuItemIcon :icon="child.icon" />{{ child.title }}
               </NuxtLink>
             </div>
           </div>

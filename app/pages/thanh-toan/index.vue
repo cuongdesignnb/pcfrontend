@@ -60,7 +60,7 @@ const form = reactive<CheckoutForm>({
   shipping_ward: '',
   shipping_province_code: '',
   shipping_ward_code: '',
-  shipping_method: 'standard',
+  shipping_method: '',
   payment_method: '',
   payment_option: 'full',
   notes: '',
@@ -120,11 +120,16 @@ const paymentMethods = computed<CheckoutPaymentMethod[]>(() => {
   }))
 })
 
+const shippingMethods = computed(() => quotes.quote.value?.shipping_methods ?? [])
+const selectedShipping = computed(() => shippingMethods.value.find(method => method.code === form.shipping_method) ?? null)
+// "Nhận tại cửa hàng": no delivery address, the store address is shown instead.
+const isPickup = computed(() => selectedShipping.value?.requires_address === false)
+
 const quotePayload = computed<CheckoutQuoteRequest>(() => {
   const payload: CheckoutQuoteRequest = {
     checkout_mode: checkoutMode.value,
-    shipping_province_code: form.shipping_province_code,
-    shipping_ward_code: form.shipping_ward_code,
+    shipping_province_code: isPickup.value ? '' : form.shipping_province_code,
+    shipping_ward_code: isPickup.value ? '' : form.shipping_ward_code,
     shipping_method: form.shipping_method,
     payment_method: form.payment_method,
     customer_phone: form.customer_phone.trim(),
@@ -142,7 +147,6 @@ const quotePayload = computed<CheckoutQuoteRequest>(() => {
 })
 
 const quoteLoading = computed(() => quotes.loading.value)
-const shippingMethods = computed(() => quotes.quote.value?.shipping_methods ?? [])
 const hasCartError = computed(() => checkoutMode.value === 'cart' && Boolean(cart.error.value))
 const quoteHasUsablePayment = computed(() => paymentMethods.value.some(method => method.code === form.payment_method && method.available))
 // Deposit the shop accepts for this quote (Cài đặt → Thanh toán); null hides the choice.
@@ -171,10 +175,11 @@ const isFormValid = computed(() => {
     && form.customer_phone.trim().length <= 20
     && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email.trim())
     && form.customer_email.trim().length <= 255
-    && form.shipping_address.trim().length > 0
-    && form.shipping_address.trim().length <= 500
-    && Boolean(form.shipping_province_code)
-    && Boolean(form.shipping_ward_code)
+    && (isPickup.value || (form.shipping_address.trim().length > 0
+      && form.shipping_address.trim().length <= 500
+      && Boolean(form.shipping_province_code)
+      && Boolean(form.shipping_ward_code)))
+    && Boolean(selectedShipping.value?.available)
     && quoteHasUsablePayment.value
     && form.notes.length <= 1000
     && checkoutIdempotencyKey.value.length > 0
@@ -269,6 +274,11 @@ const refreshQuote = async () => {
   if (response) setDefaultPaymentMethod()
   return response
 }
+
+// Follow the method the backend priced (the first enabled one when none was picked yet).
+watch(() => quotes.quote.value?.shipping_method, (code) => {
+  if (code && code !== form.shipping_method && !orderResult.value) form.shipping_method = code
+})
 
 const resumeAttempt = async (): Promise<boolean> => {
   if (!import.meta.client) return false
@@ -374,12 +384,16 @@ const placeOrder = async () => {
         customer_name: form.customer_name.trim(),
         customer_email: form.customer_email.trim(),
         customer_phone: form.customer_phone.trim(),
-        shipping_address: form.shipping_address.trim(),
-        shipping_city: selectedProvince.value?.fullname ?? form.shipping_city,
-        shipping_district: form.shipping_district.trim() || null,
-        shipping_ward: selectedWard.value?.fullname ?? form.shipping_ward,
-        shipping_province_code: form.shipping_province_code,
-        shipping_ward_code: form.shipping_ward_code,
+        ...(isPickup.value
+          ? {}
+          : {
+              shipping_address: form.shipping_address.trim(),
+              shipping_city: selectedProvince.value?.fullname ?? form.shipping_city,
+              shipping_district: form.shipping_district.trim() || null,
+              shipping_ward: selectedWard.value?.fullname ?? form.shipping_ward,
+              shipping_province_code: form.shipping_province_code,
+              shipping_ward_code: form.shipping_ward_code,
+            }),
         shipping_method: form.shipping_method,
         notes: form.notes,
         referral_code: form.referral_code.trim() || undefined,
@@ -619,7 +633,26 @@ useSeoMeta({
               </div>
             </CheckoutSection>
 
-            <CheckoutSection :number="2" title="Địa chỉ nhận hàng" icon="location">
+            <CheckoutSection :number="2" title="Cách nhận hàng" icon="truck">
+              <fieldset class="checkout-radio-group">
+                <legend class="sr-only">Cách nhận hàng</legend>
+                <label v-for="shipping in shippingMethods" :key="shipping.code" class="checkout-radio-card" :class="{ 'is-selected': form.shipping_method === shipping.code, 'is-disabled': !shipping.available }">
+                  <input v-model="form.shipping_method" type="radio" name="shipping_method" :value="shipping.code" :disabled="!shipping.available || Boolean(orderResult)">
+                  <span class="checkout-radio-mark" aria-hidden="true" />
+                  <CartIcon :name="shipping.requires_address === false ? 'location' : 'truck'" size="22" />
+                  <span class="checkout-radio-copy"><strong>{{ shipping.label }}</strong><small>{{ shipping.available ? shipping.description : shipping.disabled_reason }}<template v-if="shipping.eta"> · {{ shipping.eta }}</template></small></span>
+                  <strong class="checkout-radio-price">{{ shipping.fee === null ? '—' : (shipping.fee === 0 ? 'Miễn phí' : formatMoney(shipping.fee)) }}</strong>
+                </label>
+                <p v-if="!shippingMethods.length" class="checkout-muted">Đang cập nhật phương thức giao hàng từ hệ thống.</p>
+                <small v-if="issueFor('shipping_method')" class="checkout-field-error">{{ issueFor('shipping_method') }}</small>
+              </fieldset>
+              <div v-if="isPickup" class="checkout-payment-hint" role="status">
+                <CartIcon name="location" size="17" />
+                <span>Nhận hàng tại: <strong>{{ selectedShipping?.pickup_address || 'cửa hàng (shop sẽ gọi xác nhận địa chỉ)' }}</strong>. Không cần nhập địa chỉ giao hàng.</span>
+              </div>
+            </CheckoutSection>
+
+            <CheckoutSection v-if="!isPickup" :number="3" title="Địa chỉ nhận hàng" icon="location">
               <div class="checkout-fields checkout-fields-three">
                 <div class="checkout-field">
                   <label for="shipping-province">Tỉnh/Thành phố <span>*</span></label>
@@ -651,28 +684,14 @@ useSeoMeta({
               </div>
             </CheckoutSection>
 
-            <CheckoutSection :number="3" title="Phương thức giao hàng" icon="truck">
-              <fieldset class="checkout-radio-group">
-                <legend class="sr-only">Phương thức giao hàng</legend>
-                <label v-for="shipping in shippingMethods" :key="shipping.code" class="checkout-radio-card" :class="{ 'is-selected': form.shipping_method === shipping.code, 'is-disabled': !shipping.available }">
-                  <input v-model="form.shipping_method" type="radio" name="shipping_method" :value="shipping.code" :disabled="!shipping.available || Boolean(orderResult)">
-                  <span class="checkout-radio-mark" aria-hidden="true" />
-                  <CartIcon name="truck" size="22" />
-                  <span class="checkout-radio-copy"><strong>{{ shipping.label }}</strong><small>{{ shipping.description }}<template v-if="shipping.eta"> · {{ shipping.eta }}</template></small></span>
-                  <strong class="checkout-radio-price">{{ shipping.fee === null ? '—' : (shipping.fee === 0 ? 'Miễn phí' : formatMoney(shipping.fee)) }}</strong>
-                </label>
-                <p v-if="!shippingMethods.length" class="checkout-muted">Đang cập nhật phương thức giao hàng từ hệ thống.</p>
-              </fieldset>
-            </CheckoutSection>
-
-            <CheckoutSection :number="4" title="Phương thức thanh toán" icon="card">
+            <CheckoutSection :number="isPickup ? 3 : 4" title="Phương thức thanh toán" icon="card">
               <fieldset class="checkout-radio-group">
                 <legend class="sr-only">Phương thức thanh toán</legend>
                 <label v-for="method in paymentMethods" :key="method.code" class="checkout-radio-card checkout-payment-card" :class="{ 'is-selected': form.payment_method === method.code, 'is-disabled': !method.available }">
                   <input v-model="form.payment_method" type="radio" name="payment_method" :value="method.code" :disabled="!method.available || Boolean(orderResult)">
                   <span class="checkout-radio-mark" aria-hidden="true" />
                   <span class="checkout-payment-symbol" aria-hidden="true"><CartIcon :name="method.code === 'sepay' ? 'qr' : 'cash'" size="22" /></span>
-                  <span class="checkout-radio-copy"><strong>{{ method.label }}</strong><small>{{ method.description }}</small></span>
+                  <span class="checkout-radio-copy"><strong>{{ method.label }}</strong><small>{{ method.available ? method.description : (method.disabled_reason || method.description) }}</small></span>
                   <span class="checkout-method-badge">{{ method.code === 'cod' ? 'COD' : 'SePay' }}</span>
                 </label>
                 <p v-if="!paymentMethods.length" class="checkout-muted">Chưa có phương thức thanh toán khả dụng. Vui lòng liên hệ cửa hàng.</p>
@@ -707,7 +726,7 @@ useSeoMeta({
               <CheckoutSepayPanel v-if="paymentData" :payment="paymentData" :format-money="formatMoney" :verified="paymentVerified" :checking="checkingPayment" :copied-field="copiedField" @copy="copyToClipboard" @check="checkPaymentStatus" />
             </CheckoutSection>
 
-            <CheckoutSection :number="5" title="Ghi chú đơn hàng" icon="file" description="(tùy chọn)">
+            <CheckoutSection :number="isPickup ? 4 : 5" title="Ghi chú đơn hàng" icon="file" description="(tùy chọn)">
               <div class="checkout-field">
                 <label for="order-notes">Ghi chú cho người giao hàng</label>
                 <textarea id="order-notes" v-model="form.notes" maxlength="1000" rows="4" placeholder="Ví dụ: Giao hàng trong giờ hành chính…" :aria-invalid="Boolean(issueFor('notes'))" />

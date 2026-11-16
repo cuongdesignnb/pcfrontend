@@ -12,6 +12,13 @@ export interface NewsDetailAuthor {
   id: number
   name: string
   avatar: string | null
+  /** Set for authors managed in admin (Nội dung → Tác giả); null for the admin-user fallback. */
+  slug?: string | null
+  job_title?: string | null
+  bio?: string | null
+  same_as?: string[]
+  canonical_path?: string | null
+  url?: string | null
 }
 
 export interface NewsTocItem {

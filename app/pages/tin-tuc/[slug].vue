@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { faqPageSchema } from '~/utils/faqSchema'
 import type { NewsDetailPost } from '~/types/news-detail'
-import { publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
+import { normalizeRobots, publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
 import { newsCategoryUrl } from '~/utils/news'
 
 const route = useRoute()
@@ -40,8 +40,9 @@ const { origin, canonicalUrl } = useSeoDocument(() => ({
   title: post.value?.seo.title || post.value?.title || `Tin tức - ${siteName.value}`,
   description: post.value?.seo.description || post.value?.excerpt,
   path: canonicalPath.value,
+  canonicalUrl: post.value?.seo.canonical_url,
   image: post.value?.seo.image || post.value?.featured_image,
-  robots: post.value ? 'index,follow' : 'noindex,follow',
+  robots: post.value ? normalizeRobots(post.value.seo.robots) : 'noindex,follow',
   type: 'article',
 }))
 
@@ -67,7 +68,17 @@ const articleJsonLd = computed(() => {
     image: absoluteUrl(article.seo.image || article.featured_image),
     articleSection: article.category?.name || undefined,
   }
-  if (article.author?.name) articleSchema.author = { '@type': 'Person', name: article.author.name }
+  if (article.author?.name) {
+    // Authors managed in admin get their own page; it is the Person's url.
+    const authorUrl = article.author.canonical_path ? publicAbsoluteUrl(origin.value, article.author.canonical_path) : null
+    articleSchema.author = {
+      '@type': 'Person',
+      name: article.author.name,
+      ...(authorUrl ? { url: authorUrl } : {}),
+      ...(article.author.job_title ? { jobTitle: article.author.job_title } : {}),
+      ...(article.author.same_as?.length ? { sameAs: article.author.same_as } : {}),
+    }
+  }
 
   const breadcrumbItems: Array<Record<string, unknown>> = [
     { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: publicAbsoluteUrl(origin.value, '/') },

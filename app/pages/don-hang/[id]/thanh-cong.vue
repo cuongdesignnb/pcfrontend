@@ -264,6 +264,7 @@ useSeoMeta({ title: () => 'Trạng thái đơn hàng - ' + siteName.value })
                 {{ order.shipping_district && order.shipping_district + ', ' }}
                 {{ order.shipping_city }}
               </p>
+              <p v-if="order.shipping_method_label" class="text-gray-600 mt-1">{{ order.shipping_method_label }}</p>
             </div>
           </div>
 

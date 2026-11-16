@@ -36,6 +36,9 @@ export interface ProductCard {
   warranty_months: number | null
   is_featured?: boolean
   has_variants?: boolean
+  /** "Link mua ngoài": the product is bought on another site. */
+  external_buy_url?: string | null
+  external_buy_label?: string | null
 }
 
 export interface ProductVariant {
@@ -151,6 +154,9 @@ export interface ProductDetail {
   video?: ProductVideo | null
   /** "Lấy key ngay": outside page that hands out a licence key at once. */
   instant_key_url?: string | null
+  /** "Link mua ngoài": one button to this page replaces cart/buy. */
+  external_buy_url?: string | null
+  external_buy_label?: string | null
   specifications: ProductSpecification[]
   has_specifications: boolean
   technical_section_title: string

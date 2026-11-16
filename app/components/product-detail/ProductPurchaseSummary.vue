@@ -11,8 +11,10 @@ const props = defineProps<{
   zaloHref: string
   messengerHref: string
   instantKeyHref?: string
+  externalBuyHref?: string
+  externalBuyLabel?: string
 }>()
-const emit = defineEmits<{ add: []; buy: []; 'instant-key': [] }>()
+const emit = defineEmits<{ add: []; buy: []; 'instant-key': []; 'external-buy': [] }>()
 const { formatMoney, getString } = useSettings()
 const primaryImage = computed(() => props.product.images.find(image => isUsablePublicImageUrl(image.url)) || null)
 
@@ -47,14 +49,17 @@ const benefits = computed(() => [
       </div>
     </div>
 
-    <dl v-if="!contactOnly" class="mt-3 space-y-2 border-y border-slate-100 py-3 text-xs">
+    <dl v-if="!contactOnly && !externalBuyHref" class="mt-3 space-y-2 border-y border-slate-100 py-3 text-xs">
       <div class="flex justify-between gap-3"><dt class="text-slate-500">Số lượng</dt><dd class="font-medium text-slate-800">{{ quantity }}</dd></div>
       <div class="flex justify-between gap-3"><dt class="text-slate-500">Tạm tính</dt><dd class="font-medium text-slate-800">{{ formatMoney(subtotal) }}</dd></div>
       <div class="flex justify-between gap-3"><dt class="text-slate-500">Giảm giá</dt><dd class="font-medium text-red-600">{{ discount > 0 ? `-${formatMoney(discount)}` : '—' }}</dd></div>
       <div class="flex justify-between gap-3 pt-1 text-sm"><dt class="font-bold text-slate-900">Tổng cộng</dt><dd class="font-bold text-red-600">{{ formatMoney(subtotal) }}</dd></div>
     </dl>
 
-    <div v-if="contactOnly" class="mt-3 rounded-[6px] border border-orange-200 bg-orange-50 p-3">
+    <div v-if="externalBuyHref" class="mt-3 grid gap-2">
+      <a :href="externalBuyHref" target="_blank" rel="nofollow noopener sponsored" class="flex h-9 items-center justify-center rounded-[6px] bg-accent px-3 text-xs font-bold uppercase text-accent-ink hover:brightness-95" @click="emit('external-buy')">{{ externalBuyLabel || 'Mua tại trang đối tác' }}</a>
+    </div>
+    <div v-else-if="contactOnly" class="mt-3 rounded-[6px] border border-orange-200 bg-orange-50 p-3">
       <p class="text-xs leading-5 text-orange-900">Sản phẩm chưa có giá bán trực tuyến. Liên hệ để nhận báo giá và được tư vấn cấu hình phù hợp.</p>
       <div v-if="zaloHref || messengerHref" class="mt-3 grid gap-2">
         <a v-if="zaloHref" :href="zaloHref" target="_blank" rel="noopener noreferrer" class="flex h-9 items-center justify-center rounded-[6px] bg-[#0068ff] px-3 text-xs font-bold uppercase text-white hover:bg-[var(--pc-primary)]">Chat Zalo</a>

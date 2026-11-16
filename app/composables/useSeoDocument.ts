@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
-import type { SeoDocumentInput } from '~/types/seo'
+import type { RobotsDirective, SeoDocumentInput } from '~/types/seo'
 import { normalizeSeoTitle } from '~/utils/seoIdentity'
 
 function cleanOrigin(value: unknown): string | null {
@@ -44,6 +44,32 @@ export function canonicalAbsoluteUrl(origin: string | null, path: string | null 
   }
 }
 
+/**
+ * Canonical set in admin: an absolute https URL. A value that only repeats
+ * the page's own path (the API's default) is ignored, so the storefront
+ * origin keeps deciding the host.
+ */
+export function canonicalOverrideUrl(origin: string | null, value: string | null | undefined, ownPath: string | null | undefined): string | null {
+  if (!value || typeof value !== 'string') return null
+  try {
+    const url = origin ? new URL(value, origin) : new URL(value)
+    if (url.protocol !== 'https:' && !(origin && url.origin === origin)) return null
+    if (url.username || url.password) return null
+    url.hash = ''
+    if (ownPath && url.pathname === ownPath.split('?')[0] && !url.search) return null
+    return url.toString()
+  } catch {
+    return null
+  }
+}
+
+/** Robots value from the API; anything unexpected falls back to the default. */
+export function normalizeRobots(value: unknown, fallback: RobotsDirective = 'index,follow'): RobotsDirective {
+  const allowed: RobotsDirective[] = ['index,follow', 'noindex,follow', 'noindex,nofollow', 'index,nofollow']
+  const cleaned = typeof value === 'string' ? value.replace(/\s+/g, '') as RobotsDirective : null
+  return cleaned && allowed.includes(cleaned) ? cleaned : fallback
+}
+
 export function serializeJsonLd(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')
 }
@@ -52,7 +78,8 @@ export function useSeoDocument(input: MaybeRefOrGetter<SeoDocumentInput>) {
   const config = useRuntimeConfig()
   const origin = computed(() => trustedSiteOrigin(config.public.siteUrl))
   const document = computed(() => toValue(input))
-  const canonicalUrl = computed(() => canonicalAbsoluteUrl(origin.value, document.value.path))
+  const canonicalUrl = computed(() => canonicalOverrideUrl(origin.value, document.value.canonicalUrl, document.value.path)
+    || canonicalAbsoluteUrl(origin.value, document.value.path))
   const imageUrl = computed(() => publicAbsoluteUrl(origin.value, document.value.image))
 
   useSeoMeta({

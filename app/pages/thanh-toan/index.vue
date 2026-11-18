@@ -154,6 +154,17 @@ const sepayDepositAmount = computed(() => paymentMethods.value.find(method => me
 watch(sepayDepositAmount, (amount) => {
   if (!amount && !orderResult.value) form.payment_option = 'full'
 })
+// Delivery outside the exempt provinces: the deposit must be transferred first (COD is closed).
+const depositRequired = computed(() => paymentMethods.value.find(method => method.code === 'sepay')?.deposit_required === true)
+const remainingAfterDeposit = computed(() => {
+  const total = quotes.quote.value?.summary.total
+  return total == null || !sepayDepositAmount.value ? null : Math.max(total - sepayDepositAmount.value, 0)
+})
+watch(depositRequired, (required) => {
+  if (!required || orderResult.value) return
+  form.payment_method = 'sepay'
+  form.payment_option = 'deposit'
+})
 
 const issueFor = (field: string): string => {
   if (serverFieldErrors.value[field]) return serverFieldErrors.value[field]
@@ -426,6 +437,8 @@ const placeOrder = async () => {
       paymentData.value = response.payment
       paymentPending.value = false
       schedulePaymentPoll(5000)
+      // Straight to the QR for the deposit (or the full amount).
+      nextTick(() => document.querySelector('.checkout-sepay-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
     } else if (response.order.payment_method === 'sepay') {
       paymentPending.value = true
       schedulePaymentPoll(5000)
@@ -697,15 +710,25 @@ useSeoMeta({
                 <p v-if="!paymentMethods.length" class="checkout-muted">Chưa có phương thức thanh toán khả dụng. Vui lòng liên hệ cửa hàng.</p>
               </fieldset>
 
+              <div v-if="depositRequired" class="checkout-payment-hint" role="status">
+                <CartIcon name="info" size="17" />
+                <span>Đơn giao đến tỉnh/thành này cần đặt cọc trước. Bấm "Đặt hàng" để nhận mã QR chuyển khoản tiền cọc; phần còn lại thanh toán khi nhận hàng.</span>
+              </div>
               <fieldset v-if="form.payment_method === 'sepay' && sepayDepositAmount" class="checkout-radio-group checkout-payment-options">
                 <legend class="checkout-payment-options-title">Hình thức chuyển khoản</legend>
+                <label v-if="depositRequired" class="checkout-radio-card" :class="{ 'is-selected': form.payment_option === 'deposit' }">
+                  <input v-model="form.payment_option" type="radio" name="payment_option" value="deposit" :disabled="Boolean(orderResult)">
+                  <span class="checkout-radio-mark" aria-hidden="true" />
+                  <span class="checkout-radio-copy"><strong>Đặt cọc {{ formatMoney(sepayDepositAmount) }}, còn lại thanh toán khi nhận hàng</strong><small v-if="remainingAfterDeposit !== null">Thanh toán khi nhận hàng: {{ formatMoney(remainingAfterDeposit) }}</small></span>
+                  <strong class="checkout-radio-price">{{ formatMoney(sepayDepositAmount) }}</strong>
+                </label>
                 <label class="checkout-radio-card" :class="{ 'is-selected': form.payment_option === 'full' }">
                   <input v-model="form.payment_option" type="radio" name="payment_option" value="full" :disabled="Boolean(orderResult)">
                   <span class="checkout-radio-mark" aria-hidden="true" />
                   <span class="checkout-radio-copy"><strong>Chuyển khoản toàn bộ</strong><small>Thanh toán đủ giá trị đơn hàng.</small></span>
                   <strong class="checkout-radio-price">{{ quotes.quote.value?.summary.total == null ? '—' : formatMoney(quotes.quote.value.summary.total) }}</strong>
                 </label>
-                <label class="checkout-radio-card" :class="{ 'is-selected': form.payment_option === 'deposit' }">
+                <label v-if="!depositRequired" class="checkout-radio-card" :class="{ 'is-selected': form.payment_option === 'deposit' }">
                   <input v-model="form.payment_option" type="radio" name="payment_option" value="deposit" :disabled="Boolean(orderResult)">
                   <span class="checkout-radio-mark" aria-hidden="true" />
                   <span class="checkout-radio-copy"><strong>Đặt cọc trước</strong><small>Phần còn lại chuyển khoản sau hoặc trả khi nhận hàng.</small></span>

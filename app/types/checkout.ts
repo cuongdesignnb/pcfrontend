@@ -67,6 +67,8 @@ export interface CheckoutPaymentMethod {
   disabled_reason: string | null
   // SePay only: what a deposit would be for the quoted total, null when not offered.
   deposit_amount?: number | null
+  // SePay only: the deposit must be paid first (COD is closed for this order).
+  deposit_required?: boolean
 }
 
 export interface CheckoutIssue {
@@ -98,6 +100,7 @@ export interface CheckoutQuote {
   // The method the totals use: the requested one, or the first the shop has turned on.
   shipping_method?: string
   payment_methods: CheckoutPaymentMethod[]
+  required_deposit?: number | null
   coupon: CheckoutCoupon | null
   referral?: CheckoutReferral
   capabilities: CheckoutCapabilities
@@ -178,6 +181,9 @@ export interface CheckoutOrder {
   shipping_ward: string | null
   can_pay: boolean
   kiot_sync_status: string
+  // "awaiting_deposit" (Chờ cọc) / "awaiting_payment" (Chờ thanh toán) until SePay confirms the money.
+  payment_stage?: 'awaiting_deposit' | 'awaiting_payment' | null
+  payment_stage_label?: string | null
 }
 
 export interface CheckoutOrderResponse {

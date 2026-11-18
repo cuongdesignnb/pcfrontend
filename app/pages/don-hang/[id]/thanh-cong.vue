@@ -67,6 +67,8 @@ const statusLabels: Record<string, string> = {
   cancel_pending: 'Đang gửi yêu cầu hủy',
   cancelled: 'Đơn hàng đã được hủy',
   not_required: 'Đơn hàng đã được ghi nhận',
+  // Deposit required: the shop handles the order once the transfer arrives.
+  waiting_payment: 'Đơn hàng đã được ghi nhận, đang chờ bạn chuyển khoản',
 }
 
 const paymentPurposeText: Record<string, string> = {
@@ -78,13 +80,18 @@ const paymentStatusLabel = computed(() => ({
   paid: 'Đã thanh toán',
   deposited: 'Đã đặt cọc',
   refunded: 'Đã hoàn tiền',
-})[order.value?.payment_status as string] ?? 'Chờ thanh toán')
+})[order.value?.payment_status as string] ?? order.value?.payment_stage_label ?? 'Chờ thanh toán')
+// Deposit orders: what is still collected on delivery once the deposit is in.
+const codRemaining = computed(() => {
+  if (order.value?.payment_option !== 'deposit' || !Number(order.value?.deposit_amount)) return null
+  return Math.max(Number(order.value.total) - Math.max(Number(order.value.amount_paid) || 0, Number(order.value.deposit_amount)), 0)
+})
 
 const integrationMessage = computed(
   () => statusLabels[order.value?.kiot_sync_status] || 'Đang ghi nhận đơn hàng',
 )
 const isWaiting = computed(() =>
-  ['pending', 'sending', 'retrying', 'cancel_pending'].includes(
+  ['pending', 'sending', 'retrying', 'cancel_pending', 'waiting_payment'].includes(
     order.value?.kiot_sync_status,
   ),
 )
@@ -225,6 +232,10 @@ useSeoMeta({ title: () => 'Trạng thái đơn hàng - ' + siteName.value })
         <p class="text-gray-700 mt-2">
           Nội dung chuyển khoản:
           <strong>{{ order.payment.transfer_content }}</strong>
+        </p>
+        <p v-if="codRemaining !== null" class="text-gray-700 mt-2">
+          Còn lại thanh toán khi nhận hàng:
+          <strong>{{ new Intl.NumberFormat('vi-VN').format(codRemaining) }}₫</strong>
         </p>
       </div>
 

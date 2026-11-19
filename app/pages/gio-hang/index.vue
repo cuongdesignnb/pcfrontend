@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { BaokimLine } from '~/composables/useBaokim'
+
 definePageMeta({ hideMobileBottomBar: true })
 
 const { siteName, formatMoney } = useSettings()
@@ -30,6 +32,17 @@ const {
   confirmConfirmation,
   checkout,
 } = useCartPage()
+
+// Bảo Kim "Thanh toán / Trả góp" for the ticked lines, when they can all be bought.
+const baokimLines = computed<BaokimLine[]>(() => {
+  if (!canCheckout.value) return []
+  return items.value.filter(item => item.selected && item.product).map(item => ({
+    name: [item.product!.name, item.variant?.name, item.warranty ? `Bảo hành ${item.warranty.months} tháng` : ''].filter(Boolean).join(' - '),
+    price: item.unit_price,
+    image: item.product!.images.find(image => image.url)?.url ?? null,
+    quantity: item.quantity,
+  }))
+})
 
 useSeoMeta({
   title: () => `Giỏ hàng - ${siteName.value}`,
@@ -113,7 +126,9 @@ onBeforeUnmount(() => window.removeEventListener('pageshow', refreshRestoredCart
             :disabled="!canCheckout"
             :loading="bulkBusy || cartLoading"
             @checkout="checkout"
-          />
+          >
+            <template #after-checkout><BaokimPayButton :lines="baokimLines" /></template>
+          </CartSummary>
         </div>
       </template>
     </div>

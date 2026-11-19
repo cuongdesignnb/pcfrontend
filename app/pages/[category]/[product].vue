@@ -5,6 +5,7 @@ import { getErrorStatusCode } from '~/utils/errors'
 import { productUrl } from '~/utils/urls'
 import { normalizeRobots, publicAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
 import { isUsablePublicImageUrl } from '~/utils/media'
+import type { BaokimLine } from '~/composables/useBaokim'
 
 definePageMeta({ hideMobileBottomBar: true })
 
@@ -100,6 +101,21 @@ const contactOnly = computed(() => !externalBuyHref.value && selectedPricing.val
 const onlinePurchasable = computed(() => !externalBuyHref.value && selection.purchasable.value && selectedPricing.value.display_price > 0)
 const publicProductImages = computed(() => product.value?.images.filter(image => isUsablePublicImageUrl(image.url)) ?? [])
 const primaryProductImage = computed(() => publicProductImages.value[0]?.url ?? null)
+
+// Bảo Kim "Thanh toán / Trả góp": only for items that can be bought online now.
+const baokimLines = computed<BaokimLine[]>(() => {
+  if (!product.value || !onlinePurchasable.value) return []
+  return [{
+    name: product.value.name,
+    price: pricingWithWarranty.value.display_price,
+    image: primaryProductImage.value,
+    quantity: selection.quantity.value,
+  }]
+})
+const baokimProperty = computed(() => [
+  selection.selectedVariant.value?.name,
+  selectedWarranty.value ? `Bảo hành ${selectedWarranty.value} tháng` : '',
+].filter(Boolean).join(' - '))
 
 const zaloHref = computed(() => {
   return toSocialHref(socialZalo.value, 'zalo')
@@ -246,6 +262,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
               </div>
               <ProductVariantSelector :product="product" :variants="product.variants" :option-groups="selection.optionGroups.value" :selected-variant="selection.selectedVariant.value" :selected-attributes="selection.selectedAttributes.value" :alternative-products="alternativeProducts" :is-option-available="selection.isOptionAvailable" :warranty-packages="warrantyPackages" :selected-warranty="selectedWarranty" @select-warranty="selectedWarranty = $event" @select-variant="selection.chooseVariant" @select-attribute="selection.chooseAttribute" />
               <ProductPurchaseActions :quantity="selection.quantity.value" :max-quantity="Math.max(1, selectedQuantity)" :purchasable="onlinePurchasable" :adding="addingToCart" :contact-only="contactOnly" :zalo-href="zaloHref" :messenger-href="messengerHref" :instant-key-href="instantKeyHref" :external-buy-href="externalBuyHref" :external-buy-label="externalBuyLabel" @update:quantity="selection.quantity.value = $event" @add="addToCart" @buy="buyNow" @instant-key="onInstantKey" @external-buy="onExternalBuy" />
+              <BaokimPayButton :lines="baokimLines" :property="baokimProperty" :variant-id="selection.selectedVariant.value?.id ?? null" />
               <ClientOnly><AffiliateShareBox v-if="canonicalPath" :product-id="product.id" :product-name="product.name" :path="canonicalPath" /></ClientOnly>
             </div>
           </section>

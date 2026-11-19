@@ -33,6 +33,7 @@ const sideBenefits = computed(() => props.benefits.filter(item => item.title.tri
       <button type="button" class="cart-checkout-button" :disabled="disabled || loading" @click="emit('checkout')">
         {{ loading ? 'Đang chuẩn bị…' : 'Tiến hành thanh toán' }} <CartIcon name="arrow-right" size="18" />
       </button>
+      <slot name="after-checkout" />
       <p class="cart-safe-payment"><CartIcon name="lock" size="14" /> Thanh toán an toàn, bảo mật</p>
 
       <div class="cart-summary-benefits">

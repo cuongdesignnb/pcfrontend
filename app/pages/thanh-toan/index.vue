@@ -198,12 +198,24 @@ const isFormValid = computed(() => {
 
 const mobileTotal = computed(() => quotes.quote.value?.summary.total)
 
+// What is being bought: an order placed earlier is shown again only for the
+// same products, variants, warranty packages and quantities.
+const lineSignature = computed(() => fallbackLines.value
+  .map(line => `${line.product_id}:${line.variant_id ?? 0}:${line.warranty?.months ?? 0}:${line.quantity}`)
+  .sort()
+  .join('|'))
+
+// An unpaid order from an earlier checkout in this tab, kept on its own page.
+const previousOrder = ref<{ id: number; order_number: string | null } | null>(null)
+
 const saveAttempt = (order: CheckoutOrder) => {
   if (!import.meta.client) return
   sessionStorage.setItem('pc-checkout-attempt', JSON.stringify({
     order_id: order.id,
+    order_number: order.order_number,
     access_token: orderAccessToken.value,
     checkout_mode: checkoutMode.value,
+    items: lineSignature.value,
   }))
   // The order page reads the token by order id; guests have no other way in.
   sessionStorage.setItem(`pc-order-access-token:${order.id}`, orderAccessToken.value)
@@ -296,8 +308,16 @@ const resumeAttempt = async (): Promise<boolean> => {
   const raw = sessionStorage.getItem('pc-checkout-attempt')
   if (!raw) return false
   try {
-    const attempt = JSON.parse(raw) as { order_id?: number; access_token?: string; checkout_mode?: 'cart' | 'buy_now' }
+    const attempt = JSON.parse(raw) as { order_id?: number; order_number?: string; access_token?: string; checkout_mode?: 'cart' | 'buy_now'; items?: string }
     if (!Number.isInteger(attempt.order_id) || typeof attempt.access_token !== 'string' || !attempt.access_token) return false
+    // The customer came back with other products: that order keeps its own
+    // page and payment code, and this checkout becomes a new order.
+    if (attempt.checkout_mode !== checkoutMode.value || attempt.items !== lineSignature.value) {
+      previousOrder.value = { id: attempt.order_id as number, order_number: attempt.order_number ?? null }
+      finishAttempt()
+      initialiseTokens()
+      return false
+    }
     const response = await $fetch<CheckoutOrderResponse>(`${config.public.apiBase}/orders/${attempt.order_id}`, {
       headers: {
         ...getCartHeaders(),
@@ -619,6 +639,12 @@ useSeoMeta({
                 <p v-if="quoteIssues.length">{{ quoteIssues[0]?.message }}</p>
               </div>
             </div>
+
+            <section v-if="previousOrder && !orderResult" class="checkout-auth-prompt checkout-previous-order" role="status">
+              <span class="checkout-auth-prompt-icon"><CartIcon name="qr" size="19" /></span>
+              <div><strong>Đơn trước {{ previousOrder.order_number ?? '' }} vẫn được giữ</strong><p>Giỏ hàng đã thay đổi nên lần này sẽ tạo đơn mới với mã thanh toán mới. Mã chuyển khoản của đơn trước xem ở trang đơn hàng.</p></div>
+              <NuxtLink :to="`/don-hang/${previousOrder.id}/thanh-cong`">Xem đơn trước <CartIcon name="arrow-right" size="14" /></NuxtLink>
+            </section>
 
             <section v-if="!auth.isAuthenticated.value && !orderResult" class="checkout-auth-prompt">
               <span class="checkout-auth-prompt-icon"><CartIcon name="user" size="19" /></span>

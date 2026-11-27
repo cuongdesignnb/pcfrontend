@@ -421,7 +421,7 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 .site-footer ul { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; color: #a9bad0; font-size: 11px; }
 .site-footer li a:hover { color: #fff; }
 .site-footer-payments { display: flex; flex-wrap: wrap; gap: 5px; }
-.site-footer-payments span { display: flex; min-width: 58px; min-height: 28px; align-items: center; justify-content: center; padding: 4px 6px; color: var(--pc-secondary); background: #fff; border-radius: 3px; font-size: 8px; font-weight: 800; text-align: center; }
+.site-footer-payments span, .site-footer-payments a { display: flex; min-width: 58px; min-height: 28px; align-items: center; justify-content: center; padding: 4px 6px; color: var(--pc-secondary); background: #fff; border-radius: 3px; font-size: 8px; font-weight: 800; text-align: center; }
 .footer-newsletter h3 { margin-bottom: 9px; }
 .footer-newsletter p { margin: 0 0 10px; color: #a9bad0; font-size: 9px; }
 .footer-newsletter-form { display: flex; gap: 5px; }

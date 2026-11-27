@@ -6,6 +6,8 @@ export interface WarrantyPackage {
   price: number
   /** Set when the price is a share of the unit price, so a variant can be repriced. */
   percent?: number | null
+  /** Name set in admin for the package button; null shows "N tháng". */
+  label?: string | null
 }
 
 export interface ProductImage {
@@ -138,6 +140,8 @@ export interface ProductDetail {
   warranty_months: number | null
   /** Paid warranty options of the product's category; empty when none are offered. */
   warranty_packages?: WarrantyPackage[]
+  /** "Khuyến mại" lines from the product or its category. */
+  promotions?: string[]
   /** The product's id in the catalog feeds (kiot:123), sent with Pixel events. */
   catalog_content_id?: string
   /** Nghị định 37/2026: year of manufacture, refurbished label, warnings, usage and storage. */

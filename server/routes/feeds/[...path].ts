@@ -6,17 +6,6 @@ import { createError, getHeader, getRequestURL, sendStream, setResponseHeader, s
 // reach the storefront domain. The feed token stays in the query string.
 const FEED_PATH = /^\/feeds\/(google\/products\.xml|meta\/[a-z0-9-]+\.csv)$/
 
-function backendOrigin(): string | null {
-  const configured = process.env.NUXT_API_PROXY_TARGET || ''
-  try {
-    const url = new URL(configured)
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return null
-    return url.toString().replace(/\/$/, '')
-  } catch {
-    return null
-  }
-}
-
 export default defineEventHandler(async (event) => {
   const url = getRequestURL(event)
   if (!FEED_PATH.test(url.pathname)) {

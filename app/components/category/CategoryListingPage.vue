@@ -6,7 +6,7 @@ import type {
   CategoryListingFilters,
   CategoryTrustItem,
 } from '~/types/category-listing'
-import { canonicalAbsoluteUrl, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
+import { canonicalAbsoluteUrl, plainSeoText, serializeJsonLd, useSeoDocument } from '~/composables/useSeoDocument'
 import { getErrorStatusCode } from '~/utils/errors'
 import { productUrl } from '~/utils/urls'
 
@@ -183,13 +183,14 @@ const canonicalPath = computed(() => {
 
 const { origin, canonicalUrl } = useSeoDocument(() => ({
   title: (() => {
-    const title = category.value?.meta_title || category.value?.name
+    const title = category.value?.seo?.title || category.value?.meta_title || category.value?.name
     return title ? `${title} - ${siteName.value}` : `Danh mục - ${siteName.value}`
   })(),
-  description: category.value?.meta_description || category.value?.description,
+  description: category.value?.seo?.description ?? plainSeoText(category.value?.meta_description || category.value?.description),
   path: canonicalPath.value,
+  canonicalUrl: pageNumber.value > 1 || hasFilterQuery.value ? null : category.value?.seo?.canonical_url,
   image: category.value?.image,
-  robots: hasFilterQuery.value ? 'noindex,follow' : 'index,follow',
+  robots: hasFilterQuery.value ? 'noindex,follow' : (category.value?.seo?.robots || 'index,follow'),
 }))
 
 const categoryJsonLd = computed(() => {
@@ -229,7 +230,7 @@ const categoryJsonLd = computed(() => {
         '@type': 'CollectionPage',
         '@id': canonicalUrl.value,
         name: category.value.meta_title || category.value.name,
-        description: category.value.meta_description || category.value.description || undefined,
+        description: category.value.seo?.description ?? (plainSeoText(category.value.meta_description || category.value.description) || undefined),
         url: canonicalUrl.value,
         mainEntity: {
           '@type': 'ItemList',

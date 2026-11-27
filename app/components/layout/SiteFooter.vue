@@ -70,7 +70,7 @@ const socialLinks = computed(() => [
 ].map(link => ({ ...link, href: toSocialHref(link.value, link.key) })).filter(link => link.href))
 
 const paymentMethods = computed(() => {
-  const methods: { label: string; detail: string }[] = []
+  const methods: { label: string; detail: string; to?: string }[] = []
   const bankName = getString('payment_bank_name')
   // payment_sepay_enabled follows the checkout: bank transfer is shown only when customers can pay that way.
   if (getBoolean('payment_sepay_enabled', Boolean(bankName))) {
@@ -78,7 +78,9 @@ const paymentMethods = computed(() => {
   }
   if (getBoolean('payment_cod_enabled', true)) methods.push({ label: 'COD', detail: 'Thanh toán khi nhận hàng' })
   const extra = getString('payment_footer_extra').trim()
-  if (extra) methods.push({ label: extra, detail: extra })
+  // payment_footer_extra_url: e.g. "Hỗ trợ trả góp" → /mua-laptop-tra-gop.
+  const extraUrl = getString('payment_footer_extra_url').trim()
+  if (extra) methods.push({ label: extra, detail: extra, to: extraUrl ? storefrontPath(extraUrl) || undefined : undefined })
   return methods
 })
 
@@ -170,7 +172,10 @@ const chatLink = computed(() => {
         <section v-if="paymentMethods.length">
           <h3>THANH TOÁN</h3>
           <div class="site-footer-payments">
-            <span v-for="method in paymentMethods" :key="method.label" :title="method.detail">{{ method.label }}</span>
+            <template v-for="method in paymentMethods" :key="method.label">
+              <NuxtLink v-if="method.to" :to="method.to" :title="method.detail">{{ method.label }}</NuxtLink>
+              <span v-else :title="method.detail">{{ method.label }}</span>
+            </template>
           </div>
         </section>
       </div>

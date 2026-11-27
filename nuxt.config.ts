@@ -107,6 +107,7 @@ export default defineNuxtConfig({
     '/sitemap.xml': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
     // Token-protected catalog feeds, passed through from the backend (server/routes/feeds).
     '/feeds/**': { ssr: true, isr: false, swr: false, prerender: false },
+    '/files/**': { ssr: true, isr: false, swr: false, prerender: false },
     '/sitemaps/**': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=300' } },
     '/robots.txt': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=3600' } },
     '/llms.txt': { ssr: true, isr: false, swr: false, prerender: false, headers: { 'cache-control': 'public, max-age=3600' } },

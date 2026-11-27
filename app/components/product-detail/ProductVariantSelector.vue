@@ -93,7 +93,7 @@ const productPath = (product: ProductCard) => productUrl(product)
           :class="selectedWarranty === pkg.months ? 'pdp-option-chip--selected' : 'hover:border-brand hover:text-brand'"
           @click="emit('selectWarranty', pkg.months)"
         >
-          {{ pkg.months }} tháng{{ pkg.price > 0 ? ` (+${formatMoney(pkg.price)})` : pkg.price < 0 ? ` (-${formatMoney(-pkg.price)})` : '' }}
+          {{ pkg.label || `${pkg.months} tháng` }}
         </button>
       </div>
     </div>

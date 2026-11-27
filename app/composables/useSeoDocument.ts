@@ -70,6 +70,18 @@ export function normalizeRobots(value: unknown, fallback: RobotsDirective = 'ind
   return cleaned && allowed.includes(cleaned) ? cleaned : fallback
 }
 
+/** Meta description text: HTML tags and entities removed, one line, at most 160 characters. */
+export function plainSeoText(value: string | null | undefined, max = 160): string {
+  const text = String(value ?? '')
+    .replace(/<(?:br|\/p|\/li|\/h[1-6])\b[^>]*>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#0?39;|&apos;/gi, "'").replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text.length > max ? `${text.slice(0, max - 3).trimEnd()}...` : text
+}
+
 export function serializeJsonLd(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')
 }
@@ -84,10 +96,10 @@ export function useSeoDocument(input: MaybeRefOrGetter<SeoDocumentInput>) {
 
   useSeoMeta({
     title: () => normalizeSeoTitle(document.value.title) || undefined,
-    description: () => document.value.description || undefined,
+    description: () => plainSeoText(document.value.description) || undefined,
     robots: () => document.value.robots || 'index,follow',
     ogTitle: () => normalizeSeoTitle(document.value.title) || undefined,
-    ogDescription: () => document.value.description || undefined,
+    ogDescription: () => plainSeoText(document.value.description) || undefined,
     ogUrl: () => canonicalUrl.value || undefined,
     ogType: () => document.value.type || 'website',
     ogImage: () => imageUrl.value || undefined,

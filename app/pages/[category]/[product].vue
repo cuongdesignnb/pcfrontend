@@ -254,6 +254,7 @@ onMounted(() => { if (product.value) track('view_item', product.value) })
               <ProductTitleMeta :product="product" :sku="selection.sku.value" @reviews="scrollTo('danh-gia')" />
               <ProductHighlights :highlights="product.highlights" :short-description="product.short_description" />
               <ProductPrice :pricing="pricingWithWarranty" :contact-only="contactOnly" />
+              <ProductPromotions :items="product.promotions" />
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                 <span :class="onlinePurchasable ? 'font-semibold text-emerald-600' : 'text-slate-500'"><span aria-hidden="true">●</span> {{ contactOnly ? 'Liên hệ để báo giá' : (onlinePurchasable ? 'Còn hàng' : product.inventory.availability_label) }}</span>
                 <span v-if="onlinePurchasable && selectedQuantity" class="text-slate-400">{{ selectedQuantity }} sản phẩm</span>

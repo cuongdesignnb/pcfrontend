@@ -13,6 +13,8 @@ export interface CategoryListingCategory {
   meta_description: string | null
   canonical_path?: string | null
   canonical_url?: string | null
+  /** Meta title/description (plain text), robots and canonical from admin. */
+  seo?: { title: string | null; description: string | null; robots?: string; canonical_url?: string | null }
   product_count?: number
   parent?: CategoryListingCategory | null
   /** Root first; two entries for a third-level category (Laptop cũ → Dell). */
